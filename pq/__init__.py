@@ -13,4 +13,10 @@ __homepage__ = "https://github.com/quantmind/pulsar-queue"
 if os.environ.get('pulsar_queue_setup') != 'yes':
     from pulsar.utils.version import get_version
 
+    from .app import PulsarQueue
+    from .tasks import nice_task_message
+
     __version__ = get_version(VERSION)
+
+    __all__ = ['PulsarQueue',
+               'nice_task_message']

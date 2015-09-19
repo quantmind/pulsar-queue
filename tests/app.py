@@ -3,10 +3,10 @@ import unittest
 from random import random
 
 from pulsar import send, multi_async
-from pulsar.apps import tasks, rpc
 from pulsar.apps.test import dont_run_with_thread
+from pulsar.apps import rpc
 
-from .manage import server
+from pq import PulsarQueue, nice_task_message, states
 
 
 CODE_TEST = '''\
@@ -15,6 +15,12 @@ def task_function(N = 10, lag = 0.1):
     time.sleep(lag)
     return N*N
 '''
+
+
+def dummy():
+    # Just a dummy callable for testing coverage.
+    # A callable is invoked when the taskqueue starts
+    pass
 
 
 class TaskQueueBase(object):
@@ -42,16 +48,16 @@ class TaskQueueBase(object):
     @classmethod
     def setUpClass(cls):
         # The name of the task queue application
-        s = server(name=cls.name(),
-                   rpc_bind='127.0.0.1:0',
-                   concurrent_tasks=cls.concurrent_tasks,
-                   concurrency=cls.concurrency,
-                   rpc_concurrency=cls.concurrency,
-                   rpc_keep_alive=cls.rpc_timeout,
-                   task_backend=cls.task_backend(),
-                   script=__file__,
-                   schedule_periodic=cls.schedule_periodic)
-        cfgs = yield send('arbiter', 'run', s)
+        pq = PulsarQueue('taskqueue',
+                         queue_callable=dummy,
+                         rpc_bind='127.0.0.1:0',
+                         concurrent_tasks=cls.concurrent_tasks,
+                         concurrency=cls.concurrency,
+                         rpc_concurrency=cls.concurrency,
+                         rpc_keep_alive=cls.rpc_timeout,
+                         schedule_periodic=cls.schedule_periodic,
+                         task_paths=['sampletasks.*'])
+        cfgs = yield from pq.start()
         cls.tq = cfgs[0].app()
         cls.rpc = cfgs[1].app()
         # make sure the time out is high enough (bigger than test-timeout)
@@ -166,7 +172,7 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
     def test_run_new_simple_task(self):
         r = yield self.proxy.queue_task(jobname='addition', a=40, b=50)
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.SUCCESS)
+        self.assertEqual(r['status'], states.SUCCESS)
         self.assertEqual(r['result'], 90)
 
 
@@ -176,14 +182,14 @@ class f:
         app = self.tq
         r = yield app.backend.queue_task('asynchronous', lag=3)
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.SUCCESS)
+        self.assertEqual(r['status'], states.SUCCESS)
         time = r['result']
         self.assertTrue(time > 3)
 
     def test_queue_task_asynchronous(self):
         r = yield self.proxy.queue_task(jobname='asynchronous', lag=3)
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.SUCCESS)
+        self.assertEqual(r['status'], states.SUCCESS)
         time = r['result']
         self.assertTrue(time > 3)
 
@@ -191,7 +197,7 @@ class f:
         app = self.tq
         r = yield self.proxy.queue_task(jobname='asynchronous', lag=3)
         r = yield app.backend.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.SUCCESS)
+        self.assertEqual(r['status'], states.SUCCESS)
         time = r['result']
         self.assertTrue(time > 3)
 
@@ -200,13 +206,13 @@ class f:
                                         expiry=0)
         self.assertTrue(r)
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.REVOKED)
+        self.assertEqual(r['status'], states.REVOKED)
 
     def test_run_new_simple_task_from_test(self):
         app = self.tq
         r = yield app.backend.queue_task('addition', a=1, b=2)
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.SUCCESS)
+        self.assertEqual(r['status'], states.SUCCESS)
         self.assertEqual(r['result'], 3)
 
     def test_not_overlap(self):
@@ -220,7 +226,7 @@ class f:
         self.assertFalse(r2)
         # We need to make sure the first task is completed
         r1 = yield app.backend.wait_for_task(r1)
-        self.assertEqual(r1['status'], tasks.SUCCESS)
+        self.assertEqual(r1['status'], states.SUCCESS)
         self.assertTrue(r1['result'] > sec)
 
     def test_queue_task_error(self):
@@ -236,13 +242,13 @@ class f:
                                         code=CODE_TEST, N=3)
         self.assertTrue(r)
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.SUCCESS)
+        self.assertEqual(r['status'], states.SUCCESS)
         self.assertEqual(r['result'], 9)
 
     def test_queue_task_periodicerror(self):
         r = yield self.proxy.queue_task(jobname='testperiodicerror')
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.FAILURE)
+        self.assertEqual(r['status'], states.FAILURE)
         self.assertTrue('kaputt' in r['result'])
 
     def __test_delete_task(self):
@@ -263,9 +269,9 @@ class f:
                                         sample=sample, size=100)
         self.assertTrue(r)
         r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], tasks.SUCCESS)
+        self.assertEqual(r['status'], states.SUCCESS)
         self.assertEqual(r['result'], 'produced %s new tasks' % sample)
-        self.assertTrue(tasks.nice_task_message(r))
+        self.assertTrue(nice_task_message(r))
         # We check for the tasks created
         # TODO: not available
         # created = yield self.proxy.get_tasks(from_task=r['id'])

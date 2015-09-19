@@ -2,15 +2,8 @@
 import sys
 import os
 
-from pulsar.apps.test import TestSuite, TestPlugin
+from pulsar.apps.test import TestSuite
 from pulsar.apps.test.plugins import bench, profile
-
-
-class PostgreSql(TestPlugin):
-    name = 'postgresql'
-    meta = "CONNECTION_STRING"
-    default = 'postgresql+green://odm:odmtest@127.0.0.1:5432/odmtests'
-    desc = 'Default connection string for the PostgreSql server'
 
 
 def run(**params):
@@ -29,11 +22,9 @@ def run(**params):
         sys.exit(0)
     # Run the test suite
     #
-    TestSuite(description='ODM test suite',
+    TestSuite(description='Pulsar queue test suite',
               modules=['tests'],
-              plugins=(bench.BenchMark(),
-                       profile.Profile(),
-                       PostgreSql()),
+              plugins=(bench.BenchMark(), profile.Profile()),
               **params).start()
 
 

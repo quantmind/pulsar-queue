@@ -57,10 +57,10 @@ a new task cannot be started unless a previous task of the same job
 is done.
 
 '''
-from datetime import datetime, date
 import logging
+from datetime import datetime, date
 
-from pulsar.utils.pep import iteritems
+from pulsar.utils.slugify import slugify
 from pulsar.utils.importer import import_modules
 
 
@@ -92,7 +92,7 @@ class JobRegistry(dict):
 
     def filter_types(self, type):
         """Return a generator of all tasks of a specific type."""
-        return ((job_name, job) for job_name, job in iteritems(self)
+        return ((job_name, job) for job_name, job in self.items()
                 if job.type == type)
 
     @classmethod
@@ -108,15 +108,15 @@ class JobMetaClass(type):
 
     def __new__(cls, name, bases, attrs):
         attrs['can_register'] = not attrs.pop('abstract', False)
-        job_name = attrs.get("name", name).lower()
-        log_prefix = attrs.get("log_prefix") or "pulsar"
+        job_name = slugify(attrs.get("name", name))
+        log_prefix = attrs.get("log_prefix") or "pulsar.queue"
         attrs["name"] = job_name
-        logname = '%s.job.%s' % (log_prefix, name)
+        logname = '%s.%s' % (log_prefix, job_name)
         attrs['logger'] = logging.getLogger(logname)
         return super(JobMetaClass, cls).__new__(cls, name, bases, attrs)
 
 
-class Job(JobMetaClass('JobBase', (object,), {'abstract': True})):
+class Job(metaclass=JobMetaClass):
     '''The Job class which is used in a distributed task queue.
 
 .. attribute:: name
@@ -166,7 +166,7 @@ class Job(JobMetaClass('JobBase', (object,), {'abstract': True})):
     doc_syntax = 'markdown'
     can_overlap = True
 
-    def __call__(self, consumer, *args, **kwargs):
+    def __call__(self, consumer, **kwargs):
         raise NotImplementedError("Jobs must implement the __call__ method.")
 
     @property

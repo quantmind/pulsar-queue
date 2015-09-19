@@ -1,62 +1,3 @@
-'''To get started, follow these guidelines:
-
-* Create a script which runs your application, in the
-  :ref:`taskqueue tutorial <tutorials-taskqueue>` the script is called
-  ``manage.py``.
-* Create the modules where :ref:`jobs <app-taskqueue-job>` are implemented. It
-  can be a directory containing several submodules as explained in the
-  :ref:`task paths parameter <app-tasks_path>`.
-* Run your script, sit back and relax.
-
-.. _app-taskqueue-config:
-
-Configuration
-~~~~~~~~~~~~~~~~
-A :class:`TaskQueue` accepts several configuration parameters on top of the
-standard :ref:`application settings <settings>`:
-
-.. _app-tasks_path:
-
-* The :ref:`task_paths <setting-task_paths>` parameter specifies
-  a list of python paths where to collect :class:`.Job` classes::
-
-      task_paths = ['myjobs','another.moduledir.*']
-
-  The ``*`` at the end of the second module indicates to collect
-  :class:`.Job` from all submodules of ``another.moduledir``.
-
-* The :ref:`schedule_periodic <setting-schedule_periodic>` flag indicates
-  if the :class:`TaskQueue` can schedule :class:`.PeriodicJob`. Usually,
-  only one running :class:`TaskQueue` application is responsible for
-  scheduling tasks.
-
-  It can be specified in the command line via the
-  ``--schedule-periodic`` flag.
-
-  Default: ``False``.
-
-* The :ref:`task_backend <setting-task_backend>` parameter is a url
-  type string which specifies the :ref:`task backend <apps-taskqueue-backend>`
-  to use.
-
-  It can be specified in the command line via the
-  ``--task-backend ...`` option.
-
-  Default: ``local://``.
-
-* The :ref:`concurrent_tasks <setting-concurrent_tasks>` parameter controls
-  the maximum number of concurrent tasks for a given task worker.
-  This parameter is important when tasks are asynchronous, that is when
-  they perform some sort of I/O and the :ref:`job callable <job-callable>`
-  returns and :ref:`asynchronous component <tutorials-coroutine>`.
-
-  It can be specified in the command line via the
-  ``--concurrent-tasks ...`` option.
-
-  Default: ``5``.
-
-.. _celery: http://celeryproject.org/
-'''
 import time
 
 import pulsar
@@ -97,20 +38,6 @@ class ConcurrentTasks(TaskSetting):
         significant load.
         Must be a positive integer. Generally set in the range of 5-10.
         """
-
-
-class TaskBackendConnection(TaskSetting):
-    name = "task_backend"
-    flags = ["--task-backend"]
-    default = ""
-    meta = 'CONNECTION_STRING'
-    desc = '''\
-        Connection string for the backend storing tasks.
-
-        If the value is not available (default) it uses as fallback the
-        :ref:`data_store <setting-data_store>` value. If still not
-        set, it uses the ``%s`` value.
-        ''' % DEFAULT_TASK_BACKEND
 
 
 class TaskPaths(TaskSetting):
@@ -163,9 +90,7 @@ class TaskQueue(pulsar.Application):
         '''
         if self.cfg.callable:
             self.cfg.callable()
-        connection_string = self.cfg.data_store
-        store = create_store(connection_string, loop=monitor._loop)
-        self.get_backend(store)
+        self.get_backend()
 
     def monitor_task(self, monitor):
         '''Override the :meth:`~.Application.monitor_task` callback.
@@ -200,14 +125,10 @@ class TaskQueue(pulsar.Application):
                      'processed': be.processed}
             info['tasks'] = tasks
 
-    def get_backend(self, store=None):
+    def get_backend(self):
         if self.backend is None:
-            if store is None:
-                store = create_store(self.cfg.task_backend)
-            else:
-                self.cfg.set('task_backend', store.dns)
             self.backend = TaskBackend(
-                store,
+                create_store(self.cfg.data_store),
                 logger=self.logger,
                 name=self.name,
                 task_paths=self.cfg.task_paths,

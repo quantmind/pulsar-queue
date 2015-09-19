@@ -1,5 +1,5 @@
 import pulsar
-from pulsar import get_application, task
+from pulsar import get_application
 from pulsar.apps import rpc
 
 from .tasks import Task
@@ -35,7 +35,6 @@ class TaskQueueRpc(rpc.JSONRPC):
 
     ########################################################################
     #    REMOTES
-    @task
     def rpc_job_list(self, request, jobnames=None):
         '''Return the list of Jobs registered with task queue with meta
         information.
@@ -43,13 +42,12 @@ class TaskQueueRpc(rpc.JSONRPC):
         If a list of ``jobnames`` is given, it returns only jobs
         included in the list.
         '''
-        task_backend = yield self.task_backend()
+        task_backend = yield from self.task_backend()
         return task_backend.job_list(jobnames=jobnames)
 
     def rpc_next_scheduled_tasks(self, request, jobnames=None):
         return self._rq(request, 'next_scheduled', jobnames=jobnames)
 
-    @task
     def rpc_queue_task(self, request, jobname=None, **kw):
         '''Queue a new ``jobname`` in the task queue.
 
@@ -59,26 +57,9 @@ class TaskQueueRpc(rpc.JSONRPC):
 
         It returns the task :attr:`~Task.id`.
         '''
-        result = yield self.queue_task(request, jobname, **kw)
+        result = yield from self.queue_task(request, jobname, **kw)
         return task_to_json(result)
 
-    @task
-    def rpc_get_task(self, request, id=None):
-        '''Retrieve a task from its id'''
-        if id:
-            task_backend = yield self.task_backend()
-            result = yield task_backend.get_task(id)
-            return task_to_json(result)
-
-    @task
-    def rpc_get_tasks(self, request, **filters):
-        '''Retrieve a list of tasks which satisfy key-valued filters'''
-        if filters:
-            task_backend = yield self.task_backend()
-            result = yield task_backend.get_tasks(**filters)
-            return task_to_json(result)
-
-    @task
     def rpc_wait_for_task(self, request, id=None, timeout=None):
         '''Wait for a task to have finished.
 
@@ -87,22 +68,20 @@ class TaskQueueRpc(rpc.JSONRPC):
         :return: the json representation of the task once it has finished.
         '''
         if id:
-            task_backend = yield self.task_backend()
-            result = yield task_backend.wait_for_task(id, timeout=timeout)
+            task_backend = yield from self.task_backend()
+            result = yield from task_backend.wait_for_task(id, timeout=timeout)
             return task_to_json(result)
 
-    @task
     def rpc_num_tasks(self, request):
         '''Return the approximate number of tasks in the task queue.'''
-        task_backend = yield self.task_backend()
+        task_backend = yield from self.task_backend()
         return task_backend.num_tasks()
 
     ########################################################################
     #    INTERNALS
-    @task
     def task_backend(self):
         if not self._task_backend:
-            app = yield get_application(self.taskqueue)
+            app = yield from get_application(self.taskqueue)
             self._task_backend = app.get_backend()
         return self._task_backend
 

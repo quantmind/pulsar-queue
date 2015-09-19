@@ -207,7 +207,6 @@ class TaskBackend(EventHandler):
                                                              'task_started',
                                                              'task_done'))
         self.store = store
-        self._logger = logger
         self.name = name
         self.task_paths = task_paths
         self.backlog = backlog
@@ -217,7 +216,8 @@ class TaskBackend(EventHandler):
         self.processed = 0
         self.schedule_periodic = schedule_periodic
         self.next_run = time.time()
-        self.callbacks = {}
+        self._logger = logger
+        self._callbacks = {}
         self._pubsub = self.get_pubsub()
 
     def __repr__(self):
@@ -271,7 +271,7 @@ class TaskBackend(EventHandler):
             expiry of a task.
         :param kwargs: optional dictionary used for the key-valued arguments
             in the task callable.
-        :return: a :class:`.Future` resulting in a task id on success.
+        :return: a :class:`.Future` resulting in a task once finished
         '''
         if jobname in self.registry:
             job = self.registry[jobname]
@@ -282,49 +282,19 @@ class TaskBackend(EventHandler):
             elif job.timeout:
                 expiry = get_time(job.timeout, queued)
             meta_params = meta_params or {}
-            task = Task(task_id, name=job.name,
-                        time_queued=queued, expiry=expiry,
-                        kwargs=kwargs, status=states.QUEUED,
+            task = Task(task_id,
+                        name=job.name,
+                        time_queued=queued,
+                        expiry=expiry,
+                        kwargs=kwargs,
+                        status=states.QUEUED,
                         **meta_params)
-
-            queue_name = self.channel('inqueue')
-            stask = self._serialise(task)
-            yield from self.store.client().lpush(queue_name, stask)
-            yield from self._publish('queued', stask)
-
-            scheduled = self.entries.get(job.name)
-            if scheduled:
-                scheduled.next()
-            self.logger.debug('queued %s', task.lazy_info())
+            callback = Future(loop=self._loop)
+            self._callbacks[task_id] = callback
+            async(self._queue_task(task), loop=self._loop)
+            return callback
         else:
             raise TaskNotAvailable(jobname)
-
-    def wait_for_task(self, task_id, timeout=None):
-        '''Asynchronously wait for a task with ``task_id`` to have finished
-        its execution.
-        '''
-        # This coroutine is run on the worker event loop
-        def _(task_id):
-            task = yield from self._get_task(task_id)
-            if task:
-                task_id = task['id']
-                callbacks = self.callbacks
-                if task.done():  # task done, simply return it
-                    done = callbacks.pop(task_id, None)
-                    if done:
-                        done.set_result(task_id)
-                else:
-                    done = callbacks.get(task_id)
-                    if not done:
-                        # No future, create one
-                        callbacks[task_id] = done = Future(loop=self._loop)
-                    yield done
-                    task = yield from self._get_task(task_id)
-                return task
-
-        fut = async(_(task_id), loop=self._loop)
-        return fut
-        # return future_timeout(fut, timeout) if timeout else fut
 
     def get_pubsub(self):
         '''Create a publish/subscribe handler from the backend :attr:`store`.
@@ -440,6 +410,19 @@ class TaskBackend(EventHandler):
             worker._loop.call_soon(self.may_pool_task, worker)
 
     # INTERNALS
+    def _queue_task(self, task):
+        '''Asynchronously wait for a task with ``task_id`` to have finished
+        its execution.
+        '''
+        queue_name = self.channel('inqueue')
+        stask = self._serialise(task)
+        yield from self.store.client().lpush(queue_name, stask)
+        yield from self._publish('queued', stask)
+        scheduled = self.entries.get(task.name)
+        if scheduled:
+            scheduled.next()
+        self.logger.debug('queued %s', task.lazy_info())
+
     def _may_pool_task(self, worker):
         # Called in the ``worker`` event loop.
         #
@@ -551,15 +534,13 @@ class TaskBackend(EventHandler):
             entries[name] = SchedulerEntry(name, every, t.anchor)
         return entries
 
-    def _task_done_callback(self, task_id, exc=None):
-        # Got a task_id from the ``<name>_task_done`` channel.
-        # Check if a ``callback`` is available in the :attr:`callbacks`
-        # dictionary. If so fire the callback with the ``task`` instance
-        # corresponding to the input ``task_id``.
-        # If a callback is not available, it must have been fired already
-        done = self.callbacks.pop(task_id, None)
+    def _task_done_callback(self, task, exc=None):
+        done = self.callbacks.pop(task.id, None)
         if done:
-            done.set_result(task_id)
+            done.set_result(task)
+        else:
+            self.logger.error('Could not find callback for %s',
+                              task.lazy_info())
 
     def _publish(self, name, task):
         channel = self.channel('task_%s' % name)

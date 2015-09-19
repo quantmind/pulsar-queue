@@ -48,7 +48,7 @@ class TaskQueueBase(object):
     @classmethod
     def setUpClass(cls):
         # The name of the task queue application
-        pq = PulsarQueue('taskqueue',
+        pq = PulsarQueue(cls.name(),
                          queue_callable=dummy,
                          rpc_bind='127.0.0.1:0',
                          concurrent_tasks=cls.concurrent_tasks,
@@ -65,7 +65,7 @@ class TaskQueueBase(object):
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
         backend = cls.tq.get_backend()
-        yield backend.flush()
+        yield from backend.flush()
 
     @classmethod
     def tearDownClass(cls):

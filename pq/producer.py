@@ -1,6 +1,6 @@
 import json
 import time
-from asyncio import async, Future
+import asyncio
 
 from pulsar import EventHandler, ImproperlyConfigured, PulsarException
 from pulsar.apps.data import create_store
@@ -8,8 +8,16 @@ from pulsar.utils.log import LazyString
 from pulsar.utils.string import gen_unique_id, to_string
 
 from .pubsub import PubSubMixin
+from .models import RegistryMixin
 from .utils import get_time
 from . import states
+
+
+def all_queues(cfg):
+    yield cfg.default_task_queue
+    for queue in cfg.task_queues:
+        if queue != cfg.default_task_queue:
+            yield queue
 
 
 class TaskError(PulsarException):
@@ -98,7 +106,7 @@ class Task:
         return '%s_%s' % (self.queue, name)
 
 
-class TaskProducer(EventHandler, PubSubMixin):
+class TaskProducer(EventHandler, PubSubMixin, RegistryMixin):
     """Produce tasks by queuing them
     """
     MANY_TIMES_EVENTS = ('task_queued', 'task_started', 'task_done')
@@ -122,6 +130,20 @@ class TaskProducer(EventHandler, PubSubMixin):
         else:
             return 'task producer <%s>' % self.store.dns
     __str__ = __repr__
+
+    @property
+    def queue(self):
+        return self._queue
+
+    def flush(self):
+        client = self.store.client()
+        if self.queue:
+            return client.execute('del', self.queue)
+        else:
+            pipe = client.pipeline()
+            for queue in all_queues(self.cfg):
+                pipe.execute('del', queue)
+            return pipe.commit()
 
     def close(self):
         '''Close this :class:`.TaskBackend`.
@@ -169,33 +191,12 @@ class TaskProducer(EventHandler, PubSubMixin):
                         kwargs=kwargs,
                         status=states.QUEUED,
                         **meta_params)
-            callback = Future(loop=self._loop)
+            callback = asyncio.Future(loop=self._loop)
             self._callbacks[task_id] = callback
-            async(self._queue_task(task), loop=self._loop)
+            asyncio.async(self._queue_task(task), loop=self._loop)
             return callback
         else:
             raise TaskNotAvailable(jobname)
-
-    def job_list(self, jobnames=None):
-        registry = self.registry
-        jobnames = jobnames or registry
-        all = []
-        for name in jobnames:
-            if name not in registry:
-                continue
-            job = registry[name]
-            d = {'doc': job.__doc__,
-                 'doc_syntax': job.doc_syntax,
-                 'type': job.type}
-            if self.entries and name in self.entries:
-                entry = self.entries[name]
-                _, next_time_to_run = self.next_scheduled((name,))
-                run_every = 86400*job.run_every.days + job.run_every.seconds
-                d.update({'next_run': next_time_to_run,
-                          'run_every': run_every,
-                          'runs_count': entry.total_run_count})
-            all.append((name, d))
-        return all
 
     def _queue_task(self, task):
         '''Asynchronously queue a task

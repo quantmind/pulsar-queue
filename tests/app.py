@@ -63,7 +63,7 @@ class TaskQueueBase(object):
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
-        backend = cls.tq.backend()
+        backend = cls.tq.backend
         yield from backend.flush()
 
     @classmethod
@@ -75,7 +75,7 @@ class TaskQueueBase(object):
 class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
 
     def test_registry(self):
-        backend = self.tq.backend()
+        backend = self.tq.backend
         self.assertTrue(isinstance(backend.registry, dict))
         regular = backend.registry.regular()
         periodic = backend.registry.periodic()
@@ -83,7 +83,7 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertTrue(periodic)
 
     def test_producer(self):
-        backend = self.tq.backend()
+        backend = self.tq.backend
         self.assertFalse(backend.queue)
         self.assertTrue(str(backend).startswith('task producer <'))
 

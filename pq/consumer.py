@@ -1,9 +1,9 @@
 import time
-from asyncio import async
+import asyncio
 
 from pulsar import is_async, ImproperlyConfigured, CANCELLED_ERRORS
 
-from .consumer import Task, TaskTimeout
+from .producer import Task, TaskTimeout
 from . import models
 from . import states
 
@@ -81,7 +81,7 @@ class ConsumerMixin:
                 worker._loop.stop()
         else:
             if worker.is_running() and not next_time:
-                async(self._may_pool_task(worker), loop=worker._loop)
+                asyncio.async(self._may_pool_task(worker), loop=worker._loop)
             else:
                 next_time = next_time or 0
                 worker._loop.call_later(next_time, self.may_pool_task, worker)
@@ -112,8 +112,7 @@ class ConsumerMixin:
                     if task:    # Got a new task
                         self.processed += 1
                         self.concurrent_tasks.add(task.id)
-                        async(self._execute_task(worker, task))
-                        # executor.submit(yield_from, coro)
+                        asyncio.async(self._execute_task(worker, task))
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
                                   self.num_concurrent_tasks)
@@ -126,10 +125,11 @@ class ConsumerMixin:
         :return: a :class:`.Task` or ``None``.
         '''
         client = self.store.client()
-        stask = yield from client.execute('brpop',
-                                          self.queue,
-                                          self.cfg.task_pool_timeout)
-        if stask:
+        queue_stask = yield from client.execute('brpop',
+                                                self.queue,
+                                                self.cfg.task_pool_timeout)
+        if queue_stask:
+            _, stask = queue_stask
             return Task.load(stask, self.cfg.params.get('TASK_SERIALISATION'))
 
     def _execute_task(self, worker, task):
@@ -191,8 +191,8 @@ class ConsumerMixin:
             return self._green_pool.submit(job, context, **kwargs)
 
         elif concurrency == models.THREAD_IO:
-            executor = context.worker.executor()
-            return executor.submit(job, context, **kwargs)
+            loop = context._loop
+            return loop.run_in_executor(None, job, context, **kwargs)
 
         elif concurrency == models.CPUBOUND:
             return self._consume_in_subprocess()

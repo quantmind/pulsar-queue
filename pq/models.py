@@ -62,6 +62,7 @@ from datetime import datetime, date
 
 from pulsar.utils.slugify import slugify
 from pulsar.utils.importer import import_modules
+from pulsar.utils.log import lazyproperty
 
 
 __all__ = ['Job',
@@ -78,6 +79,29 @@ ASYNC_IO = 1    # tasks run in the worker event loop
 GREEN_IO = 2    # tasks run in the worker event loop on a child greenlet
 THREAD_IO = 3   # tasks run in the event loop executor
 CPUBOUND = 4    # tasks run in a subprocess
+
+
+class RegistryMixin:
+
+    @lazyproperty
+    def registry(self):
+        '''The :class:`.JobRegistry` for this backend.
+        '''
+        return JobRegistry.load(self.cfg.task_paths)
+
+    def job_list(self, jobnames=None):
+        registry = self.registry
+        jobnames = jobnames or registry
+        all = []
+        for name in jobnames:
+            if name not in registry:
+                continue
+            job = registry[name]
+            d = {'doc': job.__doc__,
+                 'doc_syntax': job.doc_syntax,
+                 'type': job.type}
+            all.append((name, d))
+        return all
 
 
 class JobRegistry(dict):

@@ -1,9 +1,9 @@
 from datetime import timedelta
 
-from pulsar.apps.tasks import PeriodicJob,  anchorDate
+import pq
 
 
-class TestPeriodicJob(PeriodicJob):
+class TestPeriodicJob(pq.PeriodicJob):
     abstract = True
     run_every = timedelta(hours=1)
 
@@ -23,7 +23,7 @@ class TestPeriodicError(TestPeriodicJob):
 
 
 class AnchoredEveryHour(TestPeriodicJob):
-    anchor = anchorDate(minute=25)
+    anchor = pq.anchorDate(minute=25)
 
     def __call__(self, consumer):   # pragma    nocover
         pass

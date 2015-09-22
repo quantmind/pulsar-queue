@@ -25,7 +25,6 @@ def dummy():
 
 class TaskQueueBase(object):
     concurrency = 'thread'
-    schedule_periodic = True
     # used for both keep-alive and timeout in JsonProxy
     # long enough to allow to wait for tasks
     rpc_timeout = 500
@@ -49,13 +48,13 @@ class TaskQueueBase(object):
     def setUpClass(cls):
         # The name of the task queue application
         pq = PulsarQueue(cls.name(),
+                         wsgi=True,
                          queue_callable=dummy,
                          rpc_bind='127.0.0.1:0',
                          concurrent_tasks=cls.concurrent_tasks,
                          concurrency=cls.concurrency,
                          rpc_concurrency=cls.concurrency,
                          rpc_keep_alive=cls.rpc_timeout,
-                         schedule_periodic=cls.schedule_periodic,
                          task_paths=['tests.example.sampletasks.*'])
         cfgs = yield from pq.start()
         cls.tq = cfgs[0].app()
@@ -64,7 +63,7 @@ class TaskQueueBase(object):
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
-        backend = cls.tq.get_backend()
+        backend = cls.tq.backend()
         yield from backend.flush()
 
     @classmethod
@@ -75,6 +74,20 @@ class TaskQueueBase(object):
 
 class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
 
+    def test_registry(self):
+        backend = self.tq.backend()
+        self.assertTrue(isinstance(backend.registry, dict))
+        regular = backend.registry.regular()
+        periodic = backend.registry.periodic()
+        self.assertTrue(regular)
+        self.assertTrue(periodic)
+
+    def test_producer(self):
+        backend = self.tq.backend()
+        self.assertFalse(backend.queue)
+        self.assertTrue(str(backend).startswith('task producer <'))
+
+class d:
     #    RPC TESTS
     def test_check_next_run(self):
         app = self.tq

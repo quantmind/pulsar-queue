@@ -20,4 +20,4 @@ task_paths = ['sampletasks.*']
 
 
 if __name__ == '__main__':  # pragma    nocover
-    PulsarQueue('taskqueue', config='manage.py').start()
+    PulsarQueue('taskqueue', wsgi=True, config='manage.py').start()

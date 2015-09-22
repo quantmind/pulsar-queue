@@ -67,6 +67,7 @@ from pulsar.utils.importer import import_modules
 __all__ = ['Job',
            'PeriodicJob',
            'anchorDate',
+           'JobRegistry',
            'ASYNC_IO',
            'GREEN_IO',
            'THREAD_IO',
@@ -83,12 +84,12 @@ class JobRegistry(dict):
     """Site registry for tasks."""
 
     def regular(self):
-        """A generator of all regular jobs."""
-        return self.filter_types("regular")
+        """A tuple containing of all regular jobs."""
+        return tuple(self.filter_types("regular"))
 
     def periodic(self):
-        """A generator of all periodic jobs."""
-        return self.filter_types("periodic")
+        """A tuple containing all periodic jobs."""
+        return tuple(self.filter_types("periodic"))
 
     def register(self, job):
         """Register a job in the job registry.
@@ -109,7 +110,7 @@ class JobRegistry(dict):
     @classmethod
     def load(cls, paths):
         self = cls()
-        for mod in import_modules(paths):
+        for mod in import_modules(paths, safe=False):
             for name in dir(mod):
                 self.register(getattr(mod, name))
         return self

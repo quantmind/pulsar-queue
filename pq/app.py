@@ -18,7 +18,7 @@ class PulsarQueue(MultiApp):
         yield self.new_app(TaskQueue,
                            callable=self.cfg.params.get('queue_callable'))
 
-        wsgi = self.cfg.params.get('wsgi_callable')
+        wsgi = self.cfg.params.get('wsgi')
         if wsgi:
             if wsgi is True:
                 wsgi = Rpc

@@ -26,9 +26,26 @@ def requirements():
     return result
 
 
+def md2rst(filename):
+    argv = sys.argv
+    try:
+        import pypandoc
+    except ImportError:
+        if len(argv) > 1 and argv[1] == 'sdist':
+            print('pypandoc is required for creating a distribution')
+            exit(1)
+        pypandoc = None
+
+    if pypandoc:
+        return pypandoc.convert(filename, 'rst')
+    else:
+        return read(filename)
+
+
 def run(argv=None):
     if argv:
         sys.argv = list(argv)
+
     setup(name=package_name,
           zip_safe=False,
           version=mod.__version__,
@@ -37,7 +54,7 @@ def run(argv=None):
           url=mod.__homepage__,
           license='BSD',
           description=mod.__doc__,
-          long_description=read('README.rst'),
+          long_description=md2rst('README.md'),
           packages=find_packages(exclude=('tests', 'tests.*')),
           install_requires=requirements(),
           classifiers=['Development Status :: 2 - Pre-Alpha',

@@ -126,12 +126,12 @@ class Task:
 
         Its status is one of :ref:`READY_STATES <task-ready-state>`.
         '''
-        return self.get('status') in states.READY_STATES
+        return self.status in states.READY_STATES
 
     def status_string(self):
         '''A string representation of :attr:`status` code
         '''
-        return states.status_string(self.get('status'))
+        return states.status_string(self.status)
 
     def info(self):
         return 'task.%s(%s)' % (self.name, self.id)

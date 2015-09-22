@@ -64,8 +64,19 @@ from pulsar.utils.slugify import slugify
 from pulsar.utils.importer import import_modules
 
 
-__all__ = ['JobMetaClass', 'Job', 'PeriodicJob',
-           'anchorDate', 'JobRegistry']
+__all__ = ['Job',
+           'PeriodicJob',
+           'anchorDate',
+           'ASYNC_IO',
+           'GREEN_IO',
+           'THREAD_IO',
+           'CPUBOUND']
+
+
+ASYNC_IO = 1    # tasks run in the worker event loop
+GREEN_IO = 2    # tasks run in the worker event loop on a child greenlet
+THREAD_IO = 3   # tasks run in the event loop executor
+CPUBOUND = 4    # tasks run in a subprocess
 
 
 class JobRegistry(dict):
@@ -119,52 +130,57 @@ class JobMetaClass(type):
 class Job(metaclass=JobMetaClass):
     '''The Job class which is used in a distributed task queue.
 
-.. attribute:: name
+    .. attribute:: name
 
-    The unique name which defines the Job and which can be used to retrieve
-    it from the job registry. This attribute is set to the Job class name
-    in lower case by default, unless a ``name`` class attribute is defined.
+        The unique name which defines the Job and which can be used to retrieve
+        it from the job registry. This attribute is set to the Job class name
+        in lower case by default, unless a ``name`` class attribute is defined.
 
-.. attribute:: abstract
+    .. attribute:: abstract
 
-    If set to ``True`` (default is ``False``), the :class:`.Job` won't be
-    registered with the :class:`.JobRegistry`. Useful when creating a new
-    base class for several other jobs.
+        If set to ``True`` (default is ``False``), the :class:`.Job` won't be
+        registered with the :class:`.JobRegistry`. Useful when creating a new
+        base class for several other jobs.
 
-.. attribute:: type
+    .. attribute:: type
 
-    Type of Job, one of ``regular`` and ``periodic``.
+        Type of Job, one of ``regular`` and ``periodic``.
 
-.. attribute:: timeout
+    .. attribute:: concurrency
 
-    An instance of a datetime.timedelta or ``None``. If set, it represents the
-    time lag after which a task which did not start expires.
+        Concurrency type can be either: ASYNC_IO, GREEN_IO, THREAD_IO
+        or CPUBOUND.
+        Tasks of the first two concurrency types are run concurrently in
+        the event loop of workers, THREAD_IO tasks run in the evnt loop
+        executor while the last one is associated with CPU-bound tasks and
+        a run in subprocess.
 
-    Default: ``None``.
+        Default: ``CPUBOUND``
 
-.. attribute:: can_overlap
+    .. attribute:: timeout
 
-    Boolean indicating if this job can generate overlapping tasks. It can
-    also be a callable which accept the same input parameters as the job
-    callable function.
+        An instance of a datetime.timedelta or ``None``.
+        If set, it represents the time lag after which a task which
+        did not start expires.
 
-    Default: ``True``.
+        Default: ``None``.
 
-.. attribute:: doc_syntax
+    .. attribute:: doc_syntax
 
-    The doc string syntax.
+        The doc string syntax.
 
-    Default: ``markdown``
+        Default: ``markdown``
 
-.. attribute:: logger
+    .. attribute:: logger
 
-    an instance of a logger. Created at runtime.
-'''
+        an instance of a logger. Created at runtime.
+    '''
     abstract = True
     timeout = None
     expires = None
     doc_syntax = 'markdown'
     can_overlap = True
+    concurrency = THREAD_IO
 
     def __call__(self, consumer, **kwargs):
         raise NotImplementedError("Jobs must implement the __call__ method.")

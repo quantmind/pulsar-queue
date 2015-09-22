@@ -1,13 +1,12 @@
 import json
 import time
-import asyncio
 
 from pulsar import EventHandler, ImproperlyConfigured, PulsarException
 from pulsar.apps.data import create_store
 from pulsar.utils.log import LazyString
 from pulsar.utils.string import gen_unique_id, to_string
 
-from .pubsub import PubSubMixin
+from .pubsub import PubSubImpl
 from .models import RegistryMixin
 from .utils import get_time
 from . import states
@@ -106,7 +105,7 @@ class Task:
         return '%s_%s' % (self.queue, name)
 
 
-class TaskProducer(EventHandler, PubSubMixin, RegistryMixin):
+class TaskProducer(EventHandler, PubSubImpl, RegistryMixin):
     """Produce tasks by queuing them
     """
     MANY_TIMES_EVENTS = ('task_queued', 'task_started', 'task_done')
@@ -117,7 +116,6 @@ class TaskProducer(EventHandler, PubSubMixin, RegistryMixin):
         self.cfg = cfg
         self._logger = logger
         self._queue = queue
-        self._callbacks = {}
         self._pubsub = self._get_pubsub()
         self._closing = False
         self.logger.debug('created %s', self)
@@ -191,25 +189,6 @@ class TaskProducer(EventHandler, PubSubMixin, RegistryMixin):
                         kwargs=kwargs,
                         status=states.QUEUED,
                         **meta_params)
-            callback = asyncio.Future(loop=self._loop)
-            self._callbacks[task_id] = callback
-            asyncio.async(self._queue_task(task), loop=self._loop)
-            return callback
+            return self._async_task(task)
         else:
             raise TaskNotAvailable(jobname)
-
-    def _queue_task(self, task):
-        '''Asynchronously queue a task
-        '''
-        stask = self._serialise(task)
-        yield from self.store.client().lpush(task.queue, stask)
-        yield from self._publish('queued', task)
-        scheduled = self.entries.get(task.name)
-        if scheduled:
-            scheduled.next()
-        self.logger.debug('queued %s in "%s"', task.lazy_info(), task.queue)
-
-    def _task_done_callback(self, task, exc=None):
-        done = self._callbacks.pop(task.id, None)
-        if done:
-            done.set_result(task)

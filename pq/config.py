@@ -1,5 +1,3 @@
-import time
-
 import pulsar
 from pulsar import command
 from pulsar.utils.config import section_docs
@@ -8,7 +6,6 @@ from pulsar.apps.ds import DEFAULT_PULSAR_STORE_ADDRESS
 from .consumer import ConsumerMixin
 from .scheduler import SchedulerMixin
 from .producer import TaskProducer
-from pulsar.utils.log import lazyproperty
 
 
 DEFAULT_TASK_BACKEND = 'pulsar://%s/1' % DEFAULT_PULSAR_STORE_ADDRESS
@@ -24,6 +21,21 @@ class TaskSetting(pulsar.Setting):
     virtual = True
     app = 'tasks'
     section = "Task Consumer"
+
+
+class BroadCastPrefix(TaskSetting):
+    name = "task_broadcast_prefix"
+    flags = ["--task-broadcast-prefix"]
+    default = 'pq'
+    desc = """\
+        Prefix for all broadcast channels
+
+        Messages emitted in these channels by the application will be:
+
+        <prefix>_task_queued
+        <prefix>_task_started
+        <prefix>_task_finished
+        """
 
 
 class ConcurrentTasks(TaskSetting):
@@ -56,7 +68,7 @@ class TaskQueues(TaskSetting):
     default = {}
     validator = pulsar.validate_dict
     desc = """\
-        Advance configurator for task queues
+        Advanced configurator for task queues
 
         A dictionary matching task queues with
         """
@@ -104,77 +116,6 @@ class TaskScheduler(TaskProducer, SchedulerMixin):
 
 class TaskConsumer(TaskProducer, ConsumerMixin):
     pass
-
-
-class TaskQueue(pulsar.Application):
-    '''A pulsar :class:`.Application` for consuming :class:`.Task`.
-
-    This application can also schedule periodic tasks when the
-    :ref:`schedule_periodic <setting-schedule_periodic>` flag is ``True``.
-    '''
-    backend = None
-    '''The :class:`.TaskBackend` for this task queue.
-
-    Available once the :class:`.TaskQueue` has started.
-    '''
-    name = 'tasks'
-    cfg = pulsar.Config(apps=('tasks',),
-                        data_store=DEFAULT_TASK_BACKEND,
-                        timeout=600)
-
-    @lazyproperty
-    def backend(self):
-        queue = self.cfg.params.get('task_queue')
-        if queue:
-            return TaskConsumer(self.cfg, queue=queue, logger=self.logger)
-        else:
-            return TaskScheduler(self.cfg, logger=self.logger)
-
-    def monitor_start(self, monitor, exc=None):
-        '''Starts running the task queue in ``monitor``.
-
-        It calls the :attr:`.Application.callable` (if available)
-        and create the :attr:`~.TaskQueue.backend`.
-        '''
-        if self.cfg.callable:
-            self.cfg.callable()
-        assert not self.backend.queue
-
-    def monitor_task(self, monitor):
-        '''Override the :meth:`~.Application.monitor_task` callback.
-
-        Check if the :attr:`~.TaskQueue.backend` needs to schedule new tasks.
-        '''
-        if monitor.is_running():
-            if self.backend.next_run <= time.time():
-                self.backend.tick()
-
-    def monitor_stopping(self, monitor, exc=None):
-        return self.backend.close()
-
-    def worker_start(self, worker, exc=None):
-        if not exc and not worker.is_monitor():
-            self.backend.start(worker)
-
-    def worker_stopping(self, worker, exc=None):
-        self.backend.close()
-
-    def actorparams(self, monitor, params):
-        # makes sure workers are only consuming tasks, not scheduling.
-        cfg = params['cfg']
-        cfg.set('schedule_periodic', False)
-        cfg.update(self.choose_queue(monitor))
-
-    def worker_info(self, worker, info=None):
-        info['tasks'] = self.backend.info()
-
-    def choose_queue(self, monitor):
-        queues = self.cfg.task_queues
-        if not queues:
-            return {'task_queue': self.cfg.default_task_queue,
-                    'concurrent_tasks': self.cfg.concurrent_tasks}
-        else:
-            raise NotImplementedError
 
 
 @command()

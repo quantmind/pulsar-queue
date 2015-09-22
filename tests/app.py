@@ -1,5 +1,6 @@
 '''Tests the taskqueue local backend.'''
 import unittest
+import asyncio
 from random import random
 
 from pulsar import send, multi_async
@@ -55,6 +56,7 @@ class TaskQueueBase(object):
                          concurrency=cls.concurrency,
                          rpc_concurrency=cls.concurrency,
                          rpc_keep_alive=cls.rpc_timeout,
+                         default_task_queue=cls.name(),
                          task_paths=['tests.example.sampletasks.*'])
         cfgs = yield from pq.start()
         cls.tq = cfgs[0].app()
@@ -86,6 +88,22 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         backend = self.tq.backend
         self.assertFalse(backend.queue)
         self.assertTrue(str(backend).startswith('task producer <'))
+        self.assertEqual(self.tq.cfg.default_task_queue, self.name())
+
+    def test_job_list(self):
+        jobs = self.tq.backend.job_list()
+        self.assertTrue(jobs)
+        self.assertTrue(isinstance(jobs, list))
+        d = dict(jobs)
+        pycode = d['runpycode']
+        self.assertEqual(pycode['type'], 'regular')
+
+    # Test jobs from the app
+    def test_async_job(self):
+        result = self.tq.queue_task('asynchronous')
+        self.assertIsInstance(result, asyncio.Future)
+        result = yield from result
+        self.assertTrue(result)
 
 class d:
     #    RPC TESTS
@@ -173,14 +191,6 @@ class d:
         root = router.post
         tq = root.taskqueue
         self.assertEqual(tq, self.name())
-
-    def test_registry(self):
-        app = self.tq
-        self.assertTrue(isinstance(app.backend.registry, dict))
-        regular = app.backend.registry.regular()
-        periodic = app.backend.registry.periodic()
-        self.assertTrue(regular)
-        self.assertTrue(periodic)
 
     def test_run_new_simple_task(self):
         r = yield self.proxy.queue_task(jobname='addition', a=40, b=50)

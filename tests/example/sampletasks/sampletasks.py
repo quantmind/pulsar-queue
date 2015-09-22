@@ -30,7 +30,7 @@ class Asynchronous(pq.Job):
 
     def __call__(self, consumer, lag=1):
         start = time.time()
-        yield asyncio.sleep(lag)
+        yield from asyncio.sleep(lag)
         return time.time() - start
 
 

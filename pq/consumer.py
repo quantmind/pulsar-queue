@@ -32,7 +32,7 @@ class TaskContext(object):
 
 
 class ConsumerMixin:
-    """A backend class for running :class:`.Task`.
+    """A mixin for consuming tasks from a distributed task queue.
     """
     queue = None
 
@@ -199,24 +199,3 @@ class ConsumerMixin:
 
         else:
             raise ImproperlyConfigured('invalid concurrency')
-
-    def _serialise(self, task):
-        return task.serialise(self.cfg.params.get('TASK_SERIALISATION'))
-
-    def _task_done_callback(self, task, exc=None):
-        done = self.callbacks.pop(task.id, None)
-        if done:
-            done.set_result(task)
-        else:
-            self.logger.error('Could not find callback for %s',
-                              task.lazy_info())
-
-    def _publish(self, name, task):
-        channel = task.channel('task_%s' % name)
-        stask = self._serialise(task)
-        return self._pubsub.publish(channel, stask)
-
-    def __call__(self, channel, message):
-        # PubSub callback
-        name = self.event_name(channel)
-        self.fire_event(name, message)

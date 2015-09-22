@@ -1,9 +1,10 @@
 .DS_Store
 *.log
 
-#eclipse
+# IDE
 .project
 .pydevproject
+.idea
 
 #coverage
 .coveralls-repo-token

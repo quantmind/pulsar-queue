@@ -3,8 +3,8 @@ import time
 import pulsar
 from pulsar import command
 from pulsar.utils.config import section_docs
-from pulsar.apps.data import create_store
 from pulsar.apps.ds import DEFAULT_PULSAR_STORE_ADDRESS
+from pulsar.utils.log import lazymethod
 
 from .tasks import TaskBackend
 
@@ -37,6 +37,36 @@ class ConcurrentTasks(TaskSetting):
         until one or more task finish. It should only affect task queues under
         significant load.
         Must be a positive integer. Generally set in the range of 5-10.
+        """
+
+
+class DefaultQueue(TaskSetting):
+    name = "default_task_queue"
+    flags = ["--default-task-queue"]
+    default = 'pulsarqueue'
+    desc = """\
+        Default queue name when not specified by the Job class
+        """
+
+
+class TaskQueues(TaskSetting):
+    name = 'task_queues'
+    default = {}
+    validator = pulsar.validate_dict
+    desc = """\
+        Advance configurator for task queues
+
+        A dictionary matching task queues with
+        """
+
+
+class TaskPoolTimeout(TaskSetting):
+    name = "task_pool_timeout"
+    flags = ["--task-pool-timeout"]
+    default = 2
+    type = int
+    desc = """\
+        Timeout for asynchronously poolling tasks from the queues
         """
 
 
@@ -82,6 +112,11 @@ class TaskQueue(pulsar.Application):
                         data_store=DEFAULT_TASK_BACKEND,
                         timeout=600)
 
+    @lazymethod
+    def backend(self):
+        queue = self.cfg.params.get('task_queue')
+        return TaskBackend(self.cfg, queue=queue, logger=self.logger)
+
     def monitor_start(self, monitor, exc=None):
         '''Starts running the task queue in ``monitor``.
 
@@ -90,53 +125,45 @@ class TaskQueue(pulsar.Application):
         '''
         if self.cfg.callable:
             self.cfg.callable()
-        self.get_backend()
+        self.backend()
 
     def monitor_task(self, monitor):
         '''Override the :meth:`~.Application.monitor_task` callback.
 
         Check if the :attr:`~.TaskQueue.backend` needs to schedule new tasks.
         '''
-        if self.backend and monitor.is_running():
-            if self.backend.next_run <= time.time():
-                self.backend.tick()
+        if monitor.is_running():
+            backend = self.backend()
+            if backend.next_run <= time.time():
+                backend.tick()
 
     def monitor_stopping(self, monitor, exc=None):
-        if self.backend:
-            self.backend.close()
+        return self.backend().close()
 
     def worker_start(self, worker, exc=None):
         if not exc:
-            self.get_backend().start(worker)
+            self.backend().start(worker)
 
     def worker_stopping(self, worker, exc=None):
-        if self.backend:
-            return self.backend.close()
+        self.backend().close()
 
     def actorparams(self, monitor, params):
         # makes sure workers are only consuming tasks, not scheduling.
         cfg = params['cfg']
         cfg.set('schedule_periodic', False)
+        cfg.update(self.choose_queue(monitor))
 
     def worker_info(self, worker, info=None):
-        be = self.backend
-        if be:
-            tasks = {'concurrent': list(be.concurrent_tasks),
-                     'processed': be.processed}
-            info['tasks'] = tasks
+        backend = self.backend()
+        info['tasks'] = backend.info()
 
-    def get_backend(self):
-        if self.backend is None:
-            self.backend = TaskBackend(
-                create_store(self.cfg.data_store),
-                logger=self.logger,
-                name=self.name,
-                task_paths=self.cfg.task_paths,
-                schedule_periodic=self.cfg.schedule_periodic,
-                max_tasks=self.cfg.max_requests,
-                backlog=self.cfg.concurrent_tasks)
-            self.logger.debug('created %s', self.backend)
-        return self.backend
+    def choose_queue(self, monitor):
+        queues = self.cfg.task_queues
+        if not queues:
+            return {'task_queue': self.cfg.default_task_queue,
+                    'concurrent_tasks': self.cfg.concurrent_tasks}
+        else:
+            raise NotImplementedError
 
 
 @command()

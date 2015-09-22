@@ -1,6 +1,4 @@
-=================
-Pulsar Queue
-=================
+# Pulsar Queue
 
 To get started, follow these guidelines:
 
@@ -9,11 +7,10 @@ To get started, follow these guidelines:
   can be a directory containing several submodules.
 * Run your script, sit back and relax.
 
-Configuration
-=================
+## Configuration
 
-A :class:`TaskQueue` accepts several configuration parameters on top of the
-standard :ref:`application settings <settings>`:
+A `TaskQueue` accepts several configuration parameters on top of the
+standard application settings:
 
 .. _app-tasks_path:
 

@@ -16,6 +16,8 @@ Open a new shell and launch python and type::
 from pq import PulsarQueue
 
 
+task_paths = ['sampletasks.*']
+
+
 if __name__ == '__main__':  # pragma    nocover
-    PulsarQueue('taskqueue',
-                task_paths=['sampletasks.*']).start()
+    PulsarQueue('taskqueue', config='manage.py').start()

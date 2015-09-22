@@ -56,7 +56,7 @@ class TaskQueueBase(object):
                          rpc_concurrency=cls.concurrency,
                          rpc_keep_alive=cls.rpc_timeout,
                          schedule_periodic=cls.schedule_periodic,
-                         task_paths=['sampletasks.*'])
+                         task_paths=['tests.example.sampletasks.*'])
         cfgs = yield from pq.start()
         cls.tq = cfgs[0].app()
         cls.rpc = cfgs[1].app()

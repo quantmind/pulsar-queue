@@ -19,8 +19,9 @@ class PulsarQueue(MultiApp):
                            callable=self.cfg.params.get('queue_callable'))
 
         wsgi = self.cfg.params.get('wsgi_callable')
-        if wsgi is not False:
-            wsgi = wsgi or Rpc
+        if wsgi:
+            if wsgi is True:
+                wsgi = Rpc
             yield self.new_app(WSGIServer,
                                prefix='rpc',
                                callable=wsgi(self.name))

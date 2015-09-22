@@ -7,6 +7,7 @@ from pulsar import (async, EventHandler, PulsarException, is_async,
                     ImproperlyConfigured, CANCELLED_ERRORS)
 from pulsar.utils.string import gen_unique_id, to_string
 from pulsar.utils.log import lazyproperty, LazyString
+from pulsar.apps.data import create_store
 
 from .models import JobRegistry
 from . import states
@@ -97,9 +98,11 @@ class Task:
     result = None
 
     def __init__(self, id=None, name=None, time_queued=None,
-                 expiry=None, status=None, kwargs=None, **kw):
+                 expiry=None, status=None, kwargs=None, queue=None,
+                 **kw):
         self.id = id
         self.name = name
+        self.queue = queue
         self.time_queued = time_queued
         self.expiry = expiry
         self.status = status
@@ -139,92 +142,42 @@ class Task:
     def lazy_info(self):
         return LazyString(self.info)
 
+    def channel(self, name):
+        '''Given an event ``name`` returns the corresponding channel name.
+
+        The event ``name`` is one of ``task_queued``, ``task_started``
+        or ``task_done``
+        '''
+        assert self.queue
+        return '%s_%s' % (self.queue, name)
+
 
 class TaskBackend(EventHandler):
-    '''A backend class for running :class:`.Task`.
-    A :class:`TaskBackend` is responsible for creating tasks and put them
-    into the distributed queue.
-    It also schedules the run of periodic tasks if enabled to do so.
+    """A backend class for running :class:`.Task`.
+    """
+    MANY_TIMES_EVENTS = ('task_queued', 'task_started', 'task_done')
 
-    .. attribute:: task_paths
-
-        List of paths where to upload :ref:`jobs <app-taskqueue-job>` which
-        are factory of tasks. Passed by the task-queue application
-        :ref:`task paths setting <setting-task_paths>`.
-
-    .. attribute:: schedule_periodic
-
-        ``True`` if this :class:`TaskBackend` can schedule periodic tasks.
-
-        Passed by the task-queue application
-        :ref:`schedule-periodic setting <setting-schedule_periodic>`.
-
-    .. attribute:: backlog
-
-        The maximum number of concurrent tasks running on a task-queue
-        for an :class:`.Actor`. A number in the order of 5 to 10 is normally
-        used. Passed by the task-queue application
-        :ref:`concurrent tasks setting <setting-concurrent_tasks>`.
-
-    .. attribute:: max_tasks
-
-        The maximum number of tasks a worker will process before restarting.
-        Passed by the task-queue application
-        :ref:`max requests setting <setting-max_requests>`.
-
-    .. attribute:: poll_timeout
-
-        The (asynchronous) timeout for polling tasks from the task queue.
-
-        It is always a positive number and it can be specified via the
-        backend connection string::
-
-            local://?poll_timeout=3
-
-        There shouldn't be any reason to modify the default value.
-
-        Default: ``2``.
-
-    .. attribute:: processed
-
-        The number of tasks processed (so far) by the worker running this
-        backend.
-        This value is important in connection with the :attr:`max_tasks`
-        attribute.
-
-    '''
-    task_poller = None
-
-    def __init__(self, store,
-                 logger=None,
-                 task_paths=None,
-                 schedule_periodic=False,
-                 backlog=1,
-                 max_tasks=0, name=None,
-                 poll_timeout=None):
-        super(TaskBackend, self).__init__(store._loop,
-                                          many_times_events=('task_queued',
-                                                             'task_started',
-                                                             'task_done'))
-        self.store = store
-        self.name = name
-        self.task_paths = task_paths
-        self.backlog = backlog
-        self.max_tasks = max_tasks
-        self.poll_timeout = max(poll_timeout or 0, 2)
+    def __init__(self, cfg, queue=None, logger=None):
+        self.store = create_store(cfg.data_store)
+        super().__init__(self.store._loop)
+        self.cfg = cfg
+        self._logger = logger
+        self.queue = queue
         self.concurrent_tasks = set()
         self.processed = 0
-        self.schedule_periodic = schedule_periodic
         self.next_run = time.time()
-        self._logger = logger
         self._callbacks = {}
-        self._pubsub = self.get_pubsub()
+        self._pubsub = self._get_pubsub()
+        self._closing = False
+        self.logger.debug('created %s', self)
 
     def __repr__(self):
-        if self.schedule_periodic:
-            return 'task scheduler %s' % self.store.dns
+        if self.cfg.schedule_periodic:
+            return 'task scheduler <%s>' % self.store.dns
+        elif self.queue:
+            return 'task consumer %s<%s>' % (self.queue, self.store.dns)
         else:
-            return 'task consumer %s' % self.store.dns
+            return 'task producer <%s>' % self.store.dns
     __str__ = __repr__
 
     @property
@@ -243,15 +196,16 @@ class TaskBackend(EventHandler):
     def registry(self):
         '''The :class:`.JobRegistry` for this backend.
         '''
-        return JobRegistry.load(self.task_paths)
+        return JobRegistry.load(self.cfg.task_paths)
 
-    def channel(self, name):
-        '''Given an event ``name`` returns the corresponding channel name.
+    @property
+    def max_tasks(self):
+        return self.cfg.max_requests
 
-        The event ``name`` is one of ``task_queued``, ``task_started``
-        or ``task_done``
-        '''
-        return '%s_%s' % (self.name, name)
+    def info(self):
+        return {'concurrent': list(self.concurrent_tasks),
+                'processed': self.processed,
+                'queue': self.queue}
 
     def event_name(self, channel):
         return channel[len(self.name)+1:]
@@ -271,8 +225,12 @@ class TaskBackend(EventHandler):
             expiry of a task.
         :param kwargs: optional dictionary used for the key-valued arguments
             in the task callable.
-        :return: a :class:`.Future` resulting in a task once finished
+        :return: a :class:`.Future` resulting in a task once finished or
+            Nothing
         '''
+        if self._closing:
+            self.logger.warning('Cannot queue task, task backend closing')
+            return
         if jobname in self.registry:
             job = self.registry[jobname]
             task_id = gen_unique_id()
@@ -284,6 +242,7 @@ class TaskBackend(EventHandler):
             meta_params = meta_params or {}
             task = Task(task_id,
                         name=job.name,
+                        queue=job.queue or self.cfg.default_task_queue,
                         time_queued=queued,
                         expiry=expiry,
                         kwargs=kwargs,
@@ -296,60 +255,24 @@ class TaskBackend(EventHandler):
         else:
             raise TaskNotAvailable(jobname)
 
-    def get_pubsub(self):
-        '''Create a publish/subscribe handler from the backend :attr:`store`.
-        '''
-        pubsub = self.store.pubsub()
-        pubsub.add_client(self)
-        # pubsub channels names from event names
-        channels = tuple((self.channel(name) for name in self.events))
-        pubsub.subscribe(*channels)
-        self.bind_event('task_done', self._task_done_callback)
-        return pubsub
-
     def flush(self):
         '''Remove all queued :class:`.Task`
         '''
         return self.store.flush()
 
-    # #######################################################################
-    # #    START/CLOSE METHODS FOR TASK WORKERS
-    # #######################################################################
     def start(self, worker):
         '''Invoked by the task queue ``worker`` when it starts.
         '''
         self.may_pool_task(worker)
-        self.logger.debug('started polling tasks')
+        self.logger.debug('%s started polling tasks', self)
 
     def close(self):
-        '''Close this :class:`TaskBackend`.
+        '''Close this :class:`.TaskBackend`.
 
         Invoked by the :class:`.Actor` when stopping.
         '''
-        task = self.task_poller
-        if task:
-            task.cancel()
-            self.task_poller = None
-        self._pubsub.close()
-        return task
-
-    # #######################################################################
-    # #    PRIVATE METHODS
-    # #######################################################################
-    def tick(self, now=None):
-        # Run a tick, that is one iteration of the scheduler.
-        if not self.schedule_periodic:
-            return
-        remaining_times = []
-        for entry in self.entries.values():
-            is_due, next_time_to_run = entry.is_due(now=now)
-            if is_due:
-                async(self.queue_task(entry.name))
-            if next_time_to_run:
-                remaining_times.append(next_time_to_run)
-        self.next_run = now or time.time()
-        if remaining_times:
-            self.next_run += min(remaining_times)
+        if not self._closing:
+            self._closing = 'closing'
 
     def job_list(self, jobnames=None):
         registry = self.registry
@@ -376,8 +299,26 @@ class TaskBackend(EventHandler):
             all.append((name, d))
         return all
 
+    # #######################################################################
+    # #    PRIVATE METHODS
+    # #######################################################################
+    def tick(self, now=None):
+        # Run a tick, that is one iteration of the scheduler.
+        if self._closing or not self.cfg.schedule_periodic:
+            return
+        remaining_times = []
+        for entry in self.entries.values():
+            is_due, next_time_to_run = entry.is_due(now=now)
+            if is_due:
+                async(self.queue_task(entry.name))
+            if next_time_to_run:
+                remaining_times.append(next_time_to_run)
+        self.next_run = now or time.time()
+        if remaining_times:
+            self.next_run += min(remaining_times)
+
     def next_scheduled(self, jobnames=None):
-        if not self.schedule_periodic:
+        if not self.cfg.schedule_periodic:
             return
         if jobnames:
             entries = (self.entries.get(name, None) for name in jobnames)
@@ -402,22 +343,37 @@ class TaskBackend(EventHandler):
         else:
             return (jobnames, None)
 
-    def may_pool_task(self, worker):
-        assert self.task_poller is None
-        if worker.is_running():
-            self.task_poller = async(self._may_pool_task(worker))
+    def may_pool_task(self, worker, next_time=None):
+        assert self.queue, 'Task queue not specified, cannot pull tasks'
+        if self._closing:
+            if not self.num_concurrent_tasks:
+                self.logger.warning(self._closing)
+                worker._loop.stop()
         else:
-            worker._loop.call_soon(self.may_pool_task, worker)
+            if worker.is_running() and not next_time:
+                async(self._may_pool_task(worker), loop=worker._loop)
+            else:
+                next_time = next_time or 0
+                worker._loop.call_later(next_time, self.may_pool_task, worker)
 
     # INTERNALS
-    def _queue_task(self, task):
-        '''Asynchronously wait for a task with ``task_id`` to have finished
-        its execution.
+    def _get_pubsub(self):
+        '''Create a publish/subscribe handler from the backend :attr:`store`.
         '''
-        queue_name = self.channel('inqueue')
+        pubsub = self.store.pubsub()
+        pubsub.add_client(self)
+        # pubsub channels names from event names
+        # channels = tuple((self.channel(name) for name in self.events))
+        # pubsub.subscribe(*channels)
+        self.bind_event('task_done', self._task_done_callback)
+        return pubsub
+
+    def _queue_task(self, task):
+        '''Asynchronously queue a task
+        '''
         stask = self._serialise(task)
-        yield from self.store.client().lpush(queue_name, stask)
-        yield from self._publish('queued', stask)
+        yield from self.store.client().lpush(task.queue, stask)
+        yield from self._publish('queued', task)
         scheduled = self.entries.get(task.name)
         if scheduled:
             scheduled.next()
@@ -428,16 +384,15 @@ class TaskBackend(EventHandler):
         #
         # It pools a new task if possible, and add it to the queue of
         # tasks consumed by the ``worker`` CPU-bound thread.'''
-        next_time = 0
+        next_time = None
         if worker.is_running():
             # executor = worker.executor()
-            if self.num_concurrent_tasks < self.backlog:
+            if self.num_concurrent_tasks < self.cfg.concurrent_tasks:
                 if self.max_tasks and self.processed >= self.max_tasks:
-                    if not self.num_concurrent_tasks:
-                        self.logger.warning('Processed %s tasks. Restarting.',
-                                            self.processed)
-                        worker._loop.stop()
-                else:
+                    self._closing = ('Processed %s tasks. Restarting.'
+                                     % self.processed)
+
+                if not self._closing:
                     try:
                         task = yield from self._get_task()
                     except ConnectionRefusedError:
@@ -456,18 +411,17 @@ class TaskBackend(EventHandler):
                 self.logger.debug('%s concurrent requests. Cannot poll.',
                                   self.num_concurrent_tasks)
                 next_time = 1
-        self.task_poller = None
-        worker._loop.call_later(next_time, self.may_pool_task, worker)
+        self.may_pool_task(worker, next_time)
 
     def _get_task(self):
-        '''Asynchronously retrieve a :class:`Task` from a ``task_id``.
+        '''Asynchronously retrieve a :class:`Task` from  the :attr:`queue`
 
-        :param task_id: the ``id`` of the task to retrieve.
-        :return: a :class:`Task` or ``None``.
+        :return: a :class:`.Task` or ``None``.
         '''
-        inq = self.channel('inqueue')
         client = self.store.client()
-        stask = yield from client.execute('brpop', inq, self.poll_timeout)
+        stask = yield from client.execute('brpop',
+                                          self.queue,
+                                          self.cfg.task_pool_timeout)
         if stask:
             return Task.load(stask, self.cfg.params.get('TASK_SERIALISATION'))
 
@@ -523,7 +477,7 @@ class TaskBackend(EventHandler):
 
     def _setup_schedule(self):
         entries = {}
-        if not self.schedule_periodic:
+        if not self.cfg.schedule_periodic:
             return entries
         for name, t in self.registry.filter_types('periodic'):
             every = t.run_every
@@ -543,10 +497,9 @@ class TaskBackend(EventHandler):
                               task.lazy_info())
 
     def _publish(self, name, task):
-        channel = self.channel('task_%s' % name)
-        if isinstance(task, Task):
-            task = self._serialise(task)
-        return self._pubsub.publish(channel, task)
+        channel = task.channel('task_%s' % name)
+        stask = self._serialise(task)
+        return self._pubsub.publish(channel, stask)
 
     def __call__(self, channel, message):
         # PubSub callback

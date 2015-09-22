@@ -180,6 +180,7 @@ class Job(metaclass=JobMetaClass):
     expires = None
     doc_syntax = 'markdown'
     can_overlap = True
+    queue = None
     concurrency = THREAD_IO
 
     def __call__(self, consumer, **kwargs):

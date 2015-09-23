@@ -1,22 +1,7 @@
+[Index](./index.md) > Task states
+***
 
-
-
-The :class:`TaskBackend` is at the heart of the
-:ref:`task queue application <apps-taskqueue>`. It exposes
-all the functionalities for running new tasks, scheduling periodic tasks
-and retrieving task information. Pulsar ships with two backends, one which uses
-pulsar internals and store tasks in the arbiter domain and another which stores
-tasks in redis_.
-
-The backend is created by the :class:`.TaskQueue`
-as soon as it starts. It is then passed to all task queue workers
-which, in turns, invoke the :class:`TaskBackend.start` method
-to start pulling tasks form the distributed task queue.
-
-.. _task-state:
-
-Task states
-~~~~~~~~~~~~~
+# Task states
 
 A :class:`Task` can have one of the following :attr:`~.Task.status` string:
 

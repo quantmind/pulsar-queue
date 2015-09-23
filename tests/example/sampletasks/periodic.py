@@ -11,19 +11,19 @@ class TestPeriodicJob(pq.PeriodicJob):
 class TestPeriodic(TestPeriodicJob):
     run_every = timedelta(seconds=5)
 
-    def __call__(self, consumer):
+    def __call__(self):
         return 'OK'
 
 
 class TestPeriodicError(TestPeriodicJob):
     run_every = timedelta(seconds=60)
 
-    def __call__(self, consumer):
+    def __call__(self):
         raise Exception('kaputt')
 
 
 class AnchoredEveryHour(TestPeriodicJob):
     anchor = pq.anchorDate(minute=25)
 
-    def __call__(self, consumer):   # pragma    nocover
+    def __call__(self):   # pragma    nocover
         pass

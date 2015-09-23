@@ -69,6 +69,7 @@ __all__ = ['Job',
            'PeriodicJob',
            'anchorDate',
            'JobRegistry',
+           'job',
            'ASYNC_IO',
            'GREEN_IO',
            'THREAD_IO',
@@ -96,7 +97,7 @@ class RegistryMixin:
         for name in jobnames:
             if name not in registry:
                 continue
-            job = registry[name]
+            job = registry[name]()
             d = {'doc': job.__doc__,
                  'doc_syntax': job.doc_syntax,
                  'type': job.type}
@@ -109,11 +110,11 @@ class JobRegistry(dict):
 
     def regular(self):
         """A tuple containing of all regular jobs."""
-        return tuple(self.filter_types("regular"))
+        return tuple(self.filter_types(type="regular"))
 
     def periodic(self):
         """A tuple containing all periodic jobs."""
-        return tuple(self.filter_types("periodic"))
+        return tuple(self.filter_types(type="periodic"))
 
     def register(self, job):
         """Register a job in the job registry.
@@ -124,12 +125,15 @@ class JobRegistry(dict):
         """
         if isinstance(job, JobMetaClass) and job.can_register:
             name = job.name
-            self[name] = job()
+            self[name] = job
 
-    def filter_types(self, type):
+    def filter_types(self, type=None, queue=None):
         """Return a generator of all tasks of a specific type."""
-        return ((job_name, job) for job_name, job in self.items()
-                if job.type == type)
+        for name, jobClass in self.items():
+            job = jobClass()
+            periodic = isinstance(job, PeriodicJob)
+            if type and job.type == type:
+                yield name, jobClass
 
     @classmethod
     def load(cls, paths):
@@ -144,7 +148,7 @@ class JobMetaClass(type):
 
     def __new__(cls, name, bases, attrs):
         attrs['can_register'] = not attrs.pop('abstract', False)
-        job_name = slugify(attrs.get("name", name))
+        job_name = slugify(attrs.get("name", name), '.')
         log_prefix = attrs.get("log_prefix") or "pulsar.queue"
         attrs["name"] = job_name
         logname = '%s.%s' % (log_prefix, job_name)
@@ -208,39 +212,35 @@ class Job(metaclass=JobMetaClass):
     queue = None
     concurrency = THREAD_IO
 
-    def __call__(self, consumer, **kwargs):
+    def __init__(self, backend=None, worker=None, task=None):
+        self.backend = backend
+        self.worker = worker
+        self.task = task
+
+    def __repr__(self):
+        return 'job.%s' % self.task if self.task else self.name
+    __str__ = __repr__
+
+    def __call__(self, **kwargs):
         raise NotImplementedError("Jobs must implement the __call__ method.")
+
+    @property
+    def _loop(self):
+        return self.worker._loop if self.worker else None
 
     @property
     def type(self):
         '''Type of Job, one of ``regular`` and ``periodic``.'''
         return 'regular'
 
-    def queue_task(self, consumer, jobname, meta_params=None, **kwargs):
-        '''Queue a new task in the task queue.
-
-        This utility method can be used from within the
-        :ref:`job callable <job-callable>` method and it allows tasks to act
-        as tasks factories.
-
-        :parameter consumer: the :class:`.TaskConsumer`
-            handling the :class:`.Task`.
-            Must be the same instance as the one passed to the
-            :ref:`job callable <job-callable>` method.
-        :parameter jobname: The name of the :class:`.Job` to run.
-        :parameter kwargs: key-valued parameters for the
-            :ref:`job callable <job-callable>`.
-        :return: a :class:`~asyncio.Future` called back with the task id.
-
-        This method invokes the :meth:`.TaskBackend.queue_task`
-        method with the additional ``from_task`` argument equal to the
-        id of the task invoking the method.
+    def queue_task(self, jobname, meta_params=None, **kw):
+        '''Queue a new task in the task queue
         '''
+        assert self.backend, 'backend not available'
         if meta_params is None:
             meta_params = {}
-        meta_params['from_task'] = consumer.task_id
-        return consumer.backend.queue_task(jobname, meta_params=meta_params,
-                                           **kwargs)
+        meta_params['from_task'] = self.task.id
+        return self.backend.queue_task(jobname, meta_params=meta_params, **kw)
 
 
 class PeriodicJob(Job):
@@ -252,13 +252,6 @@ class PeriodicJob(Job):
     '''
     run_every = None
     '''Periodicity as a :class:`~datetime.timedelta` instance.'''
-
-    def __init__(self, run_every=None):
-        self.run_every = run_every or self.run_every
-        if self.run_every is None:
-            raise NotImplementedError('Periodic Jobs must have a run_every '
-                                      'attribute set, "{0}" does not have one'
-                                      .format(self.name))
 
     @property
     def type(self):
@@ -283,3 +276,20 @@ def anchorDate(hour=0, minute=0, second=0):
     td = date.today()
     return datetime(year=td.year, month=td.month, day=td.day,
                     hour=hour, minute=minute, second=second)
+
+
+class job:
+
+    def __init__(self, name=None, run_every=None, **attrs):
+        assert name, 'task requires a valid name'
+        self.class_name = slugify(name, '_')
+        self.attrs = attrs
+        base = Job
+        if run_every:
+            self.attrs[run_every] = run_every
+            base = PeriodicJob
+        self.bases = (base,)
+
+    def __call__(self, callable):
+        self.attrs['__call__'] = callable
+        return JobMetaClass(self.class_name, self.bases, self.attrs)

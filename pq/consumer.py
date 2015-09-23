@@ -8,29 +8,6 @@ from . import models
 from . import states
 
 
-class TaskContext(object):
-    '''A context manager for consuming a task.
-    '''
-    def __init__(self, backend, worker, task, job):
-        self.logger = worker.logger
-        self.backend = backend
-        self.worker = worker
-        self.job = job
-        self.task = task
-
-    def __repr__(self):
-        return 'consumer.%s' % self.task
-    __str__ = __repr__
-
-    @property
-    def name(self):
-        return self.name
-
-    @property
-    def _loop(self):
-        return self.worker._loop
-
-
 class ConsumerMixin:
     """A mixin for consuming tasks from a distributed task queue.
     """
@@ -120,66 +97,62 @@ class ConsumerMixin:
         self.may_pool_task(worker, next_time)
 
     def _execute_task(self, worker, task):
-        logger = worker.logger
+        logger = self.logger
         task_id = task.id
         time_ended = time.time()
-        job = self.registry.get(task.name)
-        context = TaskContext(self, worker, task, job)
-        task_info = task.lazy_info()
+        JobClass = self.registry.get(task.name)
         try:
-            if not context.job:
-                raise RuntimeError('%s not in registry' % task_info)
+            if not JobClass:
+                raise RuntimeError('%s not in registry' % task.name)
             if task.status > states.STARTED:
                 expiry = task.expiry
                 if expiry and time_ended > expiry:
                     raise TaskTimeout
                 else:
-                    logger.info('starting %s', task_info)
+                    logger.info('starting %s', task.lazy_info())
                     kwargs = task.kwargs or {}
                     task.status = states.STARTED
-                    task.time_started = time_ended,
+                    task.time_started = time_ended
                     task.worker = worker.aid
                     yield from self._pubsub.publish('started', task)
                     # This may block for a while
-
-                    result = yield from self._consume(context, kwargs)
+                    job = JobClass(self, worker, task)
+                    result = yield from self._consume(job, kwargs)
                     if is_async(result):
                         task.result = yield from result
                     else:
                         task.result = result
                     task.status = states.SUCCESS
             else:
-                logger.error('invalid status for %s', task_info)
+                logger.error('invalid status for %s', task.lazy_info())
         except TaskTimeout:
-            logger.warning('%s timed-out', task_info)
+            logger.warning('%s timed-out', task.lazy_info())
             task.result = None
             task.status = states.REVOKED
         except Exception as exc:
-            logger.exception('failure in %s', task_info)
+            logger.exception('failure in %s', task.lazy_info())
             task.result = str(exc)
             task.status = states.FAILURE
         #
         task.time_ended = time.time()
         self.concurrent_tasks.discard(task_id)
         #
-        logger.info('finished %s', task_info)
+        logger.info('finished %s', task.lazy_info())
         yield from self._pubsub.publish('done', task)
 
-    def _consume(self, context, kwargs):
-        job = context.job
+    def _consume(self, job, kwargs):
         concurrency = job.concurrency or models.THREAD_IO
 
         if concurrency == models.ASYNC_IO:
-            result = job(context, **kwargs)
+            result = job(**kwargs)
             assert is_async(result), "ASYNC_IO tasks not asynchronous"
             return result
 
         elif concurrency == models.GREEN_IO:
-            return self._green_pool.submit(job, context, **kwargs)
+            return self._green_pool.submit(job, **kwargs)
 
         elif concurrency == models.THREAD_IO:
-            loop = context._loop
-            return loop.run_in_executor(None, job, context, **kwargs)
+            return job._loop.run_in_executor(None, job, **kwargs)
 
         elif concurrency == models.CPUBOUND:
             return self._consume_in_subprocess()

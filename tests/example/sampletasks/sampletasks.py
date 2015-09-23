@@ -10,7 +10,7 @@ class RunPyCode(pq.Job):
 function defined which accept key-valued parameters only.'''
     timeout = timedelta(seconds=60)
 
-    def __call__(self, consumer, code, **kwargs):
+    def __call__(self, code=None, **kwargs):
         code_local = compile(code, '<string>', 'exec')
         ns = {}
         exec(code_local, ns)
@@ -21,14 +21,14 @@ function defined which accept key-valued parameters only.'''
 class Addition(pq.Job):
     timeout = timedelta(seconds=60)
 
-    def __call__(self, consumer, a=0, b=0):
+    def __call__(self, a=0, b=0):
         return a + b
 
 
 class Asynchronous(pq.Job):
     concurrency = pq.ASYNC_IO
 
-    def __call__(self, consumer, lag=1):
+    def __call__(self, lag=1):
         start = time.time()
         yield from asyncio.sleep(lag)
         return time.time() - start
@@ -36,8 +36,8 @@ class Asynchronous(pq.Job):
 
 class NotOverLap(pq.Job):
 
-    def __call__(self, consumer, lag=1):
-        with consumer.lock():
+    def __call__(self, lag=1):
+        with self.lock():
             start = time.time()
             yield from asyncio.sleep(lag)
             return time.time() - start
@@ -45,6 +45,6 @@ class NotOverLap(pq.Job):
 
 class CheckWorker(pq.Job):
 
-    def __call__(self, consumer):
-        backend = consumer.backend
+    def __call__(self):
+        backend = self.backend
         return {'tasks': list(backend.concurrent_tasks)}

@@ -1,4 +1,6 @@
 
+* [config](./config.md)
+
 # Getting Started
 
 The first step is to create a python module which hosts the task queue application.

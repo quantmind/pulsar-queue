@@ -29,7 +29,7 @@ class TaskTimeout(TaskError):
 
 
 class Task:
-    '''A data :class:`.Model` containing task execution data.
+    '''A class containing task execution data
     '''
     time_started = None
     time_ended = None
@@ -70,6 +70,8 @@ class Task:
         return states.status_string(self.status)
 
     def serialise(self, method=None):
+        '''Serialise this task using the serialisation ``method``
+        '''
         method = method or 'json'
         if method == 'json':
             return json.dumps(self.__dict__)
@@ -84,7 +86,11 @@ class Task:
         return self.status in states.READY_STATES
 
     def info(self):
-        return '%s<%s>' % (self.full_name, self.id)
+        '''Information string about the task
+        '''
+        return '%s<%s><%s>' % (self.full_name, self.id, self.status_string)
 
     def lazy_info(self):
+        '''Lazy information string (useful for logging)
+        '''
         return LazyString(self.info)

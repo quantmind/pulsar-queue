@@ -144,7 +144,7 @@ class ConsumerMixin:
             return self._green_pool.submit(job, **kwargs)
 
         elif concurrency == models.THREAD_IO:
-            return job._loop.run_in_executor(None, lambda : job(**kwargs))
+            return job._loop.run_in_executor(None, lambda: job(**kwargs))
 
         elif concurrency == models.CPUBOUND:
             return self._consume_in_subprocess()

@@ -10,6 +10,7 @@ class PubSub:
         self.cfg = producer.cfg
         self.logger = producer.logger
         self._callbacks = {}
+        self._event_callbacks = []
         self._pubsub = producer.store.pubsub()
         self._client = producer.store.client()
         self._pubsub.add_client(self)
@@ -18,6 +19,13 @@ class PubSub:
     @property
     def _loop(self):
         return self._pubsub._loop
+
+    def on_events(self, callback):
+        self._event_callbacks.append(callback)
+
+    def remove_event_callback(self, callback):
+        if callback in self._event_callbacks:
+            self._event_callbacks.remove(callback)
 
     def queue(self, task):
         # Queue the task in the event loop and return a Future
@@ -61,11 +69,16 @@ class PubSub:
     def __call__(self, channel, message):
         # PubSub callback
         name = channel[len(self._channel()):]
+        task = Task.load(message)
         if name == 'done':
-            task = Task.load(message)
             done = self._callbacks.pop(task.id, None)
             if done:
                 done.set_result(task)
+        for callback in self._event_callbacks:
+            try:
+                callback(event, task)
+            except Exception:
+                self.logger.exception('During %s callbacks', task)
 
     def _queue_task(self, task):
         '''Asynchronously queue a task

@@ -76,10 +76,10 @@ __all__ = ['Job',
            'CPUBOUND']
 
 
-ASYNC_IO = 1    # tasks run in the worker event loop
-GREEN_IO = 2    # tasks run in the worker event loop on a child greenlet
-THREAD_IO = 3   # tasks run in the event loop executor
-CPUBOUND = 4    # tasks run in a subprocess
+ASYNC_IO = 1        # tasks run in the worker event loop
+GREEN_IO = 2        # tasks run in the worker event loop on a child greenlet
+THREAD_IO = 3       # tasks run in the event loop executor
+CPUBOUND = 4        # tasks run in a subprocess
 
 
 class RegistryMixin:

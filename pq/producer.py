@@ -1,4 +1,5 @@
 import time
+import logging
 
 from pulsar.apps.data import create_store
 from pulsar.utils.string import gen_unique_id
@@ -23,7 +24,7 @@ class TaskProducer(RegistryMixin):
     def __init__(self, cfg, queue=None, logger=None):
         self.store = create_store(cfg.data_store)
         self.cfg = cfg
-        self.logger = logger
+        self.logger = logger or logging.getLogger('pulsar.queue')
         self._queue = queue
         self._closing = False
         self._pubsub = PubSub(self)
@@ -55,6 +56,9 @@ class TaskProducer(RegistryMixin):
             for queue in all_queues(self.cfg):
                 pipe.execute('del', queue)
             return pipe.commit()
+
+    def on_events(self, callback):
+        self._pubsub.on_events(callback)
 
     def close(self):
         '''Close this :class:`.TaskBackend`.

@@ -34,6 +34,7 @@ class Task:
     time_started = None
     time_ended = None
     result = None
+    stacktrace = None
 
     def __init__(self, id=None, name=None, time_queued=None,
                  expiry=None, status=None, kwargs=None, queue=None,

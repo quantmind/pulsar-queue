@@ -1,4 +1,4 @@
 # Pulsar Queue
 
-* [Configuration][./config.md]
-* [Task States][./states.md]
+* [Configuration](./config.md)
+* [Task States](./states.md)

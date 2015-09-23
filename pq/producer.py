@@ -1,12 +1,10 @@
-import json
 import time
 
-from pulsar import EventHandler, ImproperlyConfigured, PulsarException
 from pulsar.apps.data import create_store
-from pulsar.utils.log import LazyString
-from pulsar.utils.string import gen_unique_id, to_string
+from pulsar.utils.string import gen_unique_id
 
-from .pubsub import PubSubImpl
+from .pubsub import PubSub
+from .task import Task, TaskNotAvailable
 from .models import RegistryMixin
 from .utils import get_time
 from . import states
@@ -19,105 +17,16 @@ def all_queues(cfg):
             yield queue
 
 
-class TaskError(PulsarException):
-    pass
-
-
-class TaskNotAvailable(TaskError):
-    MESSAGE = 'Task {0} is not registered'
-
-    def __init__(self, task_name):
-        self.task_name = task_name
-        super().__init__(self.MESSAGE.format(task_name))
-
-
-class TaskTimeout(TaskError):
-    pass
-
-
-class Task:
-    '''A data :class:`.Model` containing task execution data.
-    '''
-    time_started = None
-    time_ended = None
-    result = None
-
-    def __init__(self, id=None, name=None, time_queued=None,
-                 expiry=None, status=None, kwargs=None, queue=None,
-                 **kw):
-        self.id = id
-        self.name = name
-        self.queue = queue
-        self.time_queued = time_queued
-        self.expiry = expiry
-        self.status = status
-        self.kwargs = kwargs
-        self.__dict__.update(kw)
-
-    def __repr__(self):
-        return self.info
-    __str__ = __repr__
-
-    @classmethod
-    def load(cls, data, method=None):
-        method = method or 'json'
-        if method == 'json':
-            return cls(**json.loads(to_string(data)))
-        else:
-            raise ImproperlyConfigured('Unknown serialisation "%s"' % method)
-
-    @property
-    def full_name(self):
-        return 'task.%s' % self.name
-
-    def serialise(self, method=None):
-        method = method or 'json'
-        if method == 'json':
-            return json.dumps(self.__dict__)
-        else:
-            raise ImproperlyConfigured('Unknown serialisation "%s"' % method)
-
-    def done(self):
-        '''Return ``True`` if the :class:`Task` has finshed.
-
-        Its status is one of :ref:`READY_STATES <task-ready-state>`.
-        '''
-        return self.status in states.READY_STATES
-
-    def status_string(self):
-        '''A string representation of :attr:`status` code
-        '''
-        return states.status_string(self.status)
-
-    def info(self):
-        return '%s<%s>' % (self.full_name, self.id)
-
-    def lazy_info(self):
-        return LazyString(self.info)
-
-    def channel(self, name):
-        '''Given an event ``name`` returns the corresponding channel name.
-
-        The event ``name`` is one of ``task_queued``, ``task_started``
-        or ``task_done``
-        '''
-        assert self.queue
-        return '%s_%s' % (self.queue, name)
-
-
-class TaskProducer(EventHandler, PubSubImpl, RegistryMixin):
+class TaskProducer(RegistryMixin):
     """Produce tasks by queuing them
     """
-    MANY_TIMES_EVENTS = ('task_queued', 'task_started', 'task_done')
-
     def __init__(self, cfg, queue=None, logger=None):
         self.store = create_store(cfg.data_store)
-        super().__init__(self.store._loop)
         self.cfg = cfg
-        self._logger = logger
+        self.logger = logger
         self._queue = queue
-        self._pubsub = self._get_pubsub()
         self._closing = False
+        self._pubsub = PubSub(self)
         self.logger.debug('created %s', self)
 
     def __repr__(self):
@@ -133,8 +42,12 @@ class TaskProducer(EventHandler, PubSubImpl, RegistryMixin):
     def queue(self):
         return self._queue
 
+    @property
+    def _loop(self):
+        return self.store._loop
+
     def flush(self):
-        client = self.store.client()
+        client = self._pubsub._client
         if self.queue:
             return client.execute('del', self.queue)
         else:
@@ -189,6 +102,6 @@ class TaskProducer(EventHandler, PubSubImpl, RegistryMixin):
                         kwargs=kwargs,
                         status=states.QUEUED,
                         **meta_params)
-            return self._async_task(task)
+            return self._pubsub.queue(task)
         else:
             raise TaskNotAvailable(jobname)

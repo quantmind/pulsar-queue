@@ -3,7 +3,7 @@ import asyncio
 
 from pulsar import is_async, ImproperlyConfigured, CANCELLED_ERRORS
 
-from .producer import Task, TaskTimeout
+from .task import TaskTimeout
 from . import models
 from . import states
 
@@ -102,7 +102,7 @@ class ConsumerMixin:
 
                 if not self._closing:
                     try:
-                        task = yield from self._get_task()
+                        task = yield from self._pubsub.get_task(self.queue)
                     except ConnectionRefusedError:
                         if worker.is_running():
                             raise
@@ -118,19 +118,6 @@ class ConsumerMixin:
                                   self.num_concurrent_tasks)
                 next_time = 1
         self.may_pool_task(worker, next_time)
-
-    def _get_task(self):
-        '''Asynchronously retrieve a :class:`Task` from  the :attr:`queue`
-
-        :return: a :class:`.Task` or ``None``.
-        '''
-        client = self.store.client()
-        queue_stask = yield from client.execute('brpop',
-                                                self.queue,
-                                                self.cfg.task_pool_timeout)
-        if queue_stask:
-            _, stask = queue_stask
-            return Task.load(stask, self.cfg.params.get('TASK_SERIALISATION'))
 
     def _execute_task(self, worker, task):
         logger = worker.logger
@@ -152,7 +139,7 @@ class ConsumerMixin:
                     task.status = states.STARTED
                     task.time_started = time_ended,
                     task.worker = worker.aid
-                    yield from self._publish('started', task)
+                    yield from self._pubsub.publish('started', task)
                     # This may block for a while
 
                     result = yield from self._consume(context, kwargs)
@@ -176,7 +163,7 @@ class ConsumerMixin:
         self.concurrent_tasks.discard(task_id)
         #
         logger.info('finished %s', task_info)
-        yield from self._publish('done', task)
+        yield from self._pubsub.publish('done', task)
 
     def _consume(self, context, kwargs):
         job = context.job

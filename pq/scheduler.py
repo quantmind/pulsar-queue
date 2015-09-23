@@ -26,8 +26,12 @@ class SchedulerMixin:
         remaining_times = []
         for entry in self.entries.values():
             is_due, next_time_to_run = entry.is_due(now=now)
+            #
+            # Task is now due
             if is_due:
                 self.queue_task(entry.name)
+                entry.next()
+
             if next_time_to_run:
                 remaining_times.append(next_time_to_run)
         self.next_run = now or time.time()

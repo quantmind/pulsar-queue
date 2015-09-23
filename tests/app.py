@@ -7,7 +7,7 @@ from pulsar import send, multi_async
 from pulsar.apps.test import dont_run_with_thread
 from pulsar.apps import rpc
 
-from pq import PulsarQueue, nice_task_message, states
+from pq import PulsarQueue, Task, nice_task_message, states
 
 
 CODE_TEST = '''\
@@ -102,8 +102,10 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
     def test_async_job(self):
         result = self.tq.queue_task('asynchronous')
         self.assertIsInstance(result, asyncio.Future)
-        result = yield from result
-        self.assertTrue(result)
+        task = yield from result
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertTrue(task.result >= 1)
 
 class d:
     #    RPC TESTS

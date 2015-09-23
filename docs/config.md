@@ -10,11 +10,11 @@ standard application settings in pulsar:
 
 This parameter specifies a list of python paths where to collect
 `Job` classes:
-```
-      task_paths = ['myjobs','another.moduledir.*']
+```python
+task_paths = ['myjobs','another.moduledir.*']
 ```
   The ``*`` at the end of the second module indicates to collect
-  :class:`.Job` from all submodules of ``another.moduledir``.
+  [Job][] classes from all submodules of ``another.moduledir``.
 
 ## schedule_periodic
 
@@ -34,3 +34,6 @@ It can be specified in the command line via the
 ``--concurrent-tasks ...`` option.
 
 **Default**: ``5``.
+
+
+[Job]: ./job.md

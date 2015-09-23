@@ -98,7 +98,14 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         pycode = d['runpycode']
         self.assertEqual(pycode['type'], 'regular')
 
-    # Test jobs from the app
+    def test_simple_task(self):
+        task = yield from self.tq.queue_task('addition', a=40, b=50)
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertEqual(task.result, 90)
+        self.assertTrue(str(task).startswith('task.addition<'))
+        self.assertTrue(task.done())
+
     def test_async_job(self):
         result = self.tq.queue_task('asynchronous')
         self.assertIsInstance(result, asyncio.Future)
@@ -199,9 +206,6 @@ class d:
         r = yield self.proxy.wait_for_task(r)
         self.assertEqual(r['status'], states.SUCCESS)
         self.assertEqual(r['result'], 90)
-
-
-class f:
 
     def test_queue_task_asynchronous_from_test(self):
         app = self.tq

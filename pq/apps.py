@@ -28,10 +28,14 @@ class TaskApp(Application):
     @lazyproperty
     def backend(self):
         queues = getattr(self, 'queues', None)
+        app = None
+        if self.cfg.callable:
+            app = self.cfg.callable()
         if queues:
-            return TaskConsumer(self.cfg, queues=queues, logger=self.logger)
+            return TaskConsumer(self.cfg, queues=queues, app=app,
+                                logger=self.logger)
         else:
-            return TaskScheduler(self.cfg, logger=self.logger)
+            return TaskScheduler(self.cfg, app=app, logger=self.logger)
 
     def queue_task(self, job_name, **kwargs):
         """Queue a job via the backend
@@ -44,8 +48,6 @@ class TaskApp(Application):
         It calls the :attr:`.Application.callable` (if available)
         and create the :attr:`~.TaskQueue.backend`.
         '''
-        if self.cfg.callable:
-            self.cfg.callable()
         assert isinstance(self.backend, TaskScheduler)
 
     def monitor_task(self, monitor):

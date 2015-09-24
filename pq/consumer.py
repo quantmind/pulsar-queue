@@ -10,6 +10,12 @@ from . import models
 from . import states
 
 
+class RemoteStackTrace(TaskError):
+
+    def __init__(self, stacktrace):
+        self.stacktrace = stacktrace
+
+
 class ConsumerMixin:
     """A mixin for consuming tasks from a distributed task queue.
     """
@@ -157,28 +163,27 @@ class ConsumerMixin:
             return job._loop.run_in_executor(None, lambda: job(**kwargs))
 
         elif concurrency == models.CPUBOUND:
-            proc = self._consume_in_subprocess(job, kwargs)
-            return proc
+            yield from self._consume_in_subprocess(job, kwargs)
 
         else:
             raise ImproperlyConfigured('invalid concurrency')
 
-    @asyncio.coroutine
     def _consume_in_subprocess(self, job, kwargs):
         import pq, os
         # Create the subprocess, redirect the standard output into a pipe
         task_json = job.task.serialise()
         process_file = os.path.join(pq.__path__[0], "cpubound_process.py")
-        create = asyncio.create_subprocess_exec(sys.executable, process_file, task_json,
-                                                stdout=asyncio.subprocess.PIPE)
-        proc = yield from create
+        create = asyncio.create_subprocess_exec(sys.executable,
+                                                process_file,
+                                                task_json,
+                                                loop=job._loop)
+        process = yield from create
 
-        # Read one line of output
-        data = yield from proc.stdout.readline()
-        line = data.decode('ascii').rstrip()
-        #
-        # Wait for the subprocess exit
-        yield from proc.wait()
-        print (line)
-
-        return proc
+        # Wait for the subprocess exit using the process_exited() method
+        # of the protocol
+        stdout, stderr = yield from process.communicate()
+        print (stdout, stderr)
+        if stderr:
+            raise RemoteStackTrace(stderr)
+        elif stdout:
+            return stdout.decode('utf-8')

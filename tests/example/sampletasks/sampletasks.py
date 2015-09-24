@@ -43,8 +43,7 @@ class NotOverLap(pq.Job):
             return time.time() - start
 
 
-class CheckWorker(pq.Job):
+class WorkerInfo(pq.Job):
 
     def __call__(self):
-        backend = self.backend
-        return {'tasks': list(backend.concurrent_tasks)}
+        return self.backend.info()

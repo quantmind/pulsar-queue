@@ -18,8 +18,8 @@ class TestPeriodic(TestPeriodicJob):
 class TestPeriodicError(TestPeriodicJob):
     run_every = timedelta(seconds=60)
 
-    def __call__(self):
-        raise Exception('kaputt')
+    def __call__(self, msg=None):
+        raise Exception(msg or 'kaputt')
 
 
 class AnchoredEveryHour(TestPeriodicJob):

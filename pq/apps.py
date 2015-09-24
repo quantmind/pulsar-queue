@@ -27,9 +27,9 @@ class TaskApp(Application):
 
     @lazyproperty
     def backend(self):
-        queue = self.cfg.params.get('task_queue')
-        if queue:
-            return TaskConsumer(self.cfg, queue=queue, logger=self.logger)
+        queues = getattr(self, 'queues', None)
+        if queues:
+            return TaskConsumer(self.cfg, queues=queues, logger=self.logger)
         else:
             return TaskScheduler(self.cfg, logger=self.logger)
 
@@ -46,7 +46,7 @@ class TaskApp(Application):
         '''
         if self.cfg.callable:
             self.cfg.callable()
-        assert not self.backend.queue
+        assert isinstance(self.backend, TaskScheduler)
 
     def monitor_task(self, monitor):
         '''Override the :meth:`~.Application.monitor_task` callback.
@@ -62,6 +62,7 @@ class TaskApp(Application):
 
     def worker_start(self, worker, exc=None):
         if not exc and not worker.is_monitor():
+            self.queues = self.cfg.task_queues
             self.backend.start(worker)
 
     def worker_stopping(self, worker, exc=None):
@@ -71,18 +72,9 @@ class TaskApp(Application):
         # makes sure workers are only consuming tasks, not scheduling.
         cfg = params['cfg']
         cfg.set('schedule_periodic', False)
-        cfg.update(self.choose_queue(monitor))
 
     def worker_info(self, worker, info=None):
         info['tasks'] = self.backend.info()
-
-    def choose_queue(self, monitor):
-        queues = self.cfg.task_queues
-        if not queues:
-            return {'task_queue': self.cfg.default_task_queue,
-                    'concurrent_tasks': self.cfg.concurrent_tasks}
-        else:
-            raise NotImplementedError
 
 
 class PulsarQueue(MultiApp):

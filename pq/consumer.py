@@ -1,9 +1,11 @@
+import sys
 import time
 import asyncio
+import traceback
 
 from pulsar import is_async, ImproperlyConfigured, CANCELLED_ERRORS
 
-from .task import TaskTimeout
+from .task import TaskError, TaskTimeout
 from . import models
 from . import states
 
@@ -11,14 +13,24 @@ from . import states
 class ConsumerMixin:
     """A mixin for consuming tasks from a distributed task queue.
     """
-    queue = None
+    queues = None
 
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
+        o._queues = tuple(kwargs.get('queues') or ())
         o.processed = 0
         o.concurrent_tasks = set()
         return o
+
+    def __repr__(self):
+        return 'task consumer %s<%s>' % (self.queues, self.store.dns)
+
+    @property
+    def queues(self):
+        '''List of task queues consumed by this task consumer
+        '''
+        return self._queues
 
     @property
     def num_concurrent_tasks(self):
@@ -31,9 +43,9 @@ class ConsumerMixin:
     def info(self):
         return {'concurrent': list(self.concurrent_tasks),
                 'processed': self.processed,
-                'queue': self.queue}
+                'queues': self.queues}
 
-    def start(self, worker):
+    def start(self, worker, queues=None):
         '''Starts consuming tasks
         '''
         self.may_pool_task(worker)
@@ -43,9 +55,9 @@ class ConsumerMixin:
     # #    PRIVATE METHODS
     # #######################################################################
     def may_pool_task(self, worker, next_time=None):
-        assert self.queue, 'Task queue not specified, cannot pull tasks'
+        assert self._queues, 'Task queues not specified, cannot pull tasks'
         if self._closing:
-            if not self.num_concurrent_tasks:
+            if not self.concurrent_tasks:
                 self.logger.warning(self._closing)
                 worker._loop.stop()
         else:
@@ -71,7 +83,7 @@ class ConsumerMixin:
 
                 if not self._closing:
                     try:
-                        task = yield from self._pubsub.get_task(self.queue)
+                        task = yield from self._pubsub.get_task(*self.queues)
                     except ConnectionRefusedError:
                         if worker.is_running():
                             raise
@@ -101,35 +113,33 @@ class ConsumerMixin:
                 if expiry and time_ended > expiry:
                     raise TaskTimeout
                 else:
-                    logger.info('starting %s', task.lazy_info())
                     kwargs = task.kwargs or {}
                     task.status = states.STARTED
                     task.time_started = time_ended
                     task.worker = worker.aid
+                    logger.info(task.lazy_info())
                     yield from self._pubsub.publish('started', task)
                     # This may block for a while
                     job = JobClass(self, worker, task)
-                    result = yield from self._consume(job, kwargs)
-                    if is_async(result):
-                        task.result = yield from result
-                    else:
-                        task.result = result
-                    task.status = states.SUCCESS
+                    task.result = yield from self._consume(job, kwargs)
             else:
-                logger.error('invalid status for %s', task.lazy_info())
+                raise TaskError('Invalid status %s' % task.status_string)
         except TaskTimeout:
-            logger.warning('%s timed-out', task.lazy_info())
             task.result = None
             task.status = states.REVOKED
+            logger.info(task.lazy_info())
         except Exception as exc:
-            logger.exception('failure in %s', task.lazy_info())
+            exc_info = sys.exc_info()
             task.result = str(exc)
             task.status = states.FAILURE
+            task.stacktrace = traceback.format_tb(exc_info[2])
+            logger.exception(task.lazy_info())
+        else:
+            task.status = states.SUCCESS
+            logger.info(task.lazy_info())
         #
         task.time_ended = time.time()
         self.concurrent_tasks.discard(task_id)
-        #
-        logger.info('finished %s', task.lazy_info())
         yield from self._pubsub.publish('done', task)
 
     def _consume(self, job, kwargs):

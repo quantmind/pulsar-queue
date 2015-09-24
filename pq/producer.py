@@ -11,21 +11,13 @@ from .utils import get_time
 from . import states
 
 
-def all_queues(cfg):
-    yield cfg.default_task_queue
-    for queue in cfg.task_queues:
-        if queue != cfg.default_task_queue:
-            yield queue
-
-
 class TaskProducer(RegistryMixin):
     """Produce tasks by queuing them
     """
-    def __init__(self, cfg, queue=None, logger=None):
+    def __init__(self, cfg, logger=None, **kw):
         self.store = create_store(cfg.data_store)
         self.cfg = cfg
         self.logger = logger or logging.getLogger('pulsar.queue')
-        self._queue = queue
         self._closing = False
         self._pubsub = PubSub(self)
         self.logger.debug('created %s', self)
@@ -33,29 +25,18 @@ class TaskProducer(RegistryMixin):
     def __repr__(self):
         if self.cfg.schedule_periodic:
             return 'task scheduler <%s>' % self.store.dns
-        elif self.queue:
-            return 'task consumer %s<%s>' % (self.queue, self.store.dns)
         else:
             return 'task producer <%s>' % self.store.dns
-    __str__ = __repr__
 
-    @property
-    def queue(self):
-        return self._queue
+    def __str__(self):
+        return repr(self)
 
     @property
     def _loop(self):
         return self.store._loop
 
-    def flush(self):
-        client = self._pubsub._client
-        if self.queue:
-            return client.execute('del', self.queue)
-        else:
-            pipe = client.pipeline()
-            for queue in all_queues(self.cfg):
-                pipe.execute('del', queue)
-            return pipe.commit()
+    def flush_queues(self, *queues):
+        return self._pubsub.flush_queues(*queues)
 
     def on_events(self, callback):
         self._pubsub.on_events(callback)
@@ -98,9 +79,12 @@ class TaskProducer(RegistryMixin):
             elif job.timeout:
                 expiry = get_time(job.timeout, queued)
             meta_params = meta_params or {}
+            queue = job.queue or self.cfg.default_task_queue
+            if self.cfg.task_queue_prefix:
+                queue = '%s_%s' % (self.cfg.task_queue_prefix, queue)
             task = Task(task_id,
                         name=job.name,
-                        queue=job.queue or self.cfg.default_task_queue,
+                        queue=queue,
                         time_queued=queued,
                         expiry=expiry,
                         kwargs=kwargs,

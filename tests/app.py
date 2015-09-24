@@ -29,7 +29,6 @@ class TaskQueueBase(object):
     # used for both keep-alive and timeout in JsonProxy
     # long enough to allow to wait for tasks
     rpc_timeout = 500
-    concurrent_tasks = 6
     tq = None
     rpc = None
 
@@ -48,15 +47,17 @@ class TaskQueueBase(object):
     @classmethod
     def setUpClass(cls):
         # The name of the task queue application
+        name = cls.name()
+        queues = ['%s1' % name, '%s2' % name]
         pq = PulsarQueue(cls.name(),
                          wsgi=True,
                          queue_callable=dummy,
+                         task_queues=queues,
+                         default_task_queue=queues[0],
                          rpc_bind='127.0.0.1:0',
-                         concurrent_tasks=cls.concurrent_tasks,
                          concurrency=cls.concurrency,
                          rpc_concurrency=cls.concurrency,
                          rpc_keep_alive=cls.rpc_timeout,
-                         default_task_queue=cls.name(),
                          task_paths=['tests.example.sampletasks.*'])
         cfgs = yield from pq.start()
         cls.tq = cfgs[0].app()
@@ -66,7 +67,7 @@ class TaskQueueBase(object):
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
         backend = cls.tq.backend
-        yield from backend.flush()
+        yield from backend.flush_queues(*queues)
 
     @classmethod
     def tearDownClass(cls):
@@ -86,9 +87,8 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
 
     def test_producer(self):
         backend = self.tq.backend
-        self.assertFalse(backend.queue)
         self.assertTrue(str(backend).startswith('task producer <'))
-        self.assertEqual(self.tq.cfg.default_task_queue, self.name())
+        self.assertEqual(self.tq.cfg.default_task_queue, '%s1' % self.name())
 
     def test_job_list(self):
         jobs = self.tq.backend.job_list()
@@ -106,15 +106,38 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertTrue(str(task).startswith('task.addition<'))
         self.assertTrue(task.done())
 
+    def test_simple_revoked(self):
+        task = yield from self.tq.queue_task('addition', a=40, b=50,
+                                             expiry=0)
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'REVOKED')
+        self.assertFalse(task.result)
+
+    def test_info(self):
+        task = yield from self.tq.queue_task('workerinfo')
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertIsInstance(task.result, dict)
+        self.assertEqual(len(task.result['queues']), 2)
+
     def test_async_job(self):
-        result = self.tq.queue_task('asynchronous')
+        result = self.tq.queue_task('asynchronous', lag=2)
         self.assertIsInstance(result, asyncio.Future)
         task = yield from result
         self.assertIsInstance(task, Task)
         self.assertEqual(task.status_string, 'SUCCESS')
-        self.assertTrue(task.result >= 1)
+        self.assertTrue(task.result >= 2)
+
+    def test_failure(self):
+        task = yield from self.tq.queue_task('testperiodicerror',
+                                             msg='testing')
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'FAILURE')
+        self.assertEqual(task.result, 'testing')
+        self.assertTrue(task.stacktrace)
 
 class d:
+
     #    RPC TESTS
     def test_check_next_run(self):
         app = self.tq
@@ -200,35 +223,6 @@ class d:
         root = router.post
         tq = root.taskqueue
         self.assertEqual(tq, self.name())
-
-    def test_run_new_simple_task(self):
-        r = yield self.proxy.queue_task(jobname='addition', a=40, b=50)
-        r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], states.SUCCESS)
-        self.assertEqual(r['result'], 90)
-
-    def test_queue_task_asynchronous_from_test(self):
-        app = self.tq
-        r = yield app.backend.queue_task('asynchronous', lag=3)
-        r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], states.SUCCESS)
-        time = r['result']
-        self.assertTrue(time > 3)
-
-    def test_queue_task_asynchronous(self):
-        r = yield self.proxy.queue_task(jobname='asynchronous', lag=3)
-        r = yield self.proxy.wait_for_task(r)
-        self.assertEqual(r['status'], states.SUCCESS)
-        time = r['result']
-        self.assertTrue(time > 3)
-
-    def test_queue_task_asynchronous_wait_on_test(self):
-        app = self.tq
-        r = yield self.proxy.queue_task(jobname='asynchronous', lag=3)
-        r = yield app.backend.wait_for_task(r)
-        self.assertEqual(r['status'], states.SUCCESS)
-        time = r['result']
-        self.assertTrue(time > 3)
 
     def test_queue_task_expiry(self):
         r = yield self.proxy.queue_task(jobname='addition', a=40, b=50,

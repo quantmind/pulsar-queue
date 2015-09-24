@@ -24,17 +24,19 @@ class TaskSetting(pulsar.Setting):
 
 
 class BroadCastPrefix(TaskSetting):
-    name = "task_broadcast_prefix"
-    flags = ["--task-broadcast-prefix"]
-    default = 'pq'
+    name = "task_queue_prefix"
+    flags = ["--task_queue_prefix"]
+    default = ''
     desc = """\
-        Prefix for all broadcast channels
+        Prefix for all broadcast channels and queues
 
         Messages emitted in these channels by the application will be:
 
         <prefix>_task_queued
         <prefix>_task_started
         <prefix>_task_finished
+
+        if the prefix is set. Same for queues.
         """
 
 
@@ -65,12 +67,10 @@ class DefaultQueue(TaskSetting):
 
 class TaskQueues(TaskSetting):
     name = 'task_queues'
-    default = {}
-    validator = pulsar.validate_dict
+    default = ['pulsarqueue']
+    validator = pulsar.validate_list
     desc = """\
-        Advanced configurator for task queues
-
-        A dictionary matching task queues with
+        List of queues to consume
         """
 
 
@@ -110,11 +110,11 @@ class SchedulePeriodic(TaskSetting):
         '''
 
 
-class TaskScheduler(TaskProducer, SchedulerMixin):
+class TaskScheduler(SchedulerMixin, TaskProducer):
     pass
 
 
-class TaskConsumer(TaskProducer, ConsumerMixin):
+class TaskConsumer(ConsumerMixin, TaskProducer):
     pass
 
 

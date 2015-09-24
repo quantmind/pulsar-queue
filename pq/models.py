@@ -131,7 +131,6 @@ class JobRegistry(dict):
         """Return a generator of all tasks of a specific type."""
         for name, jobClass in self.items():
             job = jobClass()
-            periodic = isinstance(job, PeriodicJob)
             if type and job.type == type:
                 yield name, jobClass
 

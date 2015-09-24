@@ -65,12 +65,20 @@ class PubSub:
         method = self.cfg.params.get('TASK_SERIALISATION')
         return Task.load(stask, method)
 
+    def flush_queues(self, *queues):
+        '''Clear a list of task queues
+        '''
+        pipe = self._client.pipeline()
+        for queue in queues:
+            pipe.execute('del', queue)
+        return pipe.commit()
+
     # INTERNALS
     def __call__(self, channel, message):
         # PubSub callback
-        name = channel[len(self._channel()):]
+        event = channel[len(self._channel()):]
         task = Task.load(message)
-        if name == 'done':
+        if event == 'done':
             done = self._callbacks.pop(task.id, None)
             if done:
                 done.set_result(task)
@@ -86,7 +94,9 @@ class PubSub:
         stask = self.serialise(task)
         yield from self.publish('queued', task)
         yield from self._client.lpush(task.queue, stask)
-        self.logger.debug('queued %s in "%s"', task.lazy_info(), task.queue)
+        self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
 
     def _channel(self, event=''):
-        return '%s_task_%s' % (self.cfg.task_broadcast_prefix, event)
+        event = 'task_%s' % event
+        prefix = self.cfg.task_queue_prefix
+        return '%s_%s' % (prefix, event) if prefix else event

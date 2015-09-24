@@ -1,18 +1,14 @@
 import sys, time
-import traceback
 
-
-def main(task, *args):
-    import pq
-    time.sleep(2)
+def main(argv):
     print ("cpubound_process file")
     print (argv)
-
+    for i in range(5):
+        time.sleep(2)
+        print ("process sleep: ", i)
 
 if __name__ == '__main__':
-    try:
-        main(sys.argv[1:])
-    except:
-        exc_info = sys.exc_info()
-        stacktrace = traceback.format_tb(exc_info[2])
-        sys.stderr.write('\n'.join(stacktrace))
+    main(sys.argv[1:])
+
+
+# exit(0)

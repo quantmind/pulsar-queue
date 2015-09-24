@@ -176,7 +176,7 @@ class ConsumerMixin:
         create = asyncio.create_subprocess_exec(sys.executable,
                                                 process_file,
                                                 task_json,
-                                                loop=job._loop)
+                                                loop=job._loop,stdout=asyncio.subprocess.PIPE)
         process = yield from create
 
         # Wait for the subprocess exit using the process_exited() method
@@ -187,3 +187,5 @@ class ConsumerMixin:
             raise RemoteStackTrace(stderr)
         elif stdout:
             return stdout.decode('utf-8')
+        # data = yield from process.stdout.readline()
+        # return data.decode('utf-8')

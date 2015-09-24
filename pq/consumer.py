@@ -157,10 +157,28 @@ class ConsumerMixin:
             return job._loop.run_in_executor(None, lambda: job(**kwargs))
 
         elif concurrency == models.CPUBOUND:
-            return self._consume_in_subprocess(job, kwargs)
+            proc = self._consume_in_subprocess(job, kwargs)
+            return proc
 
         else:
             raise ImproperlyConfigured('invalid concurrency')
 
+    @asyncio.coroutine
     def _consume_in_subprocess(self, job, kwargs):
-        raise NotImplementedError
+        import pq, os
+        # Create the subprocess, redirect the standard output into a pipe
+        task_json = job.task.serialise()
+        process_file = os.path.join(pq.__path__[0], "cpubound_process.py")
+        create = asyncio.create_subprocess_exec(sys.executable, process_file, task_json,
+                                                stdout=asyncio.subprocess.PIPE)
+        proc = yield from create
+
+        # Read one line of output
+        data = yield from proc.stdout.readline()
+        line = data.decode('ascii').rstrip()
+        #
+        # Wait for the subprocess exit
+        yield from proc.wait()
+        print (line)
+
+        return proc

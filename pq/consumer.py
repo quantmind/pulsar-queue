@@ -119,8 +119,8 @@ class ConsumerMixin:
                     task.worker = worker.aid
                     logger.info(task.lazy_info())
                     yield from self._pubsub.publish('started', task)
-                    # This may block for a while
                     job = JobClass(self, worker, task)
+                    # This may block for a while
                     task.result = yield from self._consume(job, kwargs)
             else:
                 raise TaskError('Invalid status %s' % task.status_string)
@@ -157,7 +157,10 @@ class ConsumerMixin:
             return job._loop.run_in_executor(None, lambda: job(**kwargs))
 
         elif concurrency == models.CPUBOUND:
-            return self._consume_in_subprocess()
+            return self._consume_in_subprocess(job, kwargs)
 
         else:
             raise ImproperlyConfigured('invalid concurrency')
+
+    def _consume_in_subprocess(self, job, kwargs):
+        raise NotImplementedError

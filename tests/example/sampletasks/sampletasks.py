@@ -47,3 +47,11 @@ class WorkerInfo(pq.Job):
 
     def __call__(self):
         return self.backend.info()
+
+
+class CpuBound(pq.Job):
+    concurrency = pq.CPUBOUND
+
+    def __call__(self):
+        time.sleep(2)
+        return 'OK'

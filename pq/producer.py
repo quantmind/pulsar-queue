@@ -14,9 +14,10 @@ from . import states
 class TaskProducer(RegistryMixin):
     """Produce tasks by queuing them
     """
-    def __init__(self, cfg, logger=None, **kw):
+    def __init__(self, cfg, logger=None, app=None, **kw):
         self.store = create_store(cfg.data_store)
         self.cfg = cfg
+        self.app = app
         self.logger = logger or logging.getLogger('pulsar.queue')
         self._closing = False
         self._pubsub = PubSub(self)

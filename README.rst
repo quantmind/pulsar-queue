@@ -1,0 +1,30 @@
+# Pulsar Queue
+
+:Master CI: |master-build|_ |coverage-master|
+:Dev CI: |dev-build|_ |coverage-dev|
+:Documentation: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
+:Downloads: http://pypi.python.org/pypi/pulsar-queue
+:Source: https://github.com/quantmind/pulsar-queue
+:Mailing list: `google user group`_
+:Design by: `Quantmind`_ and `Luca Sbardella`_
+:Platforms: Linux, OSX, Windows. Python 3.4 and above
+:Keywords: server, asynchronous, concurrency, actor, process, queue, tasks, redis
+
+
+.. |master-build| image:: https://travis-ci.org/quantmind/pulsar.svg?branch=master
+.. _master-build: http://travis-ci.org/quantmind/pulsar
+.. |dev-build| image:: https://travis-ci.org/quantmind/pulsar.svg?branch=dev
+.. _dev-build: http://travis-ci.org/quantmind/pulsar
+.. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar/badge.svg?branch=master
+  :target: https://coveralls.io/github/quantmind/pulsar?branch=master
+.. |coverage-dev| image:: https://coveralls.io/repos/github/quantmind/pulsar/badge.svg?branch=dev
+  :target: https://coveralls.io/github/quantmind/pulsar?branch=dev
+
+
+
+To get started, follow these guidelines:
+
+* Create a script which runs your application
+* Create the modules where Jobs are implemented. It
+  can be a directory containing several submodules.
+* Run your script, sit back and relax.

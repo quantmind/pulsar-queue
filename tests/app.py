@@ -351,7 +351,7 @@ class TestTaskQueueOnProcess(TestTaskQueueOnThread):
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, ['OK', 2])
 
-    def test_error_cpubound_task(self):
+    def __test_error_cpubound_task(self):
         task = yield from self.tq.queue_task('cpubound', error=True)
         self.assertIsInstance(task, Task)
         self.assertEqual(task.status_string, 'FAILURE')

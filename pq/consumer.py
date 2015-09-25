@@ -164,27 +164,33 @@ class ConsumerMixin:
             return job._loop.run_in_executor(None, lambda: job(**kwargs))
 
         elif concurrency == models.CPUBOUND:
-            yield from self._consume_in_subprocess(job, kwargs)
+            return self._consume_in_subprocess(job, kwargs)
 
         else:
             raise ImproperlyConfigured('invalid concurrency')
 
     @asyncio.coroutine
     def _consume_in_subprocess(self, job, kwargs):
-        config = self.cfg.config
-        syspath = json.dumps(sys.path)
-        task_json = job.task.serialise()
+        params = dict(self.json_params())
         loop = job._loop
         protocol_factory = lambda: StreamProtocol(job)
         transport, protocol = yield from loop.subprocess_exec(
             protocol_factory,
             sys.executable,
             PROCESS_FILE,
-            syspath,
-            config,
-            task_json)
+            json.dumps(sys.path),
+            json.dumps(params),
+            job.task.serialise())
         process = Process(transport, protocol, loop)
         yield from process.wait()
         if job.task.stacktrace:
             raise RemoteStackTrace
         return job.task.result
+
+    def json_params(self):
+        for name, value in self.cfg.items():
+            try:
+                json.dumps(value)
+            except Exception:
+                continue
+            yield name, value

@@ -85,20 +85,23 @@ class StreamProtocol(subprocess.SubprocessStreamProtocol):
         self.error = CpuTaskInfo(job)
 
     def pipe_data_received(self, fd, data):
-        super().pipe_data_received(fd, data)
         if fd == 1:
             self.info.feed(data)
         elif fd == 2:
             self.error.feed(data)
+        super().pipe_data_received(fd, data)
 
 
 @asyncio.coroutine
-def main(loop, syspath, config, stask):
+def main(loop, syspath, params, stask):
     logger = LOGGER
     try:
         from pq import TaskApp
         sys.path[:] = json.loads(syspath)
-        producer = TaskApp(config=config, parse_console=False).backend
+        params = json.loads(params)
+        params.update({'python_path': False,
+                       'parse_console': False})
+        producer = TaskApp(**params).backend
         logger = producer.logger
         yield from producer.ready()
         task = producer._pubsub.load(stask)

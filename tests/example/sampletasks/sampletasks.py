@@ -58,8 +58,8 @@ class CpuBound(pq.Job):
 
     def __call__(self, error=False):
         self.logger.info('Testing CpuBound concurrency')
-        self.logger.warning('Testing warning')
+        self.logger.warning('Sleeping for 2 seconds')
+        time.sleep(1)
         if error:
             raise TestError('just a test')
-        time.sleep(2)
-        return 'OK'
+        return ['OK', 2]

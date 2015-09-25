@@ -1,0 +1,29 @@
+language: python
+
+python:
+  - "3.4"
+
+services:
+  - redis-server
+
+install:
+  - pip install -r requirements-dev.txt
+  - python setup.py install
+
+services:
+  - redis-server
+
+script:
+  - flake8
+  - ls -la
+  - rm -rf pulsar-queue
+  - python -m runtests --coverage
+  - python -m runtests --coveralls
+
+notifications:
+  email: false
+
+branches:
+  only:
+    - master
+    - dev

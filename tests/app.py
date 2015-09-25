@@ -76,7 +76,16 @@ class TaskQueueBase(object):
 
 
 class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
+    def test_cpubound_task(self):
+        task = yield from self.tq.queue_task('cpubound', a=40, b=50)
+        # print ("test_cpubound_task: ", task.__dict__)
+        # self.assertIsInstance(task, Task)
+        # self.assertEqual(task.status_string, 'SUCCESS')
+        # self.assertEqual(task.result, 90)
+        # self.assertTrue(str(task).startswith('task.addition<'))
+        # self.assertTrue(task.done())
 
+class f:
     def test_registry(self):
         backend = self.tq.backend
         self.assertTrue(isinstance(backend.registry, dict))
@@ -137,7 +146,6 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertTrue(task.stacktrace)
 
 class d:
-
     #    RPC TESTS
     def test_check_next_run(self):
         app = self.tq

@@ -1,15 +1,27 @@
-
-* [config](./config.md)
+[Index](./index.md) > Getting Started
+***
 
 # Getting Started
 
 The first step is to create a python module which hosts the task queue application.
-Lets assume this module is called ``main.py``:
+In this exsample, we create a single file application which should give you a good indication on how to expand if needed.
 ```python
-from pq import PulsarQueue
+import os
+import pq
 
-app = PulsarQueue()
+this_file = os.path.basename(__file__)
+
+task_paths = [this_file]
+
+class EchoJob(pq.Job):
+
+    def __call__(self, echo=None):
+    	return echo
+
+def app():
+    # Create the task application
+    return pq.TaskApp(config=this_file)
 
 if __name__ == '__main__':
-	app.start()
+    app().start()
 ```

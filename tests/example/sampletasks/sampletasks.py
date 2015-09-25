@@ -5,6 +5,10 @@ from datetime import timedelta
 import pq
 
 
+class TestError(Exception):
+    pass
+
+
 class RunPyCode(pq.Job):
     '''execute python code in *code*. There must be a *task_function*
 function defined which accept key-valued parameters only.'''
@@ -52,6 +56,10 @@ class WorkerInfo(pq.Job):
 class CpuBound(pq.Job):
     concurrency = pq.CPUBOUND
 
-    def __call__(self):
+    def __call__(self, error=False):
+        self.logger.info('Testing CpuBound concurrency')
+        self.logger.warning('Testing warning')
+        if error:
+            raise TestError('just a test')
         time.sleep(2)
         return 'OK'

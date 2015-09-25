@@ -13,10 +13,14 @@ Open a new shell and launch python and type::
     7.0
     >>>
 '''
-from pq import PulsarQueue
+from pq import TaskApp, PulsarQueue
 
 
 task_paths = ['sampletasks.*']
+
+
+def app():
+    return TaskApp(config='manage.py')
 
 
 if __name__ == '__main__':  # pragma    nocover

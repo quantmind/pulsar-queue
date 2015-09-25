@@ -76,14 +76,8 @@ class TaskQueueBase(object):
 
 
 class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
-    def test_cpubound_task(self):
-        task = yield from self.tq.queue_task('cpubound', a=40, b=50)
-        # print ("test_cpubound_task: ", task.__dict__)
-        # self.assertIsInstance(task, Task)
-        # self.assertEqual(task.status_string, 'SUCCESS')
-        # self.assertEqual(task.result, 90)
-        # self.assertTrue(str(task).startswith('task.addition<'))
-        # self.assertTrue(task.done())
+
+    pass
 
 class f:
     def test_registry(self):
@@ -352,3 +346,8 @@ class d:
 @dont_run_with_thread
 class TestTaskQueueOnProcess(TestTaskQueueOnThread):
     concurrency = 'process'
+
+    def test_cpubound_task(self):
+        task = yield from self.tq.queue_task('cpubound')
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')

@@ -211,9 +211,8 @@ class Job(metaclass=JobMetaClass):
     queue = None
     concurrency = THREAD_IO
 
-    def __init__(self, backend=None, worker=None, task=None):
+    def __init__(self, backend=None, task=None):
         self.backend = backend
-        self.worker = worker
         self.task = task
 
     def __repr__(self):
@@ -225,7 +224,7 @@ class Job(metaclass=JobMetaClass):
 
     @property
     def _loop(self):
-        return self.worker._loop if self.worker else None
+        return self.backend._loop if self.backend else None
 
     @property
     def type(self):

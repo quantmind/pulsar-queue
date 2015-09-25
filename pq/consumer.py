@@ -2,18 +2,18 @@ import sys
 import time
 import asyncio
 import traceback
+from asyncio.subprocess import Process
 
 from pulsar import is_async, ImproperlyConfigured, CANCELLED_ERRORS
-
+from pulsar.utils.system import json
 from .task import TaskError, TaskTimeout
 from . import models
 from . import states
+from .cpubound import StreamProtocol, PROCESS_FILE
 
 
 class RemoteStackTrace(TaskError):
-
-    def __init__(self, stacktrace):
-        self.stacktrace = stacktrace
+    pass
 
 
 class ConsumerMixin:
@@ -123,7 +123,7 @@ class ConsumerMixin:
                     task.worker = worker.aid
                     logger.info(task.lazy_info())
                     yield from self._pubsub.publish('started', task)
-                    job = JobClass(self, worker, task)
+                    job = JobClass(self, task)
                     # This may block for a while
                     task.result = yield from self._consume(job, kwargs)
             else:
@@ -132,6 +132,9 @@ class ConsumerMixin:
             task.result = None
             task.status = states.REVOKED
             logger.info(task.lazy_info())
+        except RemoteStackTrace:
+            task.status = states.FAILURE
+            logger.error(task.lazy_info())
         except Exception as exc:
             exc_info = sys.exc_info()
             task.result = str(exc)
@@ -166,24 +169,26 @@ class ConsumerMixin:
         else:
             raise ImproperlyConfigured('invalid concurrency')
 
+    @asyncio.coroutine
     def _consume_in_subprocess(self, job, kwargs):
-        import pq, os
-        # Create the subprocess, redirect the standard output into a pipe
+        # mod = import_system_file(self.cfg.config)
+        # config = os.path.abspath(mod.__file__)
+        config = self.cfg.config
+        syspath = json.dumps(sys.path)
         task_json = job.task.serialise()
-        process_file = os.path.join(pq.__path__[0], "cpubound_process.py")
-        create = asyncio.create_subprocess_exec(sys.executable,
-                                                process_file,
-                                                task_json,
-                                                loop=job._loop,stdout=asyncio.subprocess.PIPE)
-        process = yield from create
-
+        loop = job._loop
+        protocol_factory = lambda: StreamProtocol(job)
+        transport, protocol = yield from loop.subprocess_exec(
+            protocol_factory,
+            sys.executable,
+            PROCESS_FILE,
+            syspath,
+            config,
+            task_json)
+        process = Process(transport, protocol, loop)
         # Wait for the subprocess exit using the process_exited() method
         # of the protocol
-        stdout, stderr = yield from process.communicate()
-        print (stdout, stderr)
-        if stderr:
-            raise RemoteStackTrace(stderr)
-        elif stdout:
-            return stdout.decode('utf-8')
-        # data = yield from process.stdout.readline()
-        # return data.decode('utf-8')
+        yield from process.wait()
+        if job.task.stacktrace:
+            raise RemoteStackTrace
+        return job.task.result

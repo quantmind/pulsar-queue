@@ -19,8 +19,8 @@ class ConsumerMixin:
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
         o._queues = tuple(kwargs.get('queues') or ())
-        o.processed = 0
-        o.concurrent_tasks = set()
+        o._processed = 0
+        o._concurrent_tasks = set()
         return o
 
     def __repr__(self):
@@ -34,30 +34,28 @@ class ConsumerMixin:
 
     @property
     def num_concurrent_tasks(self):
-        '''The number of :attr:`concurrent_tasks`.
-
-        This number is never greater than the :attr:`backlog` attribute.
+        '''The number of concurrent_tasks
         '''
-        return len(self.concurrent_tasks)
+        return len(self._concurrent_tasks)
 
     def info(self):
-        return {'concurrent': list(self.concurrent_tasks),
-                'processed': self.processed,
-                'queues': self.queues}
+        return {'concurrent': list(self._concurrent_tasks),
+                'processed': self._processed,
+                'queues': self._queues}
 
     def start(self, worker, queues=None):
         '''Starts consuming tasks
         '''
-        self.may_pool_task(worker)
+        self._pool_tasks(worker)
         self.logger.debug('%s started polling tasks', self)
 
     # #######################################################################
     # #    PRIVATE METHODS
     # #######################################################################
-    def may_pool_task(self, worker, next_time=None):
+    def _pool_tasks(self, worker, next_time=None):
         assert self._queues, 'Task queues not specified, cannot pull tasks'
         if self._closing:
-            if not self.concurrent_tasks:
+            if not self._concurrent_tasks:
                 self.logger.warning(self._closing)
                 worker._loop.stop()
         else:
@@ -65,7 +63,7 @@ class ConsumerMixin:
                 asyncio.async(self._may_pool_task(worker), loop=worker._loop)
             else:
                 next_time = next_time or 0
-                worker._loop.call_later(next_time, self.may_pool_task, worker)
+                worker._loop.call_later(next_time, self._pool_tasks, worker)
 
     def _may_pool_task(self, worker):
         # Called in the ``worker`` event loop.
@@ -77,9 +75,9 @@ class ConsumerMixin:
             # executor = worker.executor()
             if self.num_concurrent_tasks < self.cfg.concurrent_tasks:
                 max_tasks = self.cfg.max_requests
-                if max_tasks and self.processed >= max_tasks:
+                if max_tasks and self._processed >= max_tasks:
                     self._closing = ('Processed %s tasks. Restarting.'
-                                     % self.processed)
+                                     % self._processed)
 
                 if not self._closing:
                     try:
@@ -91,14 +89,14 @@ class ConsumerMixin:
                         self.logger.debug('stopped polling tasks')
                         raise
                     if task:    # Got a new task
-                        self.processed += 1
-                        self.concurrent_tasks.add(task.id)
+                        self._processed += 1
+                        self._concurrent_tasks.add(task.id)
                         asyncio.async(self._execute_task(worker, task))
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
                                   self.num_concurrent_tasks)
                 next_time = 1
-        self.may_pool_task(worker, next_time)
+        self._pool_tasks(worker, next_time)
 
     def _execute_task(self, worker, task):
         logger = self.logger
@@ -139,7 +137,7 @@ class ConsumerMixin:
             logger.info(task.lazy_info())
         #
         task.time_ended = time.time()
-        self.concurrent_tasks.discard(task_id)
+        self._concurrent_tasks.discard(task_id)
         yield from self._pubsub.publish('done', task)
 
     def _consume(self, job, kwargs):

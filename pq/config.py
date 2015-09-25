@@ -1,6 +1,4 @@
 import pulsar
-from pulsar import command
-from pulsar.utils.config import section_docs
 from pulsar.apps.ds import DEFAULT_PULSAR_STORE_ADDRESS
 
 from .consumer import ConsumerMixin
@@ -9,12 +7,6 @@ from .producer import TaskProducer
 
 
 DEFAULT_TASK_BACKEND = 'pulsar://%s/1' % DEFAULT_PULSAR_STORE_ADDRESS
-
-
-section_docs['Task Consumer'] = '''
-This section covers configuration parameters used by CPU bound type
-applications such as the :ref:`distributed task queue <apps-taskqueue>` and
-the :ref:`test suite <apps-test>`.'''
 
 
 class TaskSetting(pulsar.Setting):
@@ -116,9 +108,3 @@ class TaskScheduler(SchedulerMixin, TaskProducer):
 
 class TaskConsumer(ConsumerMixin, TaskProducer):
     pass
-
-
-@command()
-def next_scheduled(request, jobnames=None):
-    actor = request.actor
-    return actor.app.backend.next_scheduled(jobnames)

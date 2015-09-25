@@ -1,4 +1,5 @@
-# Pulsar Queue
+Asynchronous task queue for consuming asynchronous IO tasks, green IO tasks,
+blocking IO tasks and long running CPU bound tasks.
 
 :Master CI: |master-build|_ |coverage-master|
 :Dev CI: |dev-build|_ |coverage-dev|
@@ -28,3 +29,14 @@ To get started, follow these guidelines:
 * Create the modules where Jobs are implemented. It
   can be a directory containing several submodules.
 * Run your script, sit back and relax.
+
+
+License
+=============
+This software is licensed under the BSD 3-clause License. See the LICENSE
+file in the top distribution directory for the full license text.
+
+
+.. _`google user group`: https://groups.google.com/forum/?fromgroups#!forum/python-pulsar
+.. _`Luca Sbardella`: http://lucasbardella.com
+.. _`Quantmind`: http://quantmind.com

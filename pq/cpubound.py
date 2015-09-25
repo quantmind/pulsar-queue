@@ -70,11 +70,11 @@ class CpuTaskInfo:
                 self.job.task.result = data[0]
                 self.job.task.stacktrace = data[1]
             elif 'levelno' in data:
-                levelno = data['levelno']
-                msg = data['msg']
-                self.job.logger.log(levelno, msg)
-        else:
-            print(data)
+                self.job.logger.log(data['levelno'], data['msg'])
+        elif isinstance(data, str):
+            data = data.rstrip()
+            if data:
+                print(data)
 
 
 class StreamProtocol(subprocess.SubprocessStreamProtocol):
@@ -100,6 +100,7 @@ def main(loop, syspath, config, stask):
         sys.path[:] = json.loads(syspath)
         producer = TaskApp(config=config, parse_console=False).backend
         logger = producer.logger
+        yield from producer.ready()
         task = producer._pubsub.load(stask)
         JobClass = producer.registry.get(task.name)
         if not JobClass:

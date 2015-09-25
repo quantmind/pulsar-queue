@@ -171,8 +171,6 @@ class ConsumerMixin:
 
     @asyncio.coroutine
     def _consume_in_subprocess(self, job, kwargs):
-        # mod = import_system_file(self.cfg.config)
-        # config = os.path.abspath(mod.__file__)
         config = self.cfg.config
         syspath = json.dumps(sys.path)
         task_json = job.task.serialise()
@@ -186,8 +184,6 @@ class ConsumerMixin:
             config,
             task_json)
         process = Process(transport, protocol, loop)
-        # Wait for the subprocess exit using the process_exited() method
-        # of the protocol
         yield from process.wait()
         if job.task.stacktrace:
             raise RemoteStackTrace

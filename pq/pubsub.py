@@ -14,7 +14,8 @@ class PubSub:
         self._pubsub = producer.store.pubsub()
         self._client = producer.store.client()
         self._pubsub.add_client(self)
-        asyncio.async(self._pubsub.psubscribe(self._channel('*')))
+        coro = self._pubsub.psubscribe(self._channel('*'))
+        self._subscribed = asyncio.async(coro)
 
     @property
     def _loop(self):

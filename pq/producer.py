@@ -36,6 +36,9 @@ class TaskProducer(RegistryMixin):
     def _loop(self):
         return self.store._loop
 
+    def ready(self):
+        return self._pubsub._subscribed
+
     def flush_queues(self, *queues):
         return self._pubsub.flush_queues(*queues)
 

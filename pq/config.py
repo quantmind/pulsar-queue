@@ -1,12 +1,11 @@
 import pulsar
-from pulsar.apps.ds import DEFAULT_PULSAR_STORE_ADDRESS
 
 from .consumer import ConsumerMixin
 from .scheduler import SchedulerMixin
 from .producer import TaskProducer
 
 
-DEFAULT_TASK_BACKEND = 'pulsar://%s/1' % DEFAULT_PULSAR_STORE_ADDRESS
+DEFAULT_TASK_BACKEND = 'redis://127.0.0.1:6379/7'
 
 
 class TaskSetting(pulsar.Setting):

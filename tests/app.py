@@ -77,9 +77,6 @@ class TaskQueueBase(object):
 
 class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
 
-    pass
-
-class f:
     def test_registry(self):
         backend = self.tq.backend
         self.assertTrue(isinstance(backend.registry, dict))
@@ -138,6 +135,7 @@ class f:
         self.assertEqual(task.status_string, 'FAILURE')
         self.assertEqual(task.result, 'testing')
         self.assertTrue(task.stacktrace)
+
 
 class d:
     #    RPC TESTS
@@ -351,3 +349,10 @@ class TestTaskQueueOnProcess(TestTaskQueueOnThread):
         task = yield from self.tq.queue_task('cpubound')
         self.assertIsInstance(task, Task)
         self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertEqual(task.result, ['OK', 2])
+
+    def test_error_cpubound_task(self):
+        task = yield from self.tq.queue_task('cpubound', error=True)
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'FAILURE')
+        self.assertTrue(task.stacktrace)

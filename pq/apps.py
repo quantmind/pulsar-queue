@@ -48,7 +48,7 @@ class TaskApp(Application):
         It calls the :attr:`.Application.callable` (if available)
         and create the :attr:`~.TaskQueue.backend`.
         '''
-        assert isinstance(self.backend, TaskScheduler)
+        return self.backend.ready()
 
     def monitor_task(self, monitor):
         '''Override the :meth:`~.Application.monitor_task` callback.
@@ -65,6 +65,7 @@ class TaskApp(Application):
     def worker_start(self, worker, exc=None):
         if not exc and not worker.is_monitor():
             self.queues = self.cfg.task_queues
+            yield from self.backend.ready()
             self.backend.start(worker)
 
     def worker_stopping(self, worker, exc=None):

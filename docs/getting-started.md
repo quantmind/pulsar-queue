@@ -4,7 +4,8 @@
 # Getting Started
 
 The first step is to create a python module which hosts the task queue application.
-In this exsample, we create a single file application which should give you a good indication on how to expand if needed.
+
+In this example, we create a single file application which should give you a good indication on how to expand to modular backend.
 ```python
 import os
 import pq

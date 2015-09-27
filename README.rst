@@ -18,15 +18,14 @@ blocking IO tasks and long running CPU bound tasks.
 .. _master-build: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 .. |master-build| image:: https://travis-ci.org/quantmind/pulsar-queue.svg?branch=master
 .. _master-build: http://travis-ci.org/quantmind/pulsar-queue
-.. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=master
+.. |coverage-master| image:: https://coveralls.io/repos/quantmind/pulsar-queue/badge.svg?branch=master&service=github
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
 
 
-
-Three steps tutorial
+Four steps tutorial
 ------------------------
 
-**Create a script which runs your application**:
+**1 - Create a script which runs your application**:
 
 .. code::
 
@@ -48,21 +47,61 @@ Three steps tutorial
         app().start()
 
 
-**Create the modules where Jobs are implemented**
+**2 - Create the modules where Jobs are implemented**
 
 It can be a directory containing several submodules.
 
 .. code::
 
+    mkdir sampletasks
+    cd sampletasks
+    vim mytasks.py
+    
+.. code:: python
 
-**3 - Run your script, sit back and relax**
+    import asyncio
+    
+    import pq
+    
+    
+    class Addition(pq.Job):
+    
+        def __call__(self, a=0, b=0):
+            return a + b
 
-Run your script with two task consumers (pulsar actors)
+
+    class Asynchronous(pq.Job):
+        concurrency = pq.ASYNC_IO
+
+        def __call__(self, lag=1):
+            start = time.time()
+            yield from asyncio.sleep(lag)
+            return time.time() - start
+
+**3 - Run the server**
+
+Run the server with two task consumers (pulsar actors)
 
 .. code::
 
     python manage.py -w 2
 
+**4 - Queue tasks**
+
+Launch a python shell and play with the api
+
+.. code:: python
+
+    >>> from manage import app
+    >>> api = app().backend
+    >>> task = api.queue_task('addition', a=4, b=6, wait=True)
+    >>> task
+    task.addition<i24ab99ddf2744902a375e039790dcbc4><SUCCESS>
+    >>> task.result
+    10
+    >>> task.status_string
+    'SUCCESS'
+    
 License
 =============
 This software is licensed under the BSD 3-clause License. See the LICENSE

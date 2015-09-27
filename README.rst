@@ -13,7 +13,7 @@ blocking IO tasks and long running CPU bound tasks.
 :Keywords: server, asynchronous, concurrency, actor, process, queue, tasks, redis
 
 
-.. |pulsar-queue| image:: https://github.com/quantmind/pulsar-queue/blob/master/docs/pulsar-queuemonochrome.svg
+.. |pulsar-queue| image:: https://github.com/quantmind/pulsar-queue/blob/master/docs/pulsar-queue-monochrome.svg
    :width: 200 px
    :target: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 .. |master-build| image:: https://travis-ci.org/quantmind/pulsar-queue.svg?branch=master

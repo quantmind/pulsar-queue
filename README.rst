@@ -18,13 +18,45 @@ blocking IO tasks and long running CPU bound tasks.
 
 
 
-To get started, follow these guidelines:
+Three steps tutorial
+------------------------
 
-* Create a script which runs your application
-* Create the modules where Jobs are implemented. It
-  can be a directory containing several submodules.
-* Run your script, sit back and relax.
+**Create a script which runs your application**:
 
+.. code::
+
+    vim manage.py
+
+    
+.. code:: python
+
+    from pq import TaskApp
+
+
+    task_paths = ['sampletasks.*']
+
+
+    def app():
+        return TaskApp(config=__file__)
+
+    if __name__ == '__main__':
+        app().start()
+
+
+**Create the modules where Jobs are implemented**
+
+It can be a directory containing several submodules.
+
+.. code::
+
+
+**3 - Run your script, sit back and relax**
+
+Run your script with two task consumers (pulsar actors)
+
+.. code::
+
+    python manage.py -w 2
 
 License
 =============

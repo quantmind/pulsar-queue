@@ -13,9 +13,8 @@ blocking IO tasks and long running CPU bound tasks.
 
 .. |master-build| image:: https://travis-ci.org/quantmind/pulsar-queue.svg?branch=master
 .. _master-build: http://travis-ci.org/quantmind/pulsar-queue
-.. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=master
+.. |coverage-master| image:: https://coveralls.io/repos/quantmind/pulsar-queue/badge.svg?branch=master&service=github
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
-
 
 
 Four steps tutorial

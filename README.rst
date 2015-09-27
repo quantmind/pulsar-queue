@@ -105,9 +105,11 @@ Launch a python shell and play with the api
 License
 =============
 This software is licensed under the BSD 3-clause License. See the LICENSE
-file in the top distribution directory for the full license text.
+file in the top distribution directory for the full license text. Logo designed by Ralf Hölzemer,
+`creative common license`_.
 
 
 .. _`google user group`: https://groups.google.com/forum/?fromgroups#!forum/python-pulsar
 .. _`Luca Sbardella`: http://lucasbardella.com
 .. _`Quantmind`: http://quantmind.com
+.. _`creative common license`: http://creativecommons.org/licenses/by-nc/3.0/

@@ -2,7 +2,6 @@ Asynchronous task queue for consuming asynchronous IO tasks, green IO tasks,
 blocking IO tasks and long running CPU bound tasks.
 
 :Master CI: |master-build|_ |coverage-master|
-:Dev CI: |dev-build|_ |coverage-dev|
 :Documentation: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 :Downloads: http://pypi.python.org/pypi/pulsar-queue
 :Source: https://github.com/quantmind/pulsar-queue
@@ -12,14 +11,10 @@ blocking IO tasks and long running CPU bound tasks.
 :Keywords: server, asynchronous, concurrency, actor, process, queue, tasks, redis
 
 
-.. |master-build| image:: https://travis-ci.org/quantmind/pulsar.svg?branch=master
-.. _master-build: http://travis-ci.org/quantmind/pulsar
-.. |dev-build| image:: https://travis-ci.org/quantmind/pulsar.svg?branch=dev
-.. _dev-build: http://travis-ci.org/quantmind/pulsar
-.. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar/badge.svg?branch=master
-  :target: https://coveralls.io/github/quantmind/pulsar?branch=master
-.. |coverage-dev| image:: https://coveralls.io/repos/github/quantmind/pulsar/badge.svg?branch=dev
-  :target: https://coveralls.io/github/quantmind/pulsar?branch=dev
+.. |master-build| image:: https://travis-ci.org/quantmind/pulsar-queue.svg?branch=master
+.. _master-build: http://travis-ci.org/quantmind/pulsar-queue
+.. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=master
+  :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
 
 
 

@@ -1,6 +1,7 @@
 [run]
 concurrency = greenlet
 source = pq
+omit = */cpubound.py
 
 [report]
 # Regexes for lines to exclude from consideration

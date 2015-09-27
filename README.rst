@@ -1,3 +1,5 @@
+|pulsar-queue|_
+
 Asynchronous task queue for consuming asynchronous IO tasks, green IO tasks,
 blocking IO tasks and long running CPU bound tasks.
 
@@ -11,6 +13,9 @@ blocking IO tasks and long running CPU bound tasks.
 :Keywords: server, asynchronous, concurrency, actor, process, queue, tasks, redis
 
 
+.. |pulsar-queue| image:: https://github.com/quantmind/pulsar-queue/blob/master/docs/pulsar-queuemonochrome.svg
+   :width: 200 px
+.. _master-build: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 .. |master-build| image:: https://travis-ci.org/quantmind/pulsar-queue.svg?branch=master
 .. _master-build: http://travis-ci.org/quantmind/pulsar-queue
 .. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=master
@@ -27,7 +32,7 @@ Three steps tutorial
 
     vim manage.py
 
-    
+
 .. code:: python
 
     from pq import TaskApp

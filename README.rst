@@ -1,4 +1,4 @@
-|pulsar-queue|_
+|pulsar-queue|
 
 Asynchronous task queue for consuming asynchronous IO tasks, green IO tasks,
 blocking IO tasks and long running CPU bound tasks.
@@ -15,7 +15,7 @@ blocking IO tasks and long running CPU bound tasks.
 
 .. |pulsar-queue| image:: https://github.com/quantmind/pulsar-queue/blob/master/docs/pulsar-queuemonochrome.svg
    :width: 200 px
-.. _master-build: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
+   :target: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 .. |master-build| image:: https://travis-ci.org/quantmind/pulsar-queue.svg?branch=master
 .. _master-build: http://travis-ci.org/quantmind/pulsar-queue
 .. |coverage-master| image:: https://coveralls.io/repos/quantmind/pulsar-queue/badge.svg?branch=master&service=github

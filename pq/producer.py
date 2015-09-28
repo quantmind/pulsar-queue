@@ -3,6 +3,7 @@ import logging
 
 from pulsar.apps.data import create_store
 from pulsar.utils.string import gen_unique_id
+from pulsar.apps.greenio import GreenPool
 
 from .pubsub import PubSub
 from .task import Task, TaskNotAvailable
@@ -18,6 +19,7 @@ class TaskProducer(RegistryMixin):
         self.store = create_store(cfg.data_store)
         self.cfg = cfg
         self.app = app
+        self.green_pool = getattr(app, 'green_pool', GreenPool())
         self.logger = logger or logging.getLogger('pulsar.queue')
         self._closing = False
         self._pubsub = PubSub(self)

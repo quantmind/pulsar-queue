@@ -6,6 +6,7 @@ from asyncio.subprocess import Process
 
 from pulsar import is_async, ImproperlyConfigured, CANCELLED_ERRORS
 from pulsar.utils.system import json
+
 from .task import TaskError, TaskTimeout
 from . import models
 from . import states
@@ -158,7 +159,7 @@ class ConsumerMixin:
             return result
 
         elif concurrency == models.GREEN_IO:
-            return self._green_pool.submit(job, **kwargs)
+            return self.green_pool.submit(job, **kwargs)
 
         elif concurrency == models.THREAD_IO:
             return job._loop.run_in_executor(None, lambda: job(**kwargs))

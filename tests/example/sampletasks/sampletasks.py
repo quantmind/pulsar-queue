@@ -48,6 +48,7 @@ class NotOverLap(pq.Job):
 
 
 class WorkerInfo(pq.Job):
+    concurrency = pq.GREEN_IO
 
     def __call__(self):
         return self.backend.info()

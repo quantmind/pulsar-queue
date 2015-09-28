@@ -228,6 +228,10 @@ class Job(metaclass=JobMetaClass):
         raise NotImplementedError("Jobs must implement the __call__ method.")
 
     @property
+    def green_pool(self):
+        return self.backend.green_pool
+
+    @property
     def _loop(self):
         return self.backend._loop if self.backend else None
 

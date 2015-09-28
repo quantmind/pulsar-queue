@@ -58,6 +58,7 @@ is done.
 
 '''
 import logging
+import inspect
 from datetime import datetime, date
 
 from pulsar.utils.slugify import slugify
@@ -139,7 +140,11 @@ class JobRegistry(dict):
         self = cls()
         for mod in import_modules(paths, safe=False):
             for name in dir(mod):
-                self.register(getattr(mod, name))
+                if name == JOB_LIST:
+                    for job_cls in getattr(mod, name):
+                        self.register(job_cls)
+                else:
+                    self.register(getattr(mod, name))
         return self
 
 
@@ -276,6 +281,9 @@ def anchorDate(hour=0, minute=0, second=0):
                     hour=hour, minute=minute, second=second)
 
 
+JOB_LIST = '__PULSAR_QUEUE_JOBS__'
+
+
 class job:
 
     def __init__(self, name=None, run_every=None, **attrs):
@@ -290,4 +298,11 @@ class job:
 
     def __call__(self, callable):
         self.attrs['__call__'] = callable
-        return JobMetaClass(self.class_name, self.bases, self.attrs)
+        cls = JobMetaClass(self.class_name, self.bases, self.attrs)
+        module = inspect.getmodule(callable)
+        job_list = getattr(module, JOB_LIST, None)
+        if not job_list:
+            job_list = []
+            setattr(module, JOB_LIST, job_list)
+        job_list.append(cls)
+        return cls

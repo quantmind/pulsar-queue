@@ -249,6 +249,12 @@ class Job(metaclass=JobMetaClass):
         meta_params['from_task'] = self.task.id
         return self.backend.queue_task(jobname, meta_params=meta_params, **kw)
 
+    def lock(self, name=None, revoke=False):
+        '''Acquire a lock if possible
+        '''
+        name = name or self.name
+        return self.backend.lock(name, revoke)
+
 
 class PeriodicJob(Job):
     '''A periodic :class:`.Job` implementation.'''

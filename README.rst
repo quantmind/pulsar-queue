@@ -60,7 +60,7 @@ It can be a directory containing several submodules.
 .. code:: python
 
     import asyncio
-    
+    import time    
     import pq
     
     

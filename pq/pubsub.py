@@ -3,6 +3,22 @@ import asyncio
 from .task import Task
 
 
+class TaskFuture(asyncio.Future):
+
+    def __init__(self, task_id, *, loop=None):
+        super().__init__(loop=loop)
+        self.task_id = task_id
+
+    def wait(self):
+        assert not self._loop.is_running(), 'cannot wait if loop is running'
+        return self._loop.run_until_complete(self)
+
+    def _repr_info(self):
+        info = super()._repr_info()
+        info.append('ID=%s' % self.task_id)
+        return info
+
+
 class PubSub:
     '''Class implementing publish/subscribe for task producers
     '''
@@ -31,7 +47,7 @@ class PubSub:
     def queue(self, task):
         # Queue the task in the event loop and return a Future
         # called back once the task is done
-        callback = asyncio.Future(loop=self._loop)
+        callback = TaskFuture(task.id, loop=self._loop)
         self._callbacks[task.id] = callback
         asyncio.async(self._queue_task(task), loop=self._loop)
         return callback

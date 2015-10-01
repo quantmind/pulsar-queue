@@ -55,8 +55,7 @@ class TaskProducer(RegistryMixin):
         if not self._closing:
             self._closing = 'closing'
 
-    def queue_task(self, jobname, meta_params=None, expiry=None,
-                   wait=False, **kwargs):
+    def queue_task(self, jobname, meta_params=None, expiry=None, **kwargs):
         '''Try to queue a new :ref:`Task`.
 
         This method returns a :class:`.Future` which results in the
@@ -97,10 +96,6 @@ class TaskProducer(RegistryMixin):
                         kwargs=kwargs,
                         status=states.QUEUED,
                         **meta_params)
-            result = self._pubsub.queue(task)
-            if wait and not self._loop.is_running():
-                return self._loop.run_until_complete(result)
-            else:
-                return result
+            return self._pubsub.queue(task)
         else:
             raise TaskNotAvailable(jobname)

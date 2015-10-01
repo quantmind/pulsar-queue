@@ -91,7 +91,8 @@ class ConsumerMixin:
                         task = yield from self._pubsub.get_task(*self.queues)
                     except ConnectionRefusedError:
                         if worker.is_running():
-                            raise
+                            self.logger.exception('Could not pool tasks')
+                            next_time = 2
                     except CANCELLED_ERRORS:
                         self.logger.debug('stopped polling tasks')
                         raise
@@ -151,7 +152,9 @@ class ConsumerMixin:
         yield from self._pubsub.publish('done', task)
 
     def _consume(self, job, kwargs):
-        concurrency = job.concurrency or models.THREAD_IO
+        concurrency = job.concurrency
+        if not concurrency:
+            concurrency = models.concurrency(self.cfg.default_task_concurrency)
 
         if concurrency == models.ASYNC_IO:
             result = job(**kwargs)

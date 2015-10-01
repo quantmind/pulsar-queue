@@ -14,6 +14,17 @@ class TaskSetting(pulsar.Setting):
     section = "Task Consumer"
 
 
+class DefaultTaskConcurrency(TaskSetting):
+    name = "default_task_concurrency"
+    flags = ["--default-task-concurrency"]
+    choices = ('asyncio', 'greenio', 'thread', 'process')
+    default = 'thread'
+    desc = """\
+        Default concurrency for tasks
+        """
+
+
+
 class BroadCastPrefix(TaskSetting):
     name = "task_queue_prefix"
     flags = ["--task_queue_prefix"]

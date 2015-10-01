@@ -83,6 +83,16 @@ THREAD_IO = 3       # tasks run in the event loop executor
 CPUBOUND = 4        # tasks run in a subprocess
 
 
+_concurrency = {'asyncio': ASYNC_IO,
+                'greenio': GREEN_IO,
+                'thread': THREAD_IO,
+                'process': CPUBOUND}
+
+
+def concurrency(value):
+    return _concurrency[value.lower()]
+
+
 class RegistryMixin:
 
     @lazyproperty

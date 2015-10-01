@@ -80,10 +80,12 @@ It can be a directory containing several submodules.
 
 **3 - Run the server**
 
-Run the server with two task consumers (pulsar actors)
+Run the server with two task consumers (pulsar actors).
+
+NOTE: Make sure you have Redis server up and running before you start the queue.
 
 .. code::
-
+    
     python manage.py -w 2
 
 **4 - Queue tasks**

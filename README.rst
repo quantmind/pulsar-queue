@@ -56,16 +56,16 @@ It can be a directory containing several submodules.
     mkdir sampletasks
     cd sampletasks
     vim mytasks.py
-    
+
 .. code:: python
 
     import asyncio
-    import time    
+    import time
     import pq
-    
-    
+
+
     class Addition(pq.Job):
-    
+
         def __call__(self, a=0, b=0):
             return a + b
 
@@ -85,7 +85,7 @@ Run the server with two task consumers (pulsar actors).
 NOTE: Make sure you have Redis server up and running before you start the queue.
 
 .. code::
-    
+
     python manage.py -w 2
 
 **4 - Queue tasks**
@@ -103,11 +103,11 @@ Launch a python shell and play with the api
     10
     >>> task.status_string
     'SUCCESS'
-    
+
 License
 =============
 This software is licensed under the BSD 3-clause License. See the LICENSE
-file in the top distribution directory for the full license text. Logo designed by Ralf Hölzemer,
+file in the top distribution directory for the full license text. Logo designed by Ralf Holzemer,
 `creative common license`_.
 
 

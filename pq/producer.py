@@ -1,18 +1,20 @@
 import time
 import logging
 
+from pulsar import chain_future
 from pulsar.apps.data import create_store
 from pulsar.utils.string import gen_unique_id
 from pulsar.apps.greenio import GreenPool
 
-from .pubsub import PubSub
+from .pubsub import PubSub, TaskFuture
 from .task import Task, TaskNotAvailable
 from .models import RegistryMixin
+from .consumer import ExecutorMixin
 from .utils import get_time
 from . import states
 
 
-class TaskProducer(RegistryMixin):
+class TaskProducer(RegistryMixin, ExecutorMixin):
     """Produce tasks by queuing them
     """
     def __init__(self, cfg, logger=None, app=None, **kw):
@@ -55,7 +57,29 @@ class TaskProducer(RegistryMixin):
         if not self._closing:
             self._closing = 'closing'
 
-    def queue_task(self, jobname, meta_params=None, expiry=None, **kwargs):
+    def queue_task(self, jobname, **kwargs):
+        '''Try to queue a new :task
+
+        :return: a :class:`.Future` resulting in a task once finished or
+            Nothing
+        '''
+        task = self._create_task(jobname, **kwargs)
+        if task:
+            return self._pubsub.queue(task)
+
+    def execute_task(self, jobname, **kwargs):
+        '''Execute a task immediately
+        '''
+        kwargs['queue'] = False
+        task = self._create_task(jobname, **kwargs)
+        if task:
+            future = TaskFuture(task.id, loop=self._loop)
+            coro = self._execute_task(None, task)
+            return chain_future(coro, next=future)
+
+    # INTERNALS
+    def _create_task(self, jobname, meta_params=None, expiry=None, queue=True,
+                     **kwargs):
         '''Try to queue a new :ref:`Task`.
 
         This method returns a :class:`.Future` which results in the
@@ -85,10 +109,14 @@ class TaskProducer(RegistryMixin):
             elif job.timeout:
                 expiry = get_time(job.timeout, queued)
             meta_params = meta_params or {}
-            queue = job.queue or self.cfg.default_task_queue
-            if self.cfg.task_queue_prefix:
-                queue = '%s_%s' % (self.cfg.task_queue_prefix, queue)
-            task = Task(task_id,
+            if queue is not False:
+                if queue is True:
+                    queue = job.queue or self.cfg.default_task_queue
+                if self.cfg.task_queue_prefix:
+                    queue = '%s_%s' % (self.cfg.task_queue_prefix, queue)
+            else:
+                queue = None
+            return Task(task_id,
                         name=job.name,
                         queue=queue,
                         time_queued=queued,
@@ -96,6 +124,5 @@ class TaskProducer(RegistryMixin):
                         kwargs=kwargs,
                         status=states.QUEUED,
                         **meta_params)
-            return self._pubsub.queue(task)
         else:
             raise TaskNotAvailable(jobname)

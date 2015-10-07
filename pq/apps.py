@@ -42,6 +42,11 @@ class TaskApp(Application):
         """
         return self.backend.queue_task(job_name, **kwargs)
 
+    def execute_task(self, job_name, **kwargs):
+        """Execute a job via the backend
+        """
+        return self.backend.execute_task(job_name, **kwargs)
+
     def monitor_start(self, monitor, exc=None):
         '''Starts running the task queue in ``monitor``.
 

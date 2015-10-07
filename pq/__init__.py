@@ -15,6 +15,7 @@ if os.environ.get('pulsar_queue_setup') != 'yes':
 
     from .apps import TaskApp, PulsarQueue      # noqa
     from .utils import nice_task_message        # noqa
+    from .pubsub import TaskFuture              # noqa
     from .models import *                       # noqa
     from .task import *                         # noqa
 

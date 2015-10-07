@@ -17,6 +17,106 @@ class RemoteStackTrace(TaskError):
     pass
 
 
+class ExecutorMixin:
+    _concurrent_tasks = None
+
+    def _execute_task(self, worker, task):
+        logger = self.logger
+        task_id = task.id
+        time_ended = time.time()
+        JobClass = self.registry.get(task.name)
+        try:
+            if not JobClass:
+                raise RuntimeError('%s not in registry' % task.name)
+            if task.status > states.STARTED:
+                expiry = task.expiry
+                if expiry and time_ended > expiry:
+                    raise TaskTimeout
+                else:
+                    kwargs = task.kwargs or {}
+                    task.status = states.STARTED
+                    task.time_started = time_ended
+                    if worker:
+                        task.worker = worker.aid
+                    logger.info(task.lazy_info())
+                    yield from self._pubsub.publish('started', task)
+                    job = JobClass(self, task)
+                    # This may block for a while
+                    task.result = yield from self._consume(job, kwargs)
+            else:
+                raise TaskError('Invalid status %s' % task.status_string)
+        except TaskTimeout:
+            task.result = None
+            task.status = states.REVOKED
+            logger.info(task.lazy_info())
+        except RemoteStackTrace:
+            task.status = states.FAILURE
+            logger.error(task.lazy_info())
+        except Exception as exc:
+            exc_info = sys.exc_info()
+            task.result = str(exc)
+            task.status = states.FAILURE
+            task.stacktrace = traceback.format_tb(exc_info[2])
+            logger.exception(task.lazy_info())
+        else:
+            task.status = states.SUCCESS
+            logger.info(task.lazy_info())
+        #
+        task.time_ended = time.time()
+        if self._concurrent_tasks:
+            self._concurrent_tasks.discard(task_id)
+        yield from self._pubsub.publish('done', task)
+        return task
+
+    def _consume(self, job, kwargs):
+        concurrency = job.concurrency
+        if not concurrency:
+            concurrency = models.concurrency(self.cfg.default_task_concurrency)
+
+        if concurrency == models.ASYNC_IO:
+            result = job(**kwargs)
+            assert is_async(result), "ASYNC_IO tasks not asynchronous"
+            return result
+
+        elif concurrency == models.GREEN_IO:
+            return self.green_pool.submit(job, **kwargs)
+
+        elif concurrency == models.THREAD_IO:
+            return job._loop.run_in_executor(None, lambda: job(**kwargs))
+
+        elif concurrency == models.CPUBOUND:
+            return self._consume_in_subprocess(job, kwargs)
+
+        else:
+            raise ImproperlyConfigured('invalid concurrency')
+
+    @asyncio.coroutine
+    def _consume_in_subprocess(self, job, kwargs):
+        params = dict(self.json_params())
+        loop = job._loop
+        protocol_factory = lambda: StreamProtocol(job)
+        transport, protocol = yield from loop.subprocess_exec(
+            protocol_factory,
+            sys.executable,
+            PROCESS_FILE,
+            json.dumps(sys.path),
+            json.dumps(params),
+            job.task.serialise())
+        process = Process(transport, protocol, loop)
+        yield from process.wait()
+        if job.task.stacktrace:
+            raise RemoteStackTrace
+        return job.task.result
+
+    def json_params(self):
+        for name, value in self.cfg.items():
+            try:
+                json.dumps(value)
+            except Exception:
+                continue
+            yield name, value
+
+
 class ConsumerMixin:
     """A mixin for consuming tasks from a distributed task queue.
     """
@@ -105,96 +205,3 @@ class ConsumerMixin:
                                   self.num_concurrent_tasks)
                 next_time = 1
         self._pool_tasks(worker, next_time)
-
-    def _execute_task(self, worker, task):
-        logger = self.logger
-        task_id = task.id
-        time_ended = time.time()
-        JobClass = self.registry.get(task.name)
-        try:
-            if not JobClass:
-                raise RuntimeError('%s not in registry' % task.name)
-            if task.status > states.STARTED:
-                expiry = task.expiry
-                if expiry and time_ended > expiry:
-                    raise TaskTimeout
-                else:
-                    kwargs = task.kwargs or {}
-                    task.status = states.STARTED
-                    task.time_started = time_ended
-                    task.worker = worker.aid
-                    logger.info(task.lazy_info())
-                    yield from self._pubsub.publish('started', task)
-                    job = JobClass(self, task)
-                    # This may block for a while
-                    task.result = yield from self._consume(job, kwargs)
-            else:
-                raise TaskError('Invalid status %s' % task.status_string)
-        except TaskTimeout:
-            task.result = None
-            task.status = states.REVOKED
-            logger.info(task.lazy_info())
-        except RemoteStackTrace:
-            task.status = states.FAILURE
-            logger.error(task.lazy_info())
-        except Exception as exc:
-            exc_info = sys.exc_info()
-            task.result = str(exc)
-            task.status = states.FAILURE
-            task.stacktrace = traceback.format_tb(exc_info[2])
-            logger.exception(task.lazy_info())
-        else:
-            task.status = states.SUCCESS
-            logger.info(task.lazy_info())
-        #
-        task.time_ended = time.time()
-        self._concurrent_tasks.discard(task_id)
-        yield from self._pubsub.publish('done', task)
-
-    def _consume(self, job, kwargs):
-        concurrency = job.concurrency
-        if not concurrency:
-            concurrency = models.concurrency(self.cfg.default_task_concurrency)
-
-        if concurrency == models.ASYNC_IO:
-            result = job(**kwargs)
-            assert is_async(result), "ASYNC_IO tasks not asynchronous"
-            return result
-
-        elif concurrency == models.GREEN_IO:
-            return self.green_pool.submit(job, **kwargs)
-
-        elif concurrency == models.THREAD_IO:
-            return job._loop.run_in_executor(None, lambda: job(**kwargs))
-
-        elif concurrency == models.CPUBOUND:
-            return self._consume_in_subprocess(job, kwargs)
-
-        else:
-            raise ImproperlyConfigured('invalid concurrency')
-
-    @asyncio.coroutine
-    def _consume_in_subprocess(self, job, kwargs):
-        params = dict(self.json_params())
-        loop = job._loop
-        protocol_factory = lambda: StreamProtocol(job)
-        transport, protocol = yield from loop.subprocess_exec(
-            protocol_factory,
-            sys.executable,
-            PROCESS_FILE,
-            json.dumps(sys.path),
-            json.dumps(params),
-            job.task.serialise())
-        process = Process(transport, protocol, loop)
-        yield from process.wait()
-        if job.task.stacktrace:
-            raise RemoteStackTrace
-        return job.task.result
-
-    def json_params(self):
-        for name, value in self.cfg.items():
-            try:
-                json.dumps(value)
-            except Exception:
-                continue
-            yield name, value

@@ -224,7 +224,7 @@ class Job(metaclass=JobMetaClass):
     doc_syntax = 'markdown'
     can_overlap = True
     queue = None
-    concurrency = THREAD_IO
+    concurrency = None
 
     def __init__(self, backend=None, task=None):
         self.backend = backend

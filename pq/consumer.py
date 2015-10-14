@@ -171,7 +171,8 @@ class ConsumerMixin:
             return self._consume_in_subprocess(job, kwargs)
 
         else:
-            raise ImproperlyConfigured('invalid concurrency')
+            raise ImproperlyConfigured('invalid concurrency "%d"' %
+                                       concurrency)
 
     @asyncio.coroutine
     def _consume_in_subprocess(self, job, kwargs):

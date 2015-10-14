@@ -7,7 +7,7 @@ from pulsar import send, multi_async
 from pulsar.apps.test import dont_run_with_thread
 from pulsar.apps import rpc
 
-from pq import PulsarQueue, Task, nice_task_message, states
+from pq import PulsarQueue, Task, TaskFuture, nice_task_message, states
 
 
 CODE_TEST = '''\
@@ -135,6 +135,17 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertEqual(task.status_string, 'FAILURE')
         self.assertEqual(task.result, 'testing')
         self.assertTrue(task.stacktrace)
+
+    def test_execute_addition(self):
+        future = self.tq.execute_task('addition', a=3, b=-4)
+        self.assertIsInstance(future, TaskFuture)
+        self.assertTrue(future.task_id)
+        task = yield from future
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertEqual(task.result, -1)
+        self.assertFalse(task.worker)
+        self.assertFalse(task.queue)
 
 
 class d:

@@ -6,8 +6,8 @@ from pulsar.apps.test import TestSuite
 from pulsar.apps.test.plugins import bench, profile
 
 
-def run(**params):
-    args = params.get('argv', sys.argv)
+def run():
+    args = sys.argv
     if '--coveralls' in args:
         import pq
         from pulsar.utils.path import Path
@@ -25,7 +25,7 @@ def run(**params):
     TestSuite(description='Pulsar queue test suite',
               modules=['tests'],
               plugins=(bench.BenchMark(), profile.Profile()),
-              **params).start()
+              test_timeout=30).start()
 
 
 if __name__ == '__main__':

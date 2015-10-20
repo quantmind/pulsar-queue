@@ -312,7 +312,7 @@ class job:
         self.attrs = attrs
         base = Job
         if run_every:
-            self.attrs[run_every] = run_every
+            self.attrs['run_every'] = run_every
             base = PeriodicJob
         self.bases = (base,)
 

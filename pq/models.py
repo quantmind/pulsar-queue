@@ -245,6 +245,18 @@ class Job(metaclass=JobMetaClass):
     def _loop(self):
         return self.backend._loop if self.backend else None
 
+    def run_in_executor(self, callable, *args, **kw):
+        '''Run a callable in the event loop executor.
+
+        If the concurrency is set to GRENN_IO, wait for the future
+        to execute
+        '''
+        future = self._loop.run_in_executor(None, callable, *args)
+        if self.concurrency == GREEN_IO:
+            return self.green_pool.wait(future)
+        else:
+            return future
+
     @property
     def type(self):
         '''Type of Job, one of ``regular`` and ``periodic``.'''

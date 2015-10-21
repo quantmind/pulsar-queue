@@ -54,6 +54,13 @@ class WorkerInfo(pq.Job):
         return self.backend.info()
 
 
+class GreenExecutor(pq.Job):
+    concurrency = pq.GREEN_IO
+
+    def __call__(self):
+        return self.run_in_executor(self.backend.info)
+
+
 class CpuBound(pq.Job):
     concurrency = pq.CPUBOUND
 

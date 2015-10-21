@@ -147,6 +147,13 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertFalse(task.worker)
         self.assertFalse(task.queue)
 
+    def test_green_executor(self):
+        task = yield from self.tq.queue_task('greenexecutor')
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertIsInstance(task.result, dict)
+        self.assertEqual(len(task.result['queues']), 2)
+
 
 class d:
     #    RPC TESTS

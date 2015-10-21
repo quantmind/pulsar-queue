@@ -13,6 +13,7 @@
 htmlcov
 
 #python
+.python-version
 pulsar_cloud.egg-info
 *.pyc
 __pycache__

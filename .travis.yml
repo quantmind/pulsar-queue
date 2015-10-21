@@ -1,7 +1,8 @@
 language: python
 
 python:
-  - "3.4"
+  - 3.4.3
+  - 3.5
 
 services:
   - redis-server
@@ -17,7 +18,7 @@ script:
   - flake8
   - rm -rf pulsar-queue
   - python -m runtests --coverage
-  - python -m runtests --coveralls
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then python -m runtests --coveralls; fi
 
 notifications:
   email: false

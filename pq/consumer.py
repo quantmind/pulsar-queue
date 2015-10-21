@@ -69,9 +69,7 @@ class ExecutorMixin:
         return task
 
     def _consume(self, job, kwargs):
-        concurrency = job.concurrency
-        if not concurrency:
-            concurrency = models.concurrency(self.cfg.default_task_concurrency)
+        concurrency = job.get_concurrency()
 
         if concurrency == models.ASYNC_IO:
             result = job(**kwargs)

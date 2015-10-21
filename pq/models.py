@@ -89,10 +89,6 @@ _concurrency = {'asyncio': ASYNC_IO,
                 'process': CPUBOUND}
 
 
-def concurrency(value):
-    return _concurrency[value.lower()]
-
-
 class RegistryMixin:
 
     @lazyproperty
@@ -245,6 +241,17 @@ class Job(metaclass=JobMetaClass):
     def _loop(self):
         return self.backend._loop if self.backend else None
 
+    @property
+    def type(self):
+        '''Type of Job, one of ``regular`` and ``periodic``.'''
+        return 'regular'
+
+    def get_concurrency(self):
+        '''The concurrency for this job
+        '''
+        default = self.backend.cfg.default_task_concurrency
+        return self.concurrency or _concurrency[default.lower()]
+
     def run_in_executor(self, callable, *args, **kw):
         '''Run a callable in the event loop executor.
 
@@ -252,15 +259,11 @@ class Job(metaclass=JobMetaClass):
         to execute
         '''
         future = self._loop.run_in_executor(None, callable, *args)
-        if self.concurrency == GREEN_IO:
+        concurrency = self.get_concurrency()
+        if concurrency == GREEN_IO:
             return self.green_pool.wait(future)
         else:
             return future
-
-    @property
-    def type(self):
-        '''Type of Job, one of ``regular`` and ``periodic``.'''
-        return 'regular'
 
     def queue_task(self, jobname, meta_params=None, **kw):
         '''Queue a new task in the task queue

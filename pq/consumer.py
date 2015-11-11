@@ -124,7 +124,9 @@ class ConsumerMixin:
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
-        o._queues = tuple(kwargs.get('queues') or ())
+        queues = [o.node_name]
+        queues.extend(kwargs.get('queues') or ())
+        o._queues = tuple(queues)
         o._processed = 0
         o._concurrent_tasks = set()
         return o

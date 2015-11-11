@@ -118,7 +118,7 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertIsInstance(task, Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertIsInstance(task.result, dict)
-        self.assertEqual(len(task.result['queues']), 2)
+        self.assertEqual(len(task.result['queues']), 3)
 
     def test_async_job(self):
         result = self.tq.queue_task('asynchronous', lag=2)
@@ -152,7 +152,15 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertIsInstance(task, Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertIsInstance(task.result, dict)
-        self.assertEqual(len(task.result['queues']), 2)
+        self.assertEqual(len(task.result['queues']), 3)
+
+    def test_local_queue(self):
+        backend = self.tq.backend
+        task = yield from backend.queue_task_local('testlocalqueue')
+        self.assertIsInstance(task, Task)
+        self.assertIsInstance(task.result, list)
+        self.assertEqual(len(task.result), 3)
+        self.assertEqual(task.result[0], backend.node_name)
 
 
 class d:

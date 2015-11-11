@@ -1,5 +1,6 @@
 import time
 import logging
+import platform
 
 from pulsar import chain_future
 from pulsar.apps.data import create_store
@@ -40,6 +41,10 @@ class TaskProducer(RegistryMixin, ExecutorMixin):
     def _loop(self):
         return self.store._loop
 
+    @property
+    def node_name(self):
+        return platform.node()
+
     def ready(self):
         return self._pubsub._subscribed
 
@@ -66,6 +71,10 @@ class TaskProducer(RegistryMixin, ExecutorMixin):
         task = self._create_task(jobname, **kwargs)
         if task:
             return self._pubsub.queue(task)
+
+    def queue_task_local(self, jobname, **kwargs):
+        kwargs['queue'] = self.node_name
+        return self.queue_task(jobname, **kwargs)
 
     def execute_task(self, jobname, **kwargs):
         '''Execute a task immediately
@@ -112,8 +121,8 @@ class TaskProducer(RegistryMixin, ExecutorMixin):
             if queue is not False:
                 if queue is True:
                     queue = job.queue or self.cfg.default_task_queue
-                if self.cfg.task_queue_prefix:
-                    queue = '%s_%s' % (self.cfg.task_queue_prefix, queue)
+                # if self.cfg.task_queue_prefix:
+                #    queue = '%s_%s' % (self.cfg.task_queue_prefix, queue)
             else:
                 queue = None
             return Task(task_id,

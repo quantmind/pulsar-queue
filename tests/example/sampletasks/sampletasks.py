@@ -71,3 +71,9 @@ class CpuBound(pq.Job):
         if error:
             raise TestError('just a test')
         return ['OK', 2]
+
+
+class TestLocalQueue(pq.Job):
+
+    def __call__(self):
+        return self.backend.queues

@@ -109,7 +109,7 @@ def main(loop, syspath, params, stask):
         if not JobClass:
             raise RuntimeError('%s not in registry' % task.name)
         job = JobClass(producer, task)
-        result = job(**task.kwargs)
+        result = yield from job.green_pool.submit(job, **task.kwargs)
         if is_async(result):
             result = yield from result
         sys.stdout.write({'cpubound_result': result})

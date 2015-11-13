@@ -382,3 +382,16 @@ class TestTaskQueueOnProcess(TestTaskQueueOnThread):
         self.assertIsInstance(task, Task)
         self.assertEqual(task.status_string, 'FAILURE')
         self.assertTrue(task.stacktrace)
+
+    def test_is_in_greenlet(self):
+        task = yield from self.tq.queue_task('cpuboundwithasync')
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertEqual(task.result, True)
+
+    def test_supports_asyncio(self):
+        task = yield from self.tq.queue_task('cpuboundwithasync', asyncio=True)
+        self.assertIsInstance(task, Task)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        # If the task is asyncio it drops out of the greenlet
+        self.assertEqual(task.result, False)

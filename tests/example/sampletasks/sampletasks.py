@@ -2,6 +2,8 @@ import time
 import asyncio
 from datetime import timedelta
 
+import greenlet
+
 import pq
 
 
@@ -77,3 +79,20 @@ class TestLocalQueue(pq.Job):
 
     def __call__(self):
         return self.backend.queues
+
+
+class CpuBoundWithAsync(pq.Job):
+    concurrency = pq.CPUBOUND
+
+    def __call__(self, asyncio=False):
+        if asyncio:
+            return self.async()
+        else:
+            return self.greenlet_info()
+
+    def greenlet_info(self):
+        return greenlet.getcurrent().parent is not None
+
+    def async(self):
+        yield from asyncio.sleep(1)
+        return self.greenlet_info()

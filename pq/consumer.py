@@ -102,7 +102,7 @@ class ExecutorMixin:
             json.dumps(params),
             job.task.serialise())
         process = Process(transport, protocol, loop)
-        yield from process.wait()
+        yield from process.communicate()
         if job.task.stacktrace:
             raise RemoteStackTrace
         return job.task.result

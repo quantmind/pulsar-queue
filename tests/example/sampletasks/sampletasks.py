@@ -96,3 +96,12 @@ class CpuBoundWithAsync(pq.Job):
     def async(self):
         yield from asyncio.sleep(1)
         return self.greenlet_info()
+
+
+class CpuBoundBigLog(pq.Job):
+    concurrency = pq.CPUBOUND
+
+    def __call__(self):
+        # Log more date then the pipe buffer, as logs are send through the pipe
+        for i in range(1024):
+            self.backend.logger.info('*'*1024)

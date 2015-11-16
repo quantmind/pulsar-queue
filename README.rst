@@ -96,8 +96,10 @@ Launch a python shell and play with the api
 
     >>> from manage import app
     >>> api = app().backend
-    >>> task = api.queue_task('addition', a=4, b=6, wait=True)
+    >>> task = api.queue_task('addition', a=4, b=6)
     >>> task
+    <TaskFuture pending ID=i26ad5c14c5bb422e87b0f7ccbce5ba06>
+    >>> task = task.wait()
     task.addition<i24ab99ddf2744902a375e039790dcbc4><SUCCESS>
     >>> task.result
     10

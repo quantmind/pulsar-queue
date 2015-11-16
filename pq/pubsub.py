@@ -44,13 +44,18 @@ class PubSub:
         if callback in self._event_callbacks:
             self._event_callbacks.remove(callback)
 
-    def queue(self, task):
-        # Queue the task in the event loop and return a Future
-        # called back once the task is done
-        callback = TaskFuture(task.id, loop=self._loop)
-        self._callbacks[task.id] = callback
-        asyncio.async(self._queue_task(task), loop=self._loop)
-        return callback
+    def queue(self, task, callback=True):
+        '''Queue the task.
+
+        If callback is True (default) returns a Future
+        called back once the task is done, otherwise return a future
+        called back once the task is queued
+        '''
+        if callback:
+            callback = TaskFuture(task.id, loop=self._loop)
+            self._callbacks[task.id] = callback
+        result = asyncio.async(self._queue_task(task), loop=self._loop)
+        return callback or result
 
     def get_task(self, *queues):
         '''Asynchronously retrieve a :class:`Task` from queues
@@ -112,6 +117,7 @@ class PubSub:
         yield from self.publish('queued', task)
         yield from self._client.lpush(task.queue, stask)
         self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
+        return task
 
     def _channel(self, event=''):
         event = 'task_%s' % event

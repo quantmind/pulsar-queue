@@ -162,6 +162,12 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         self.assertEqual(len(task.result), 3)
         self.assertEqual(task.result[0], backend.node_name)
 
+    def test_no_callback(self):
+        backend = self.tq.backend
+        task = yield from backend.queue_task('asynchronous', callback=False)
+        self.assertTrue(task.id)
+        self.assertEqual(task.status_string, 'QUEUED')
+
 
 class d:
     #    RPC TESTS

@@ -62,15 +62,17 @@ class TaskProducer(RegistryMixin, ExecutorMixin):
         if not self._closing:
             self._closing = 'closing'
 
-    def queue_task(self, jobname, **kwargs):
+    def queue_task(self, jobname, callback=True, **kwargs):
         '''Try to queue a new :task
 
+        :param callback: whn true (default) return a future called back once
+            the task done, otherwise it is called back once the task is queued.
         :return: a :class:`.Future` resulting in a task once finished or
             Nothing
         '''
         task = self._create_task(jobname, **kwargs)
         if task:
-            return self._pubsub.queue(task)
+            return self._pubsub.queue(task, callback)
 
     def queue_task_local(self, jobname, **kwargs):
         kwargs['queue'] = self.node_name

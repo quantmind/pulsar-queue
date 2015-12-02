@@ -269,10 +269,22 @@ class Job(metaclass=JobMetaClass):
         '''Queue a new task in the task queue
         '''
         assert self.backend, 'backend not available'
+        meta_params = self._meta_params(meta_params)
+        return self.backend.queue_task(jobname, meta_params=meta_params, **kw)
+
+    def queue_task_local(self, jobname, meta_params=None, **kw):
+        '''Queue a new task in the local task queue
+        '''
+        assert self.backend, 'backend not available'
+        meta_params = self._meta_params(meta_params)
+        return self.backend.queue_task_local(
+            jobname, meta_params=meta_params, **kw)
+
+    def _meta_params(self, meta_params=None):
         if meta_params is None:
             meta_params = {}
         meta_params['from_task'] = self.task.id
-        return self.backend.queue_task(jobname, meta_params=meta_params, **kw)
+        return meta_params
 
     def lock(self, name=None, revoke=False):
         '''Acquire a lock if possible

@@ -4,7 +4,7 @@ import os
 
 VERSION = (0, 1, 1, 'final', 0)
 
-__version__ = '.'.join((str(v) for v in VERSION))
+__version__ = '.'.join((str(v) for v in VERSION[:3]))
 __author__ = "Luca Sbardella"
 __contact__ = "luca@quantmind.com"
 __homepage__ = "https://github.com/quantmind/pulsar-queue"

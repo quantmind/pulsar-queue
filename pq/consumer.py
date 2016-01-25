@@ -57,6 +57,7 @@ class ExecutorMixin:
             task.result = str(exc)
             task.status = states.FAILURE
             task.stacktrace = traceback.format_tb(exc_info[2])
+            task.exception = traceback.format_exception_only(exc_info[0], exc_info[1])[0]
             logger.exception(task.lazy_info())
         else:
             task.status = states.SUCCESS

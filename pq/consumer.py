@@ -95,7 +95,9 @@ class ExecutorMixin:
     def _consume_in_subprocess(self, job, kwargs):
         params = dict(self.json_params())
         loop = job._loop
-        protocol_factory = lambda: StreamProtocol(job)
+
+        def protocol_factory(): return StreamProtocol(job)
+
         transport, protocol = yield from loop.subprocess_exec(
             protocol_factory,
             sys.executable,

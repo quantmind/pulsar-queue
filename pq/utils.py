@@ -3,13 +3,13 @@ from datetime import datetime, timedelta
 from . import states
 
 
-timedelta_seconds = lambda delta: max(delta.total_seconds(), 0)
+def timedelta_seconds(delta): return max(delta.total_seconds(), 0)
 
 
 def get_time(expiry, start):
     if isinstance(expiry, timedelta):
-        return (start + 86400*expiry.days + expiry.seconds +
-                0.000001*expiry.microseconds)
+        return (start + 86400 * expiry.days + expiry.seconds +
+                0.000001 * expiry.microseconds)
     else:
         return start + expiry
 

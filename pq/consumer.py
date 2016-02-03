@@ -96,10 +96,8 @@ class ExecutorMixin:
         params = dict(self.json_params())
         loop = job._loop
 
-        def protocol_factory(): return StreamProtocol(job)
-
         transport, protocol = yield from loop.subprocess_exec(
-            protocol_factory,
+            lambda: StreamProtocol(job),
             sys.executable,
             PROCESS_FILE,
             json.dumps(sys.path),

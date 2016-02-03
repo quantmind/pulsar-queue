@@ -34,6 +34,7 @@ class Task:
     time_started = None
     time_ended = None
     result = None
+    exception = None
     stacktrace = None
     worker = None
 

@@ -57,6 +57,8 @@ class ExecutorMixin:
             task.result = str(exc)
             task.status = states.FAILURE
             task.stacktrace = traceback.format_tb(exc_info[2])
+            task.exception = traceback.format_exception_only(
+                exc_info[0], exc_info[1])[0]
             logger.exception(task.lazy_info())
         else:
             task.status = states.SUCCESS
@@ -93,7 +95,9 @@ class ExecutorMixin:
     def _consume_in_subprocess(self, job, kwargs):
         params = dict(self.json_params())
         loop = job._loop
-        protocol_factory = lambda: StreamProtocol(job)
+
+        def protocol_factory(): return StreamProtocol(job)
+
         transport, protocol = yield from loop.subprocess_exec(
             protocol_factory,
             sys.executable,
@@ -197,7 +201,7 @@ class ConsumerMixin:
                     except CANCELLED_ERRORS:
                         self.logger.debug('stopped polling tasks')
                         raise
-                    if task:    # Got a new task
+                    if task:  # Got a new task
                         self._processed += 1
                         self._concurrent_tasks.add(task.id)
                         asyncio.async(self._execute_task(worker, task))

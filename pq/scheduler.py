@@ -9,6 +9,7 @@ from .utils import timedelta_seconds
 class SchedulerMixin:
     '''Schedule new tasks
     '''
+
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
@@ -102,6 +103,7 @@ class SchedulerEntry(object):
         Total number of times this periodic task has been executed by the
         :class:`.TaskBackend`.
     '''
+
     def __init__(self, name, run_every, anchor=None):
         self.name = name
         self.run_every = run_every
@@ -111,6 +113,7 @@ class SchedulerEntry(object):
 
     def __repr__(self):
         return self.name
+
     __str__ = __repr__
 
     @property
@@ -124,10 +127,10 @@ class SchedulerEntry(object):
         anchor = self.anchor
         if last_run_at and anchor:
             run_every = self.run_every
-            times = int(timedelta_seconds(last_run_at - anchor)
-                        / timedelta_seconds(run_every))
+            times = int(timedelta_seconds(last_run_at - anchor) /
+                        timedelta_seconds(run_every))
             if times:
-                anchor += times*run_every
+                anchor += times * run_every
                 while anchor <= last_run_at:
                     anchor += run_every
                 while anchor > last_run_at:

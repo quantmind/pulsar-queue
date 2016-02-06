@@ -1,11 +1,12 @@
 import os
 
-from pulsar.apps.release import ReleaseManager
+from agile import AgileManager
 
 
 version_file = os.path.join(os.path.dirname(__file__),
                             'pq', '__init__.py')
 
+note_file = 'docs/notes.md'
 
 if __name__ == '__main__':
-    ReleaseManager(config='release.py').start()
+    AgileManager(config='release.py').start()

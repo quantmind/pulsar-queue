@@ -1,6 +1,3 @@
-[Index](./index.md) > Task states
-***
-
 # Task states
 
 A :class:`Task` can have one of the following :attr:`~.Task.status` string:

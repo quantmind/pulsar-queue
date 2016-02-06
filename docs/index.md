@@ -2,6 +2,7 @@
    
 # Pulsar Queue
 
-* [Configuration](./config.md)
-* [Task States](./states.md)
+* [Configuration](./config.html)
+* [Task States](./states.html)
+* [API](./api.html)
 

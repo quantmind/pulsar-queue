@@ -19,5 +19,6 @@ pulsar_cloud.egg-info
 __pycache__
 pulsar_queue.egg-info
 build
+_build
 dist
 config.py

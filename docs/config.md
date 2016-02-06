@@ -1,6 +1,3 @@
-[Index](./index.md) > Configuration
-***
-
 # Configuration
 
 A `TaskApp` accepts several configuration parameters on top of the
@@ -14,7 +11,7 @@ This parameter specifies a list of python paths where to collect
 task_paths = ['myjobs','another.moduledir.*']
 ```
   The ``*`` at the end of the second module indicates to collect
-  [Job][] classes from all submodules of ``another.moduledir``.
+  [job](./job.html) classes from all submodules of ``another.moduledir``.
 
 ## schedule_periodic
 

@@ -4,8 +4,8 @@ Asynchronous task queue for consuming asynchronous IO tasks, green IO tasks,
 blocking IO tasks and long running CPU bound tasks.
 
 :Badges: |license|  |pyversions| |status| |downloads|
-:Master CI: |master-build|_ |coverage-master|
-:Dev CI: |dev-build|_ |coverage-dev|
+:Master CI: |master-build| |coverage-master|
+:Dev CI: |dev-build| |coverage-dev|
 :Documentation: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 :Downloads: http://pypi.python.org/pypi/pulsar-queue
 :Source: https://github.com/quantmind/pulsar-queue
@@ -29,6 +29,8 @@ blocking IO tasks and long running CPU bound tasks.
   :target: https://travis-ci.org/quantmind/pulsar-queue?branch=dev
 .. |coverage-master| image:: https://coveralls.io/repos/quantmind/pulsar-queue/badge.svg?branch=master&service=github
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
+.. |coverage-dev| image:: https://coveralls.io/repos/quantmind/pulsar-queue/badge.svg?branch=dev&service=github
+  :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=dev
 .. |pulsar-queue| image:: https://quantmind-public.s3.amazonaws.com/pulsar/pulsar_colored_logo_only.svg
    :width: 200 px
    :target: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md

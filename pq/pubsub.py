@@ -57,7 +57,7 @@ class PubSub:
         result = asyncio.async(self._queue_task(task), loop=self._loop)
         return callback or result
 
-    def get_task(self, *queues):
+    async def get_task(self, *queues):
         '''Asynchronously retrieve a :class:`Task` from queues
 
         :return: a :class:`.Task` or ``None``.
@@ -65,7 +65,7 @@ class PubSub:
         assert queues
         args = list(queues)
         args.append(self.cfg.task_pool_timeout)
-        qt = yield from self._client.execute('brpop', *args)
+        qt = await self._client.execute('brpop', *args)
         if qt:
             _, stask = qt
             return self.load(stask)
@@ -110,12 +110,12 @@ class PubSub:
             except Exception:
                 self.logger.exception('During %s callbacks', task)
 
-    def _queue_task(self, task):
+    async def _queue_task(self, task):
         '''Asynchronously queue a task
         '''
         stask = self.serialise(task)
-        yield from self.publish('queued', task)
-        yield from self._client.lpush(task.queue, stask)
+        await self.publish('queued', task)
+        await self._client.lpush(task.queue, stask)
         self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
         return task
 

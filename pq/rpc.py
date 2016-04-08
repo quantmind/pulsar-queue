@@ -35,20 +35,20 @@ class TaskQueueRpc(rpc.JSONRPC):
 
     ########################################################################
     #    REMOTES
-    def rpc_job_list(self, request, jobnames=None):
+    async def rpc_job_list(self, request, jobnames=None):
         '''Return the list of Jobs registered with task queue with meta
         information.
 
         If a list of ``jobnames`` is given, it returns only jobs
         included in the list.
         '''
-        task_backend = yield from self.task_backend()
+        task_backend = await self.task_backend()
         return task_backend.job_list(jobnames=jobnames)
 
     def rpc_next_scheduled_tasks(self, request, jobnames=None):
         return self._rq(request, 'next_scheduled', jobnames=jobnames)
 
-    def rpc_queue_task(self, request, jobname=None, **kw):
+    async def rpc_queue_task(self, request, jobname=None, **kw):
         '''Queue a new ``jobname`` in the task queue.
 
         The task can be of any type as long as it is registered in the
@@ -57,10 +57,10 @@ class TaskQueueRpc(rpc.JSONRPC):
 
         It returns the task :attr:`~Task.id`.
         '''
-        result = yield from self.queue_task(request, jobname, **kw)
+        result = await self.queue_task(request, jobname, **kw)
         return task_to_json(result)
 
-    def rpc_wait_for_task(self, request, id=None, timeout=None):
+    async def rpc_wait_for_task(self, request, id=None, timeout=None):
         '''Wait for a task to have finished.
 
         :param id: the id of the task to wait for.
@@ -68,30 +68,30 @@ class TaskQueueRpc(rpc.JSONRPC):
         :return: the json representation of the task once it has finished.
         '''
         if id:
-            task_backend = yield from self.task_backend()
-            result = yield from task_backend.wait_for_task(id, timeout=timeout)
+            task_backend = await self.task_backend()
+            result = await task_backend.wait_for_task(id, timeout=timeout)
             return task_to_json(result)
 
-    def rpc_num_tasks(self, request):
+    async def rpc_num_tasks(self, request):
         '''Return the approximate number of tasks in the task queue.'''
-        task_backend = yield from self.task_backend()
+        task_backend = await self.task_backend()
         return task_backend.num_tasks()
 
     ########################################################################
     #    INTERNALS
-    def task_backend(self):
+    async def task_backend(self):
         if not self._task_backend:
-            app = yield from get_application(self.taskqueue)
+            app = await get_application(self.taskqueue)
             self._task_backend = app.get_backend()
         return self._task_backend
 
-    def queue_task(self, request, jobname, meta_data=None, **kw):
+    async def queue_task(self, request, jobname, meta_data=None, **kw):
         if not jobname:
             raise rpc.InvalidParams('"jobname" is not specified!')
         meta_data = meta_data or {}
         meta_data.update(self.task_request_parameters(request))
-        task_backend = yield from self.task_backend()
-        result = yield from task_backend.queue_task(jobname, meta_data, **kw)
+        task_backend = await self.task_backend()
+        result = await task_backend.queue_task(jobname, meta_data, **kw)
         return result
 
     def task_request_parameters(self, request):

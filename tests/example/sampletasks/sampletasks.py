@@ -4,14 +4,14 @@ from datetime import timedelta
 
 import greenlet
 
-import pq
+from pq import api
 
 
 class TestError(Exception):
     pass
 
 
-class RunPyCode(pq.Job):
+class RunPyCode(api.Job):
     '''execute python code in *code*. There must be a *task_function*
 function defined which accept key-valued parameters only.'''
     timeout = timedelta(seconds=60)
@@ -24,47 +24,47 @@ function defined which accept key-valued parameters only.'''
         return func(**kwargs)
 
 
-class Addition(pq.Job):
+class Addition(api.Job):
     timeout = timedelta(seconds=60)
 
     def __call__(self, a=0, b=0):
         return a + b
 
 
-class Asynchronous(pq.Job):
-    concurrency = pq.ASYNC_IO
+class Asynchronous(api.Job):
+    concurrency = api.ASYNC_IO
 
-    def __call__(self, lag=1):
+    async def __call__(self, lag=1):
         start = time.time()
-        yield from asyncio.sleep(lag)
+        await asyncio.sleep(lag)
         return time.time() - start
 
 
-class NotOverLap(pq.Job):
+class NotOverLap(api.Job):
 
-    def __call__(self, lag=1):
+    async def __call__(self, lag=1):
         with self.lock():
             start = time.time()
-            yield from asyncio.sleep(lag)
+            await asyncio.sleep(lag)
             return time.time() - start
 
 
-class WorkerInfo(pq.Job):
-    concurrency = pq.GREEN_IO
+class WorkerInfo(api.Job):
+    concurrency = api.GREEN_IO
 
     def __call__(self):
         return self.backend.info()
 
 
-class GreenExecutor(pq.Job):
-    concurrency = pq.GREEN_IO
+class GreenExecutor(api.Job):
+    concurrency = api.GREEN_IO
 
     def __call__(self):
         return self.run_in_executor(self.backend.info)
 
 
-class CpuBound(pq.Job):
-    concurrency = pq.CPUBOUND
+class CpuBound(api.Job):
+    concurrency = api.CPUBOUND
 
     def __call__(self, error=False):
         self.logger.info('Testing CpuBound concurrency')
@@ -75,31 +75,31 @@ class CpuBound(pq.Job):
         return ['OK', 2]
 
 
-class TestLocalQueue(pq.Job):
+class TestLocalQueue(api.Job):
 
     def __call__(self):
         return self.backend.queues
 
 
-class CpuBoundWithAsync(pq.Job):
-    concurrency = pq.CPUBOUND
+class CpuBoundWithAsync(api.Job):
+    concurrency = api.CPUBOUND
 
     def __call__(self, asyncio=False):
         if asyncio:
-            return self.async()
+            return self.asyncio()
         else:
             return self.greenlet_info()
 
     def greenlet_info(self):
         return greenlet.getcurrent().parent is not None
 
-    def async(self):
-        yield from asyncio.sleep(1)
+    async def asyncio(self):
+        await asyncio.sleep(1)
         return self.greenlet_info()
 
 
-class CpuBoundBigLog(pq.Job):
-    concurrency = pq.CPUBOUND
+class CpuBoundBigLog(api.Job):
+    concurrency = api.CPUBOUND
 
     def __call__(self):
         # Log more date then the pipe buffer, as logs are send through the pipe

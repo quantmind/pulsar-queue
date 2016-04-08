@@ -6,7 +6,7 @@ import asyncio
 import logging
 from asyncio import subprocess, streams
 
-from pulsar import is_async
+from pulsar import isawaitable
 
 
 PQPATH = os.path.dirname(__file__)
@@ -92,8 +92,7 @@ class StreamProtocol(subprocess.SubprocessStreamProtocol):
         super().pipe_data_received(fd, data)
 
 
-@asyncio.coroutine
-def main(loop, syspath, params, stask):
+async def main(syspath, params, stask):
     logger = LOGGER
     try:
         from pq import TaskApp
@@ -103,15 +102,15 @@ def main(loop, syspath, params, stask):
                        'parse_console': False})
         producer = TaskApp(**params).backend
         logger = producer.logger
-        yield from producer.ready()
+        await producer.ready()
         task = producer._pubsub.load(stask)
         JobClass = producer.registry.get(task.name)
         if not JobClass:
             raise RuntimeError('%s not in registry' % task.name)
         job = JobClass(producer, task)
-        result = yield from job.green_pool.submit(job, **task.kwargs)
-        if is_async(result):
-            result = yield from result
+        result = await job.green_pool.submit(job, **task.kwargs)
+        if isawaitable(result):
+            result = await result
         sys.stdout.write({'cpubound_result': result})
     except Exception:
         exc_info = sys.exc_info()
@@ -129,4 +128,4 @@ if __name__ == '__main__':
                         format='[pid=%(process)s] %(message)s',
                         handlers=[RemoteLogger()])
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(loop, *sys.argv[1:]))
+    loop.run_until_complete(main(*sys.argv[1:]))

@@ -5,4 +5,5 @@
 * [Configuration](./config.html)
 * [Task States](./states.html)
 * [API](./api.html)
+* [Release notes](./changelog.html)
 

@@ -1,55 +1,37 @@
-import os
-import sys
 from setuptools import setup, find_packages
 
-try:
-    import pulsar       # noqa
-    import greenlet     # noqa
-except ImportError:
-    os.environ['pulsar_queue_setup'] = 'yes'
-
-package_name = 'pulsar-queue'
-mod = __import__('pq')
+import config
 
 
-def read(fname):
-    with open(fname) as f:
-        return f.read()
+def run():
 
+    meta = dict(
+        name='pulsar-queue',
+        author='Luca Sbardella',
+        author_email="luca@quantmind.com",
+        maintainer_email="luca@quantmind.com",
+        url="https://github.com/quantmind/pulsar-queue",
+        license="BSD",
+        long_description=config.read('README.rst'),
+        packages=find_packages(exclude=['tests', 'tests.*']),
+        include_package_data=True,
+        zip_safe=False,
+        install_requires=config.requirements('requirements.txt')[0],
+        tests_require=config.requirements('requirements-dev.txt')[0],
+        classifiers=[
+            'Development Status :: 2 - Pre-Alpha',
+            'Environment :: Web Environment',
+            'Intended Audience :: Developers',
+            'License :: OSI Approved :: BSD License',
+            'Operating System :: OS Independent',
+            'Programming Language :: Python',
+            'Programming Language :: Python :: 3.4',
+            'Topic :: Utilities'
+        ]
+    )
 
-def requirements():
-    req = read('requirements.txt').replace('\r', '').split('\n')
-    result = []
-    for r in req:
-        r = r.replace(' ', '')
-        if r:
-            result.append(r)
-    return result
+    setup(**config.extend(meta, 'lux'))
 
-
-def run(argv=None):
-    if argv:
-        sys.argv = list(argv)
-
-    setup(name=package_name,
-          zip_safe=False,
-          version=mod.__version__,
-          author=mod.__author__,
-          author_email=mod.__contact__,
-          url=mod.__homepage__,
-          license='BSD',
-          description=mod.__doc__,
-          long_description=read('README.rst'),
-          packages=find_packages(exclude=('tests', 'tests.*')),
-          install_requires=requirements(),
-          classifiers=['Development Status :: 2 - Pre-Alpha',
-                       'Environment :: Web Environment',
-                       'Intended Audience :: Developers',
-                       'License :: OSI Approved :: BSD License',
-                       'Operating System :: OS Independent',
-                       'Programming Language :: Python',
-                       'Programming Language :: Python :: 3.4',
-                       'Topic :: Utilities'])
 
 if __name__ == '__main__':
     run()

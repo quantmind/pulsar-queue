@@ -17,8 +17,8 @@ htmlcov
 pulsar_cloud.egg-info
 *.pyc
 __pycache__
-pulsar_queue.egg-info
+*.egg-info
+.eggs
 build
 _build
 dist
-config.py

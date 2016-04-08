@@ -1,10 +1,10 @@
 import sys
 import time
-import asyncio
 import traceback
+from asyncio import ensure_future
 from asyncio.subprocess import Process
 
-from pulsar import is_async, ImproperlyConfigured, CANCELLED_ERRORS
+from pulsar import isawaitable, ImproperlyConfigured, CANCELLED_ERRORS
 from pulsar.utils.system import json
 
 from .task import TaskError, TaskTimeout
@@ -20,7 +20,7 @@ class RemoteStackTrace(TaskError):
 class ExecutorMixin:
     _concurrent_tasks = None
 
-    def _execute_task(self, worker, task):
+    async def _execute_task(self, worker, task):
         logger = self.logger
         task_id = task.id
         time_ended = time.time()
@@ -39,10 +39,10 @@ class ExecutorMixin:
                     if worker:
                         task.worker = worker.aid
                     logger.info(task.lazy_info())
-                    yield from self._pubsub.publish('started', task)
+                    await self._pubsub.publish('started', task)
                     job = JobClass(self, task)
                     # This may block for a while
-                    task.result = yield from self._consume(job, kwargs)
+                    task.result = await self._consume(job, kwargs)
             else:
                 raise TaskError('Invalid status %s' % task.status_string)
         except TaskTimeout:
@@ -67,7 +67,7 @@ class ExecutorMixin:
         task.time_ended = time.time()
         if self._concurrent_tasks:
             self._concurrent_tasks.discard(task_id)
-        yield from self._pubsub.publish('done', task)
+        await self._pubsub.publish('done', task)
         return task
 
     def _consume(self, job, kwargs):
@@ -75,7 +75,7 @@ class ExecutorMixin:
 
         if concurrency == models.ASYNC_IO:
             result = job(**kwargs)
-            assert is_async(result), "ASYNC_IO tasks not asynchronous"
+            assert isawaitable(result), "ASYNC_IO tasks not asynchronous"
             return result
 
         elif concurrency == models.GREEN_IO:
@@ -91,12 +91,11 @@ class ExecutorMixin:
             raise ImproperlyConfigured('invalid concurrency "%d"' %
                                        concurrency)
 
-    @asyncio.coroutine
-    def _consume_in_subprocess(self, job, kwargs):
+    async def _consume_in_subprocess(self, job, kwargs):
         params = dict(self.json_params())
         loop = job._loop
 
-        transport, protocol = yield from loop.subprocess_exec(
+        transport, protocol = await loop.subprocess_exec(
             lambda: StreamProtocol(job),
             sys.executable,
             PROCESS_FILE,
@@ -104,7 +103,7 @@ class ExecutorMixin:
             json.dumps(params),
             job.task.serialise())
         process = Process(transport, protocol, loop)
-        yield from process.communicate()
+        await process.communicate()
         if job.task.stacktrace:
             raise RemoteStackTrace
         return job.task.result
@@ -170,12 +169,12 @@ class ConsumerMixin:
                 worker._loop.stop()
         else:
             if worker.is_running() and not next_time:
-                asyncio.async(self._may_pool_task(worker), loop=worker._loop)
+                ensure_future(self._may_pool_task(worker), loop=worker._loop)
             else:
                 next_time = next_time or 0
                 worker._loop.call_later(next_time, self._pool_tasks, worker)
 
-    def _may_pool_task(self, worker):
+    async def _may_pool_task(self, worker):
         # Called in the ``worker`` event loop.
         #
         # It pools a new task if possible, and add it to the queue of
@@ -191,7 +190,7 @@ class ConsumerMixin:
 
                 if not self._closing:
                     try:
-                        task = yield from self._pubsub.get_task(*self.queues)
+                        task = await self._pubsub.get_task(*self.queues)
                     except ConnectionRefusedError:
                         if worker.is_running():
                             self.logger.exception('Could not pool tasks')
@@ -202,7 +201,7 @@ class ConsumerMixin:
                     if task:  # Got a new task
                         self._processed += 1
                         self._concurrent_tasks.add(task.id)
-                        asyncio.async(self._execute_task(worker, task))
+                        ensure_future(self._execute_task(worker, task))
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
                                   self.num_concurrent_tasks)

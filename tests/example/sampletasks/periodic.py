@@ -1,9 +1,9 @@
 from datetime import timedelta
 
-import pq
+from pq import api
 
 
-class TestPeriodicJob(pq.PeriodicJob):
+class TestPeriodicJob(api.PeriodicJob):
     abstract = True
     run_every = timedelta(hours=1)
 
@@ -23,7 +23,7 @@ class TestPeriodicError(TestPeriodicJob):
 
 
 class AnchoredEveryHour(TestPeriodicJob):
-    anchor = pq.anchorDate(minute=25)
+    anchor = api.anchorDate(minute=25)
 
     def __call__(self):   # pragma    nocover
         pass

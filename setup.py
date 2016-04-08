@@ -30,7 +30,7 @@ def run():
         ]
     )
 
-    setup(**config.extend(meta, 'lux'))
+    setup(**config.extend(meta, 'pq'))
 
 
 if __name__ == '__main__':

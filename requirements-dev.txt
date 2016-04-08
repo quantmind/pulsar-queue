@@ -1,3 +1,2 @@
 coverage
 flake8
--e git+https://github.com/quantmind/pulsar.git@master#egg=pulsar

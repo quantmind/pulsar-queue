@@ -3,12 +3,14 @@ import unittest
 
 from pq import api
 
+from tests import simple_task
+
 
 class TestTasks(unittest.TestCase):
 
     def test_decorator(self):
-        Job = api.job('bla foo', v0=6)(lambda self, value=0: self.v0 + value)
-        job = Job()
+        job_cls = api.job('bla foo', v0=6)(simple_task)
+        job = job_cls()
         self.assertIsInstance(job, api.Job)
         self.assertEqual(job(value=4), 10)
         self.assertEqual(str(job), 'bla.foo')

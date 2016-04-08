@@ -8,6 +8,8 @@ from pulsar.apps import rpc
 
 from pq import api
 
+from tests import dummy
+
 
 CODE_TEST = '''\
 import time
@@ -15,12 +17,6 @@ def task_function(N = 10, lag = 0.1):
     time.sleep(lag)
     return N*N
 '''
-
-
-def dummy():
-    # Just a dummy callable for testing coverage.
-    # A callable is invoked when the taskqueue starts
-    pass
 
 
 class TaskQueueBase(object):

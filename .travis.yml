@@ -9,17 +9,12 @@ services:
   - redis-server
 
 install:
-  - pip install -r requirements-dev.txt
-  - python setup.py install
-
-services:
-  - redis-server
+  - pip install git+https://github.com/quantmind/pulsar.git@dev
 
 script:
+  - python setup.py test --coverage
   - flake8
-  - rm -rf pulsar-queue
-  - python -m runtests --coverage
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then python -m runtests --coveralls; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.5.1' ]]; then python setup.py --coveralls; fi
 
 notifications:
   email: false

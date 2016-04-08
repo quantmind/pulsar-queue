@@ -95,7 +95,7 @@ class StreamProtocol(subprocess.SubprocessStreamProtocol):
 async def main(syspath, params, stask):
     logger = LOGGER
     try:
-        from pq import TaskApp
+        from pq.api import TaskApp
         sys.path[:] = json.loads(syspath)
         params = json.loads(params)
         params.update({'python_path': False,

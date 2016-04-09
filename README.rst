@@ -23,9 +23,9 @@ blocking IO tasks and long running CPU bound tasks.
   :target: https://pypi.python.org/pypi/pulsar-queue
 .. |downloads| image:: https://img.shields.io/pypi/dd/pulsar-queue.svg
   :target: https://pypi.python.org/pypi/pulsar-queue
-.. |master-build| image:: https://img.shields.io/travis/quantmind/lux/master.svg
+.. |master-build| image:: https://img.shields.io/travis/quantmind/pulsar-queue/master.svg
   :target: https://travis-ci.org/quantmind/pulsar-queue
-.. |dev-build| image:: https://img.shields.io/travis/quantmind/lux/dev.svg
+.. |dev-build| image:: https://img.shields.io/travis/quantmind/pulsar-queue/dev.svg
   :target: https://travis-ci.org/quantmind/pulsar-queue?branch=dev
 .. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=master
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master

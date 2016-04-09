@@ -48,7 +48,7 @@ Four steps tutorial
 
 .. code:: python
 
-    from pq import TaskApp
+    from pq.api import TaskApp
 
 
     task_paths = ['sampletasks.*']
@@ -75,21 +75,22 @@ It can be a directory containing several submodules.
 
     import asyncio
     import time
-    import pq
+
+    from pq import api
 
 
-    class Addition(pq.Job):
+    class Addition(api.Job):
 
         def __call__(self, a=0, b=0):
             return a + b
 
 
-    class Asynchronous(pq.Job):
-        concurrency = pq.ASYNC_IO
+    class Asynchronous(api.Job):
+        concurrency = api.ASYNC_IO
 
-        def __call__(self, lag=1):
+        async def __call__(self, lag=1):
             start = time.time()
-            yield from asyncio.sleep(lag)
+            await asyncio.sleep(lag)
             return time.time() - start
 
 **3 - Run the server**

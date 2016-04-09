@@ -10,7 +10,7 @@ services:
 
 install:
   - pip install cython
-  - pip install git+https://github.com/quantmind/pulsar.git@dev
+  - pip install git+https://github.com/quantmind/pulsar.git
 
 script:
   - python setup.py test --coverage -q

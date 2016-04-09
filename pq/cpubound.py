@@ -6,8 +6,6 @@ import asyncio
 import logging
 from asyncio import subprocess, streams
 
-from pulsar import isawaitable
-
 
 PQPATH = os.path.dirname(__file__)
 PROCESS_FILE = os.path.join(PQPATH, "cpubound.py")
@@ -95,8 +93,10 @@ class StreamProtocol(subprocess.SubprocessStreamProtocol):
 async def main(syspath, params, stask):
     logger = LOGGER
     try:
-        from pq.api import TaskApp
         sys.path[:] = json.loads(syspath)
+        from pulsar import isawaitable
+        from pq.api import TaskApp
+
         params = json.loads(params)
         params.update({'python_path': False,
                        'parse_console': False})

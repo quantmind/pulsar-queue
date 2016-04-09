@@ -4,7 +4,6 @@ import sys
 import json
 import subprocess
 
-log_level = ['error']
 test_modules = ['tests']
 test_timeout = 30
 

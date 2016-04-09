@@ -18,7 +18,7 @@ def run():
         zip_safe=False,
         setup_requires=['pulsar'],
         install_requires=config.requirements('requirements.txt')[0],
-        tests_require=config.requirements('requirements-dev.txt')[0],
+        # tests_require=config.requirements('requirements-dev.txt')[0],
         classifiers=[
             'Development Status :: 2 - Pre-Alpha',
             'Environment :: Web Environment',

@@ -18,7 +18,7 @@ class DefaultTaskConcurrency(TaskSetting):
     name = "default_task_concurrency"
     flags = ["--default-task-concurrency"]
     choices = ('asyncio', 'greenio', 'thread', 'process')
-    default = 'thread'
+    default = 'greenio'
     desc = """\
         Default concurrency for tasks
         """

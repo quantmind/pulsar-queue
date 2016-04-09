@@ -2,8 +2,7 @@
 import unittest
 import asyncio
 
-from pulsar import send, multi_async
-from pulsar.apps.test import dont_run_with_thread
+from pulsar import send
 from pulsar.apps import rpc
 
 from pq import api
@@ -20,7 +19,7 @@ def task_function(N = 10, lag = 0.1):
 
 
 class TaskQueueBase(object):
-    concurrency = 'thread'
+    concurrency = 'process'
     # used for both keep-alive and timeout in JsonProxy
     # long enough to allow to wait for tasks
     rpc_timeout = 500
@@ -66,11 +65,12 @@ class TaskQueueBase(object):
 
     @classmethod
     def tearDownClass(cls):
-        return multi_async((send('arbiter', 'kill_actor', a.name)
-                           for a in (cls.tq, cls.rpc) if a is not None))
+        coros = [send('arbiter', 'kill_actor', a.name) for a in
+                 (cls.tq, cls.rpc) if a is not None]
+        return asyncio.gather(*coros)
 
 
-class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
+class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
 
     def test_registry(self):
         backend = self.tq.backend
@@ -160,11 +160,6 @@ class TestTaskQueueOnThread(TaskQueueBase, unittest.TestCase):
         task = await backend.queue_task('asynchronous', callback=False)
         self.assertTrue(task.id)
         self.assertEqual(task.status_string, 'QUEUED')
-
-
-@dont_run_with_thread
-class TestTaskQueueOnProcess(TestTaskQueueOnThread):
-    concurrency = 'process'
 
     async def test_cpubound_task(self):
         task = await self.tq.queue_task('cpubound')

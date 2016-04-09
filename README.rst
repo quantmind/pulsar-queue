@@ -11,18 +11,18 @@ blocking IO tasks and long running CPU bound tasks.
 :Source: https://github.com/quantmind/pulsar-queue
 :Mailing list: `google user group`_
 :Design by: `Quantmind`_ and `Luca Sbardella`_
-:Platforms: Linux, OSX, Windows. Python 3.4 and above
+:Platforms: Linux, OSX, Windows. Python 3.5 and above
 :Keywords: server, asynchronous, concurrency, actor, process, queue, tasks, redis
 
 
-.. |pyversions| image:: https://img.shields.io/pypi/pyversions/lux.svg
-  :target: https://pypi.python.org/pypi/lux
-.. |license| image:: https://img.shields.io/pypi/l/lux.svg
-  :target: https://pypi.python.org/pypi/lux
-.. |status| image:: https://img.shields.io/pypi/status/lux.svg
-  :target: https://pypi.python.org/pypi/v
-.. |downloads| image:: https://img.shields.io/pypi/dd/lux.svg
-  :target: https://pypi.python.org/pypi/lux
+.. |pyversions| image:: https://img.shields.io/pypi/pyversions/pulsar-queue.svg
+  :target: https://pypi.python.org/pypi/pulsar-queue
+.. |license| image:: https://img.shields.io/pypi/l/pulsar-queue.svg
+  :target: https://pypi.python.org/pypi/pulsar-queue
+.. |status| image:: https://img.shields.io/pypi/status/pulsar-queue.svg
+  :target: https://pypi.python.org/pypi/pulsar-queue
+.. |downloads| image:: https://img.shields.io/pypi/dd/pulsar-queue.svg
+  :target: https://pypi.python.org/pypi/pulsar-queue
 .. |master-build| image:: https://img.shields.io/travis/quantmind/lux/master.svg
   :target: https://travis-ci.org/quantmind/pulsar-queue
 .. |dev-build| image:: https://img.shields.io/travis/quantmind/lux/dev.svg

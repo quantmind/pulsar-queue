@@ -9,11 +9,12 @@ services:
   - redis-server
 
 install:
+  - pip install cython
   - pip install git+https://github.com/quantmind/pulsar.git@dev
 
 script:
-  - python setup.py test --coverage
-  - flake8
+  - python setup.py test --coverage -q
+  - python setup.py test flake8
   - if [[ $TRAVIS_PYTHON_VERSION == '3.5.1' ]]; then python setup.py --coveralls; fi
 
 notifications:

@@ -27,9 +27,9 @@ blocking IO tasks and long running CPU bound tasks.
   :target: https://travis-ci.org/quantmind/pulsar-queue
 .. |dev-build| image:: https://img.shields.io/travis/quantmind/lux/dev.svg
   :target: https://travis-ci.org/quantmind/pulsar-queue?branch=dev
-.. |coverage-master| image:: https://coveralls.io/repos/quantmind/pulsar-queue/badge.svg?branch=master&service=github
+.. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=master
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
-.. |coverage-dev| image:: https://coveralls.io/repos/quantmind/pulsar-queue/badge.svg?branch=dev&service=github
+.. |coverage-dev| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=dev
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=dev
 .. |pulsar-queue| image:: https://quantmind-public.s3.amazonaws.com/pulsar/pulsar_colored_logo_only.svg
    :width: 200 px

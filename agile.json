@@ -1,0 +1,15 @@
+{
+    "github": {
+        "pq": {
+            "python_module": "pq",
+            "version": "pulsar.__version__",
+            "release_notes": "docs/history"
+        }
+    },
+    "tasks": {
+        "release": {
+            "description": "make a new pulsar-queue release to github",
+            "command": ["github:pq"]
+        }
+    }
+}

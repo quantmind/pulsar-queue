@@ -4,7 +4,6 @@ from .pubsub import TaskFuture
 from .config import TaskScheduler, TaskConsumer
 from .models import (job, Job, PeriodicJob, anchorDate,
                      ASYNC_IO, GREEN_IO, THREAD_IO, CPUBOUND)
-from .utils import nice_task_message
 
 __all__ = ['TaskApp',
            'PulsarQueue',
@@ -22,5 +21,4 @@ __all__ = ['TaskApp',
            'ASYNC_IO',
            'GREEN_IO',
            'THREAD_IO',
-           'CPUBOUND',
-           'nice_task_message']
+           'CPUBOUND']

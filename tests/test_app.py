@@ -2,7 +2,7 @@
 import unittest
 import asyncio
 
-from pulsar import send
+from pulsar import send, ImproperlyConfigured
 from pulsar.apps import rpc
 
 from pq import api
@@ -187,7 +187,10 @@ class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
         self.assertEqual(task.result, False)
 
     async def test_big_log(self):
-        # If this test fails, this is because the test runner will timeout on
+        # If this test fails, it is because the test runner will timeout on
         # this future, this is because the pipe fills up and blocks the
         # cpu bound task
-        await self.tq.queue_task('cpuboundbiglog')
+        task = await self.tq.queue_task('cpuboundbiglog')
+        self.assertRaises(ImproperlyConfigured, task.serialise, 'foo')
+        jtask = task.serialise()
+        self.assertRaises(ImproperlyConfigured, api.Task.load, jtask, 'foo')

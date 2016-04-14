@@ -45,14 +45,14 @@ class TaskQueueBase(object):
         queues = ['%s1' % name, '%s2' % name]
         pq = api.PulsarQueue(cls.name(),
                              wsgi=True,
+                             config='tests.config',
                              queue_callable=dummy,
                              task_queues=queues,
                              default_task_queue=queues[0],
                              rpc_bind='127.0.0.1:0',
                              concurrency=cls.concurrency,
                              rpc_concurrency=cls.concurrency,
-                             rpc_keep_alive=cls.rpc_timeout,
-                             task_paths=['tests.example.sampletasks.*'])
+                             rpc_keep_alive=cls.rpc_timeout)
         cfgs = await pq.start()
         cls.tq = cfgs[0].app()
         cls.rpc = cfgs[1].app()

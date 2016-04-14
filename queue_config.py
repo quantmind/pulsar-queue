@@ -4,9 +4,6 @@ import sys
 import json
 import subprocess
 
-test_modules = ['tests']
-test_timeout = 30
-
 
 def setup(params, package=None):
     if package:

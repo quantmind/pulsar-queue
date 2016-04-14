@@ -1,10 +1,6 @@
-import os
-import sys
-
 from setuptools import setup, find_packages
 
-sys.path.insert(0, os.path.dirname(__file__))
-config = __import__('config')
+import queue_config as config
 
 
 def run():

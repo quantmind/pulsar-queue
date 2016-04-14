@@ -1,7 +1,9 @@
 
 # Tasks Concurrency
 
-A task can run in one of four ``concurrency`` modes. If not specified, the default concurrency mode is [THREAD_IO](#thread_io). 
+A task can run in one of four ``concurrency`` modes.
+If not specified by the [Job][], the concurrency mode is given by the
+[default_task_concurrency][] parameter.
 
 ## ASYNC_IO
 
@@ -17,12 +19,18 @@ in the worker event loop.
 
 ## THREAD_IO
 
-The default concurrency model. It assumes the task performs blocking IO operations
+It assumes the task performs blocking IO operations
 which make it suitable to be run in the event loop [executor][].
 You can use this model for most blocking operation unless
-* Long running CPU bound
-* Don't release the GIL
 
+* Long running CPU bound
+* The operation does not release the GIL
+
+## CPUBOUND
+
+It assumes the task performs blocking CPUT bound operations.
+These tasks are run on sub-processes.
 
 [Future]: https://docs.python.org/3/library/asyncio-task.html#asyncio.Future
 [executor]: https://docs.python.org/3/library/asyncio-eventloop.html#executor
+[default_task_concurrency]: ./config.html#default-task-concurrency

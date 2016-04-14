@@ -19,7 +19,8 @@ def setup(params, package=None):
 
 
 def read(name):
-    with open(name) as fp:
+    filename = os.path.join(os.path.dirname(__file__), name)
+    with open(filename) as fp:
         return fp.read()
 
 

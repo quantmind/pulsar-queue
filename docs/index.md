@@ -4,6 +4,7 @@
 
 * [Configuration](./config.html)
 * [Task States](./states.html)
+* [Concurrency](./concurrency.html)
 * [API](./api.html)
 * [Release notes](./changelog.html)
 

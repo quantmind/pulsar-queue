@@ -5,16 +5,17 @@ from pulsar.apps.wsgi import (WSGIServer, Router, LazyWsgi,
                               WsgiHandler, GZipMiddleware)
 from pulsar.utils.log import lazyproperty
 
+from . import __version__
 from .config import TaskScheduler, TaskConsumer, DEFAULT_TASK_BACKEND
 from .rpc import TaskQueueRpc
 
 
 class TaskApp(Application):
-    '''A pulsar :class:`.Application` for consuming :class:`.Task`.
+    """A pulsar :class:`.Application` for consuming :class:`.Task`.
 
     This application can also schedule periodic tasks when the
     :ref:`schedule_periodic <setting-schedule_periodic>` flag is ``True``.
-    '''
+    """
     backend = None
     '''The :class:`.TaskBackend` for this task queue.
 
@@ -22,6 +23,7 @@ class TaskApp(Application):
     '''
     name = 'tasks'
     cfg = Config(apps=('tasks',),
+                 version=__version__,
                  data_store=DEFAULT_TASK_BACKEND,
                  timeout=600)
 

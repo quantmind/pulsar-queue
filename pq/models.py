@@ -223,8 +223,19 @@ class Job(metaclass=JobMetaClass):
         raise NotImplementedError("Jobs must implement the __call__ method.")
 
     @property
+    def cfg(self):
+        """Configuration  object from :attr:`backend`"""
+        return self.backend.cfg
+
+    @property
     def green_pool(self):
         return self.backend.green_pool
+
+    @property
+    def http(self):
+        """Best possible HTTP session handler
+        """
+        return self.backend.http_sessions(self.get_concurrency())
 
     @property
     def _loop(self):
@@ -310,6 +321,13 @@ class PeriodicJob(Job):
         return self.run_every.is_due(last_run_at)
 
 
+class EventDriven(Job):
+
+    @property
+    def type(self):
+        return 'event-driven'
+
+
 def anchorDate(hour=0, minute=0, second=0):
     '''Create an anchor date.'''
     td = date.today()
@@ -321,7 +339,8 @@ JOB_LIST = '__PULSAR_QUEUE_JOBS__'
 
 
 class job:
-
+    """Decorator for creating a Job class from a function
+    """
     def __init__(self, name=None, run_every=None, **attrs):
         assert name, 'task requires a valid name'
         self.class_name = slugify(name, '_')

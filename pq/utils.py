@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta
 
-from . import states
-
 
 def timedelta_seconds(delta):
     return max(delta.total_seconds(), 0)

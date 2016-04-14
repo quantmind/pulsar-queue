@@ -13,6 +13,15 @@ task_paths = ['myjobs','another.moduledir.*']
   The ``*`` at the end of the second module indicates to collect
   [job](./job.html) classes from all submodules of ``another.moduledir``.
 
+## default_task_concurrency
+
+Default [concurrency](./concurrency.html) mode for tasks.
+
+It can be specified in the command line via the
+``--default-task-concurrency`` option.
+
+**Default**: ``greenio``
+
 ## schedule_periodic
 
 When ``True``, the task application can schedule [PeriodicJob][]. Usually,

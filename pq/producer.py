@@ -2,20 +2,22 @@ import time
 import logging
 import platform
 
-from pulsar import chain_future
+from pulsar import chain_future, new_event_loop
 from pulsar.apps.data import create_store
 from pulsar.utils.string import gen_unique_id
-from pulsar.apps.greenio import GreenPool
+from pulsar.apps.greenio import GreenPool, GreenHttp
+from pulsar.apps.http import HttpClient
 
 from .pubsub import PubSub, TaskFuture
 from .task import Task, TaskNotAvailable
-from .models import RegistryMixin
 from .consumer import ExecutorMixin
 from .utils import get_time
+
+from . import models
 from . import states
 
 
-class TaskProducer(RegistryMixin, ExecutorMixin):
+class TaskProducer(models.RegistryMixin, ExecutorMixin):
     """Produce tasks by queuing them
     """
     def __init__(self, cfg, logger=None, app=None, **kw):
@@ -23,6 +25,7 @@ class TaskProducer(RegistryMixin, ExecutorMixin):
         self.cfg = cfg
         self.app = app
         self.green_pool = getattr(app, 'green_pool', GreenPool())
+        self.http = getattr(app, 'http', HttpClient())
         self.logger = logger or logging.getLogger('pulsar.queue')
         self._closing = False
         self._pubsub = PubSub(self)
@@ -44,6 +47,16 @@ class TaskProducer(RegistryMixin, ExecutorMixin):
     @property
     def node_name(self):
         return platform.node()
+
+    def http_sessions(self, concurrency):
+        """Return an HTTP session handler for a given concurrency model
+        """
+        if concurrency == models.THREAD_IO:
+            return HttpClient(loop=new_event_loop())
+        elif concurrency == models.ASYNC_IO:
+            return self.http
+        else:
+            return GreenHttp(self.http)
 
     def ready(self):
         return self._pubsub._subscribed

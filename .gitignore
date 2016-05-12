@@ -14,7 +14,7 @@ htmlcov
 
 #python
 .python-version
-pulsar_cloud.egg-info
+*.egg-info
 *.pyc
 __pycache__
 *.egg-info
@@ -22,3 +22,4 @@ __pycache__
 build
 _build
 dist
+release-notes.md

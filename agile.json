@@ -2,7 +2,7 @@
     "github": {
         "pq": {
             "python_module": "pq",
-            "version": "pulsar.__version__",
+            "version": "pq.__version__",
             "release_notes": "docs/history"
         }
     },

@@ -133,7 +133,7 @@ class JobRegistry(dict):
     @classmethod
     def load(cls, paths):
         self = cls()
-        for mod in import_modules(paths, safe=False):
+        for mod in import_modules(paths, safe=True):
             for name in dir(mod):
                 if name == JOB_LIST:
                     for job_cls in getattr(mod, name):
@@ -342,8 +342,7 @@ class job:
     """Decorator for creating a Job class from a function
     """
     def __init__(self, name=None, run_every=None, **attrs):
-        assert name, 'task requires a valid name'
-        self.class_name = slugify(name, '_')
+        self.class_name = name
         self.attrs = attrs
         base = Job
         if run_every:
@@ -352,6 +351,9 @@ class job:
         self.bases = (base,)
 
     def __call__(self, callable):
+        if not self.class_name:
+            self.class_name = callable.__name__
+        self.class_name = slugify(self.class_name, '_')
         self.attrs['__call__'] = callable
         cls = JobMetaClass(self.class_name, self.bases, self.attrs)
         module = inspect.getmodule(callable)

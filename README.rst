@@ -121,6 +121,20 @@ Launch a python shell and play with the api
     >>> task.status_string
     'SUCCESS'
 
+API
+=============
+
+The task backend is obtained from the Task application ``backend`` attribute::
+
+    from pq.api import TaskApp
+
+    tasks = TaskApp(...).backend
+
+.. py:method::tasks.execute_task
+
+    Execute a task immediately, it does not put the task in the task queue.
+    This method is useful for debugging and testing.
+
 License
 =============
 This software is licensed under the BSD 3-clause License. See the LICENSE

@@ -101,9 +101,10 @@ async def main(syspath, params, stask):
         params.update({'python_path': False,
                        'parse_console': False})
         producer = TaskApp(**params).backend
+        pubsub = producer.pubsub
+        await pubsub.start()
         logger = producer.logger
-        await producer.ready()
-        task = producer._pubsub.load(stask)
+        task = pubsub.load(stask)
         JobClass = producer.registry.get(task.name)
         if not JobClass:
             raise RuntimeError('%s not in registry' % task.name)

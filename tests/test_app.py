@@ -60,7 +60,7 @@ class TaskQueueBase(object):
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
-        backend = cls.tq.backend
+        backend = await cls.tq.backend.start()
         await backend.flush_queues(*queues)
 
     @classmethod
@@ -194,3 +194,9 @@ class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
         self.assertRaises(ImproperlyConfigured, task.serialise, 'foo')
         jtask = task.serialise()
         self.assertRaises(ImproperlyConfigured, api.Task.load, jtask, 'foo')
+
+    async def test_execute_python_code(self):
+        task = await self.tq.execute_task('execute.python',
+                                          code='print("Hello World!")')
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertEqual(task.result, 'Hello World!')

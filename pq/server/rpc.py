@@ -2,7 +2,7 @@ import pulsar
 from pulsar import get_application
 from pulsar.apps import rpc
 
-from .producer import Task
+from ..tasks.task import Task
 
 
 def task_to_json(task):

@@ -1,1 +1,1 @@
-task_paths = ['tests.example.sampletasks.*']
+task_paths = ['tests.example.sampletasks.*', 'pq.jobs']

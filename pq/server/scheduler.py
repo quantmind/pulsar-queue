@@ -3,18 +3,30 @@ from datetime import datetime, timedelta
 
 from pulsar.utils.log import lazyproperty
 
-from .utils import timedelta_seconds
+from ..utils import timedelta_seconds
 
 
 class SchedulerMixin:
-    '''Schedule new tasks
-    '''
+    """Schedule new tasks
+
+    Implements method for task scheduling
+    """
 
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
         o.next_run = time.time()
         return o
+
+    def __repr__(self):
+        if self.cfg.schedule_periodic:
+            return 'task scheduler <%s>' % self.broker
+        else:
+            return 'task producer <%s>' % self.broker
+
+    async def start(self, worker=None):
+        await self.pubsub.start()
+        return self
 
     @lazyproperty
     def entries(self):

@@ -7,10 +7,10 @@ from asyncio.subprocess import Process
 from pulsar import isawaitable, ImproperlyConfigured, CANCELLED_ERRORS
 from pulsar.utils.system import json
 
-from .task import TaskError, TaskTimeout
-from . import models
-from . import states
-from .cpubound import StreamProtocol, PROCESS_FILE
+from ..tasks.task import TaskError, TaskTimeout
+from ..tasks import models
+from ..tasks import states
+from ..cpubound import StreamProtocol, PROCESS_FILE
 
 
 class RemoteStackTrace(TaskError):
@@ -20,7 +20,7 @@ class RemoteStackTrace(TaskError):
 class ExecutorMixin:
     _concurrent_tasks = None
 
-    async def _execute_task(self, worker, task):
+    async def _execute_task(self, task, worker=None):
         logger = self.logger
         task_id = task.id
         time_ended = time.time()
@@ -39,7 +39,7 @@ class ExecutorMixin:
                     if worker:
                         task.worker = worker.aid
                     logger.info(task.lazy_info())
-                    await self._pubsub.publish('started', task)
+                    await self.pubsub.publish('started', task)
                     job = JobClass(self, task)
                     # This may block for a while
                     task.result = await self._consume(job, kwargs)
@@ -67,7 +67,7 @@ class ExecutorMixin:
         task.time_ended = time.time()
         if self._concurrent_tasks:
             self._concurrent_tasks.discard(task_id)
-        await self._pubsub.publish('done', task)
+        await self.pubsub.publish('done', task)
         return task
 
     def _consume(self, job, kwargs):
@@ -152,11 +152,13 @@ class ConsumerMixin:
                 'processed': self._processed,
                 'queues': self._queues}
 
-    def start(self, worker, queues=None):
+    async def start(self, worker):
         '''Starts consuming tasks
         '''
+        await self.pubsub.start()
         self._pool_tasks(worker)
         self.logger.debug('%s started polling tasks', self)
+        return self
 
     # #######################################################################
     # #    PRIVATE METHODS
@@ -190,7 +192,7 @@ class ConsumerMixin:
 
                 if not self._closing:
                     try:
-                        task = await self._pubsub.get_task(*self.queues)
+                        task = await self.broker.get_task(*self.queues)
                     except ConnectionRefusedError:
                         if worker.is_running():
                             self.logger.exception('Could not pool tasks')
@@ -201,7 +203,7 @@ class ConsumerMixin:
                     if task:  # Got a new task
                         self._processed += 1
                         self._concurrent_tasks.add(task.id)
-                        ensure_future(self._execute_task(worker, task))
+                        ensure_future(self._execute_task(task, worker))
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
                                   self.num_concurrent_tasks)

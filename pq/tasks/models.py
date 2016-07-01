@@ -57,13 +57,16 @@ a new task cannot be started unless a previous task of the same job
 is done.
 
 '''
+import sys
 import logging
 import inspect
+import asyncio
 from datetime import datetime, date
 
 from pulsar.utils.slugify import slugify
 from pulsar.utils.importer import import_modules
 from pulsar.utils.log import lazyproperty
+from pulsar.utils.string import to_bytes
 
 
 ASYNC_IO = 1        # tasks run in the worker event loop
@@ -76,6 +79,10 @@ _concurrency = {'asyncio': ASYNC_IO,
                 'greenio': GREEN_IO,
                 'thread': THREAD_IO,
                 'process': CPUBOUND}
+
+
+class ShellError(RuntimeError):
+    pass
 
 
 class RegistryMixin:
@@ -292,6 +299,37 @@ class Job(metaclass=JobMetaClass):
         name = name or self.name
         return self.backend.lock(name, revoke)
 
+    async def shell(self, command, input=None, chdir=None, interactive=False,
+                    stderr=None, stdout=None, **kw):
+        """Execute a shell command
+        :param command: command to execute
+        :param input: optional input
+        :param chdir: optional directory to execute the shell command from
+        :param  interactive: display output as it becomes available
+        :return: the output text
+        """
+        stdin = asyncio.subprocess.PIPE if input is not None else None
+        if chdir:
+            command = 'cd %s && %s' % (chdir, command)
+
+        proc = await asyncio.create_subprocess_shell(
+            command,
+            stdin=stdin,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        if input is not None:
+            proc._feed_stdin(to_bytes(input))
+
+        msg, err = await asyncio.gather(
+            _interact(proc, 1, interactive, stdout or sys.stdout),
+            _interact(proc, 2, interactive, stderr or sys.stderr)
+        )
+        if proc.returncode:
+            msg = '%s%s' % (msg.decode('utf-8'), err.decode('utf-8'))
+            raise ShellError(msg.strip(), proc.returncode)
+        return msg.decode('utf-8').strip()
+
 
 class PeriodicJob(Job):
     '''A periodic :class:`.Job` implementation.'''
@@ -363,3 +401,19 @@ class job:
             setattr(module, JOB_LIST, job_list)
         job_list.append(cls)
         return cls
+
+
+# INTERNALS
+async def _interact(proc, fd, interactive, out):
+    transport = proc._transport.get_pipe_transport(fd)
+    stream = proc.stdout if fd == 1 else proc.stderr
+    output = b''
+    while interactive:
+        line = await stream.readline()
+        if not line:
+            break
+        out.write(line.decode('utf-8'))
+    else:
+        output = await stream.read()
+    transport.close()
+    return output

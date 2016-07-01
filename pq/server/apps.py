@@ -5,9 +5,10 @@ from pulsar.apps.wsgi import (WSGIServer, Router, LazyWsgi,
                               WsgiHandler, GZipMiddleware)
 from pulsar.utils.log import lazyproperty
 
-from . import __version__
-from .config import TaskScheduler, TaskConsumer, DEFAULT_TASK_BACKEND
+from .. import __version__
+from .config import DEFAULT_TASK_BACKEND
 from .rpc import TaskQueueRpc
+from . import TaskScheduler, TaskConsumer
 
 
 class TaskApp(Application):
@@ -30,14 +31,10 @@ class TaskApp(Application):
     @lazyproperty
     def backend(self):
         queues = getattr(self, 'queues', None)
-        app = None
-        if self.cfg.callable:
-            app = self.cfg.callable()
         if queues:
-            return TaskConsumer(self.cfg, queues=queues, app=app,
-                                logger=self.logger)
+            return TaskConsumer(self.cfg, queues=queues, logger=self.logger)
         else:
-            return TaskScheduler(self.cfg, app=app, logger=self.logger)
+            return TaskScheduler(self.cfg, logger=self.logger)
 
     def queue_task(self, job_name, **kwargs):
         """Queue a job via the backend
@@ -55,7 +52,8 @@ class TaskApp(Application):
         It calls the :attr:`.Application.callable` (if available)
         and create the :attr:`~.TaskQueue.backend`.
         '''
-        return self.backend.ready()
+        if not exc:
+            return self.backend.start(monitor)
 
     def monitor_task(self, monitor):
         '''Override the :meth:`~.Application.monitor_task` callback.
@@ -72,7 +70,7 @@ class TaskApp(Application):
     def worker_start(self, worker, exc=None):
         if not exc and not worker.is_monitor():
             self.queues = self.cfg.task_queues
-            self.backend.start(worker)
+            return self.backend.start(worker)
 
     def worker_stopping(self, worker, exc=None):
         self.backend.close()

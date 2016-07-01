@@ -1,52 +1,61 @@
+from abc import ABC, abstractmethod
 import time
 import logging
 import platform
 
-from pulsar import chain_future, new_event_loop
+from pulsar import new_event_loop
 from pulsar.apps.data import create_store
 from pulsar.utils.string import gen_unique_id
 from pulsar.apps.greenio import GreenPool, GreenHttp
 from pulsar.apps.http import HttpClient
 
-from .pubsub import PubSub, TaskFuture
-from .task import Task, TaskNotAvailable
+from ..utils import get_time
+from ..tasks import models
+from ..tasks import states
+from ..tasks.task import Task, TaskNotAvailable
+from ..backends import brokers
+
 from .consumer import ExecutorMixin
-from .utils import get_time
-
-from . import models
-from . import states
+from .pubsub import PubSub
 
 
-class TaskProducer(models.RegistryMixin, ExecutorMixin):
+class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
     """Produce tasks by queuing them
+
+    Abstract base class for both task schedulers and task consumers
     """
-    def __init__(self, cfg, logger=None, app=None, **kw):
-        self.store = create_store(cfg.data_store)
+    app = None
+
+    def __init__(self, cfg, logger=None, **kw):
         self.cfg = cfg
-        self.app = app
-        self.green_pool = getattr(app, 'green_pool', GreenPool())
-        self.http = getattr(app, 'http', HttpClient())
         self.logger = logger or logging.getLogger('pulsar.queue')
         self._closing = False
-        self._pubsub = PubSub(self)
-        self.logger.debug('created %s', self)
-
-    def __repr__(self):
-        if self.cfg.schedule_periodic:
-            return 'task scheduler <%s>' % self.store.dns
+        store = create_store(cfg.data_store)
+        if not cfg.message_broker:
+            broker = store
         else:
-            return 'task producer <%s>' % self.store.dns
+            broker = create_store(cfg.message_broker)
+        if self.cfg.callable:
+            self.app = self.cfg.callable(self)
+        self.pubsub = PubSub(self, store)
+        self.broker = brokers.get(broker.name)(self, broker)
+        self.green_pool = getattr(self.app, 'green_pool', GreenPool())
+        self.http = getattr(self.app, 'http', HttpClient())
 
     def __str__(self):
         return repr(self)
 
     @property
     def _loop(self):
-        return self.store._loop
+        return self.broker._loop
 
     @property
     def node_name(self):
         return platform.node()
+
+    @abstractmethod
+    async def start(self, worker=None):
+        pass
 
     def http_sessions(self, concurrency):
         """Return an HTTP session handler for a given concurrency model
@@ -58,14 +67,11 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
         else:
             return GreenHttp(self.http)
 
-    def ready(self):
-        return self._pubsub._subscribed
-
     def flush_queues(self, *queues):
-        return self._pubsub.flush_queues(*queues)
+        return self.broker.flush_queues(*queues)
 
     def on_events(self, callback):
-        self._pubsub.on_events(callback)
+        self.pubsub.on_events(callback)
 
     def close(self):
         '''Close this :class:`.TaskBackend`.
@@ -78,14 +84,14 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
     def queue_task(self, jobname, callback=True, **kwargs):
         '''Try to queue a new :task
 
-        :param callback: whn true (default) return a future called back once
+        :param callback: when true (default) return a future called back once
             the task done, otherwise it is called back once the task is queued.
         :return: a :class:`.Future` resulting in a task once finished or
             Nothing
         '''
         task = self._create_task(jobname, **kwargs)
         if task:
-            return self._pubsub.queue(task, callback)
+            return self.broker.queue(task, callback)
 
     def queue_task_local(self, jobname, **kwargs):
         kwargs['queue'] = self.node_name
@@ -95,11 +101,8 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
         '''Execute a task immediately
         '''
         kwargs['queue'] = False
-        task = self._create_task(jobname, **kwargs)
-        if task:
-            future = TaskFuture(task.id, loop=self._loop)
-            coro = self._execute_task(None, task)
-            return chain_future(coro, next=future)
+        kwargs['callback'] = True
+        return self.queue_task(jobname, **kwargs)
 
     # INTERNALS
     def _create_task(self, jobname, meta_params=None, expiry=None, queue=True,

@@ -8,6 +8,7 @@ from tests import simple_task
 
 
 class TestTasks(unittest.TestCase):
+
     def app(self, task_paths=None, **kwargs):
         task_paths = task_paths or ['tests.example.sampletasks.*']
         app = api.TaskApp(task_paths=task_paths, **kwargs)

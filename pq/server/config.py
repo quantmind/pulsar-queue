@@ -1,9 +1,5 @@
 import pulsar
 
-from .consumer import ConsumerMixin
-from .scheduler import SchedulerMixin
-from .producer import TaskProducer
-
 
 DEFAULT_TASK_BACKEND = 'redis://127.0.0.1:6379/7'
 
@@ -12,6 +8,16 @@ class TaskSetting(pulsar.Setting):
     virtual = True
     app = 'tasks'
     section = "Task Consumer"
+
+
+class MessageBroker(TaskSetting):
+    name = 'message_broker'
+    flags = ['--message-broker']
+    meta = "CONNECTION STRING"
+    default = ''
+    desc = """\
+        Connection string to message broker.
+    """
 
 
 class DefaultTaskConcurrency(TaskSetting):
@@ -109,11 +115,3 @@ class SchedulePeriodic(TaskSetting):
         If enabled, :class:`.PeriodicJob` will produce
         tasks according to their schedule.
         '''
-
-
-class TaskScheduler(SchedulerMixin, TaskProducer):
-    pass
-
-
-class TaskConsumer(ConsumerMixin, TaskProducer):
-    pass

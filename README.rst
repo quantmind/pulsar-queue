@@ -3,7 +3,7 @@
 Asynchronous task queue for consuming asynchronous IO tasks, green IO tasks,
 blocking IO tasks and long running CPU bound tasks.
 
-:Badges: |license|  |pyversions| |status| |downloads|
+:Badges: |license|  |pyversions| |status| |pypiversion|
 :Master CI: |master-build| |coverage-master|
 :Dev CI: |dev-build| |coverage-dev|
 :Documentation: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
@@ -15,6 +15,8 @@ blocking IO tasks and long running CPU bound tasks.
 :Keywords: server, asynchronous, concurrency, actor, process, queue, tasks, redis
 
 
+.. |pypiversion| image:: https://badge.fury.io/py/pulsar-queue.svg
+    :target: https://pypi.python.org/pypi/pulsar-queue
 .. |pyversions| image:: https://img.shields.io/pypi/pyversions/pulsar-queue.svg
   :target: https://pypi.python.org/pypi/pulsar-queue
 .. |license| image:: https://img.shields.io/pypi/l/pulsar-queue.svg

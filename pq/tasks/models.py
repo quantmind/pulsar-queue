@@ -141,12 +141,12 @@ class JobRegistry(dict):
     def load(cls, paths):
         self = cls()
         for mod in import_modules(paths, safe=True):
-            for name in dir(mod):
+            for name, item in vars(mod).items():
                 if name == JOB_LIST:
-                    for job_cls in getattr(mod, name):
+                    for job_cls in item:
                         self.register(job_cls)
                 else:
-                    self.register(getattr(mod, name))
+                    self.register(item)
         return self
 
 
@@ -237,6 +237,10 @@ class Job(metaclass=JobMetaClass):
     @property
     def green_pool(self):
         return self.backend.green_pool
+
+    @property
+    def wait(self):
+        return self.backend.green_pool.wait
 
     @property
     def http(self):

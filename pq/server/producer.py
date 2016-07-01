@@ -9,7 +9,7 @@ from pulsar.utils.string import gen_unique_id
 from pulsar.apps.greenio import GreenPool, GreenHttp
 from pulsar.apps.http import HttpClient
 
-from ..utils import get_time
+from ..utils.time import get_time
 from ..tasks import models
 from ..tasks import states
 from ..tasks.task import Task, TaskNotAvailable

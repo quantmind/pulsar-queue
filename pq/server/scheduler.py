@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from pulsar.utils.log import lazyproperty
 
-from ..utils import timedelta_seconds
+from ..utils.time import timedelta_seconds
 
 
 class SchedulerMixin:

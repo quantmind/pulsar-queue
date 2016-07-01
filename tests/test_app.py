@@ -1,4 +1,6 @@
 """Tests task scheduling and execution"""
+import os
+import sys
 import unittest
 import asyncio
 
@@ -16,6 +18,8 @@ def task_function(N = 10, lag = 0.1):
     time.sleep(lag)
     return N*N
 '''
+
+PATH = os.path.dirname(__file__)
 
 
 class TaskQueueBase(object):
@@ -200,3 +204,10 @@ class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
                                           code='print("Hello World!")')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, 'Hello World!')
+
+    async def test_execute_python_script(self):
+        script = os.path.join(PATH, 'example', 'executable.py')
+        task = await self.tq.execute_task('execute.python.script',
+                                          script=script)
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertEqual(task.result, sys.executable)

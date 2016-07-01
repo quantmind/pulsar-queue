@@ -24,3 +24,14 @@ async def execute_python(self, code=None):
     finally:
         os.remove(path)
     return result
+
+
+@job(concurrency=ASYNC_IO)
+async def execute_python_script(self, script=None):
+    """Execute arbitrary python code on a subprocess
+    """
+    assert isinstance(script, str), "script must be a string"
+    assert os.path.isfile(script), "script %s is not a file" % script
+    command = '%s %s' % (sys.executable, script)
+    result = await self.shell(command)
+    return result

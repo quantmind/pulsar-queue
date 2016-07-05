@@ -104,8 +104,7 @@ class MQ(Component, ABC):
     async def _queue_task(self, task):
         '''Asynchronously queue a task
         '''
-        stask = self.serialise(task)
         await self.pubsub.publish('queued', task)
-        await self.queue_message(task.queue, stask)
+        await self.queue_message(task.queue, self.serialise(task))
         self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
         return task

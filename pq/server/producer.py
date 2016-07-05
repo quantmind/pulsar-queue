@@ -1,3 +1,4 @@
+from uuid import uuid4
 from abc import ABC, abstractmethod
 import time
 import logging
@@ -5,7 +6,6 @@ import platform
 
 from pulsar import new_event_loop
 from pulsar.apps.data import create_store
-from pulsar.utils.string import gen_unique_id
 from pulsar.apps.greenio import GreenPool, GreenHttp
 from pulsar.apps.http import HttpClient
 
@@ -16,7 +16,7 @@ from ..tasks.task import Task, TaskNotAvailable
 from ..backends import brokers
 
 from .consumer import ExecutorMixin
-from .pubsub import PubSub
+from .pubsub import PubSub, store_task
 
 
 class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
@@ -37,6 +37,7 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
             broker = create_store(cfg.message_broker)
         if self.cfg.callable:
             self.app = self.cfg.callable(self)
+        self.store_task = getattr(self.app, 'store_task', store_task)
         self.pubsub = PubSub(self, store)
         self.broker = brokers.get(broker.name)(self, broker)
         self.green_pool = getattr(self.app, 'green_pool', GreenPool())
@@ -56,6 +57,9 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
     @abstractmethod
     async def start(self, worker=None):
         pass
+
+    def gen_unique_id(self):
+        return uuid4().hex
 
     def http_sessions(self, concurrency):
         """Return an HTTP session handler for a given concurrency model
@@ -129,7 +133,7 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
             return
         if jobname in self.registry:
             job = self.registry[jobname]
-            task_id = gen_unique_id()
+            task_id = self.gen_unique_id()
             queued = time.time()
             if expiry is not None:
                 expiry = get_time(expiry, queued)

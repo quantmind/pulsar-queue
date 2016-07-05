@@ -137,6 +137,24 @@ The task backend is obtained from the Task application ``backend`` attribute::
     Execute a task immediately, it does not put the task in the task queue.
     This method is useful for debugging and testing.
 
+Application
+~~~~~~~~~~~~~~~~
+
+It is possible to enhance the task queue by passing an application ``callable``
+during initialisation. This callable must be picklable::
+
+    class Application:
+
+        def __init__(self, backend):
+            self.backend = backend
+
+        async def store_task(self, task):
+            """Store task into a backend database"""
+            ...
+
+    tq = TaskApp(Application, ...)
+
+
 License
 =============
 This software is licensed under the BSD 3-clause License. See the LICENSE

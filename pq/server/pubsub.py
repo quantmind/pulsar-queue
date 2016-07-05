@@ -31,14 +31,14 @@ class PubSub(Component):
         if callback in self._event_callbacks:
             self._event_callbacks.remove(callback)
 
-    def publish(self, event, task):
+    async def publish(self, event, task):
         '''Publish a task to the ``<prefix>_task_<event>`` channel
 
         :return: a coroutine
         '''
         channel = self._channel(event)
-        stask = self.serialise(task)
-        return self._pubsub.publish(channel, stask)
+        await self.backend.store_task(task)
+        await self._pubsub.publish(channel, self.serialise(task))
 
     # INTERNALS
     def __call__(self, channel, message):
@@ -59,3 +59,9 @@ class PubSub(Component):
         event = 'task_%s' % event
         prefix = self.cfg.task_queue_prefix
         return '%s_%s' % (prefix, event) if prefix else event
+
+
+async def store_task(task):
+    """Dummy function to store a task into a persistent database
+    """
+    return

@@ -33,9 +33,8 @@ blocking IO tasks and long running CPU bound tasks.
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
 .. |coverage-dev| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=dev
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=dev
-.. |pulsar-queue| image:: https://quantmind-public.s3.amazonaws.com/pulsar/pulsar_colored_logo_only.svg
-   :width: 200 px
-   :target: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
+.. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png
+   :target: https://github.com/quantmind/pulsar-queue
 
 
 Four steps tutorial
@@ -126,7 +125,9 @@ Launch a python shell and play with the api
 API
 =============
 
-The task backend is obtained from the Task application ``backend`` attribute::
+The task backend is obtained from the Task application ``backend`` attribute:
+
+.. code:: python
 
     from pq.api import TaskApp
 
@@ -141,7 +142,9 @@ Application
 ~~~~~~~~~~~~~~~~
 
 It is possible to enhance the task queue by passing an application ``callable``
-during initialisation. This callable must be picklable::
+during initialisation. This callable must be picklable:
+
+.. code:: python
 
     class Application:
 
@@ -154,6 +157,9 @@ during initialisation. This callable must be picklable::
 
     tq = TaskApp(Application, ...)
 
+
+The application callable is invoked when the backend handler is initialised
+(on each consumer and in the scheduler).
 
 License
 =============

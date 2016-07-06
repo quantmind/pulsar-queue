@@ -17,3 +17,8 @@ def format_time(dt):
     if isinstance(dt, (float, int)):
         dt = datetime.fromtimestamp(dt)
     return dt.isoformat() if dt else '?'
+
+
+def timestamp_to_datetime(timestamp):
+    if timestamp:
+        return datetime.fromtimestamp(timestamp)

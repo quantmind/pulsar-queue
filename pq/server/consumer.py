@@ -133,9 +133,8 @@ class ConsumerMixin:
         return o
 
     def __repr__(self):
-        return 'task consumer %s<%s>' % (self.queues, self.store.dns)
+        return 'task consumer %s<%s>' % (self.queues(), self.store.dns)
 
-    @property
     def queues(self):
         '''List of task queues consumed by this task consumer
         '''
@@ -150,7 +149,7 @@ class ConsumerMixin:
     def info(self):
         return {'concurrent': list(self._concurrent_tasks),
                 'processed': self._processed,
-                'queues': self._queues}
+                'queues': self.queues()}
 
     async def start(self, worker):
         '''Starts consuming tasks
@@ -164,7 +163,6 @@ class ConsumerMixin:
     # #    PRIVATE METHODS
     # #######################################################################
     def _pool_tasks(self, worker, next_time=None):
-        assert self._queues, 'Task queues not specified, cannot pull tasks'
         if self._closing:
             if not self._concurrent_tasks:
                 self.logger.warning(self._closing)
@@ -192,7 +190,7 @@ class ConsumerMixin:
 
                 if not self._closing:
                     try:
-                        task = await self.broker.get_task(*self.queues)
+                        task = await self.broker.get_task(*self.queues())
                     except ConnectionRefusedError:
                         if worker.is_running():
                             self.logger.exception('Could not pool tasks')

@@ -143,8 +143,6 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
             if queue is not False:
                 if queue is True:
                     queue = job.queue or self.cfg.default_task_queue
-                # if self.cfg.task_queue_prefix:
-                #    queue = '%s_%s' % (self.cfg.task_queue_prefix, queue)
             else:
                 queue = None
             return Task(task_id,

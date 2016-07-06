@@ -75,10 +75,9 @@ class CpuBound(api.Job):
         return ['OK', 2]
 
 
-class TestLocalQueue(api.Job):
-
-    def __call__(self):
-        return self.backend.queues
+@api.job()
+def testlocalqueue(self):
+    return self.backend.queues()
 
 
 class CpuBoundWithAsync(api.Job):

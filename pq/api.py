@@ -1,4 +1,5 @@
 from .server.apps import TaskApp, PulsarQueue
+from .server.config import DEFAULT_TASK_BACKEND
 from .mq import TaskFuture, MQ
 from .server import TaskScheduler, TaskConsumer
 from .tasks.task import TaskError, TaskNotAvailable, TaskTimeout, Task
@@ -26,4 +27,5 @@ __all__ = ['TaskApp',
            'ASYNC_IO',
            'GREEN_IO',
            'THREAD_IO',
-           'CPUBOUND']
+           'CPUBOUND',
+           'DEFAULT_TASK_BACKEND']

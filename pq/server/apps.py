@@ -17,6 +17,7 @@ class TaskApp(Application):
     This application can also schedule periodic tasks when the
     :ref:`schedule_periodic <setting-schedule_periodic>` flag is ``True``.
     """
+    backend_factory = TaskScheduler
     backend = None
     '''The :class:`.TaskBackend` for this task queue.
 
@@ -30,11 +31,7 @@ class TaskApp(Application):
 
     @lazyproperty
     def backend(self):
-        queues = getattr(self, 'queues', None)
-        if queues:
-            return TaskConsumer(self.cfg, queues=queues, logger=self.logger)
-        else:
-            return TaskScheduler(self.cfg, logger=self.logger)
+        return self.backend_factory(self.cfg, logger=self.logger)
 
     def queue_task(self, job_name, **kwargs):
         """Queue a job via the backend
@@ -69,7 +66,7 @@ class TaskApp(Application):
 
     def worker_start(self, worker, exc=None):
         if not exc and not worker.is_monitor():
-            self.queues = self.cfg.task_queues
+            self.backend_factory = TaskConsumer
             return self.backend.start(worker)
 
     def worker_stopping(self, worker, exc=None):

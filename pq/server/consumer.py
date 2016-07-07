@@ -125,20 +125,19 @@ class ConsumerMixin:
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
-        queues = [o.node_name]
-        queues.extend(kwargs.get('queues') or ())
-        o._queues = tuple(queues)
         o._processed = 0
         o._concurrent_tasks = set()
         return o
 
     def __repr__(self):
-        return 'task consumer %s<%s>' % (self.queues(), self.store.dns)
+        return 'task consumer <%s>' % self.broker
 
     def queues(self):
         '''List of task queues consumed by this task consumer
         '''
-        return self._queues
+        queues = [self.node_name]
+        queues.extend(self.cfg.task_queues)
+        return queues
 
     @property
     def num_concurrent_tasks(self):

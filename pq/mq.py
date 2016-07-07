@@ -83,16 +83,26 @@ class MQ(Component, ABC):
         return callback or result
 
     @abstractmethod
+    async def size(self, *queues):
+        '''Asynchronously retrieve the size of queues
+
+        :return: the list of sizes
+        '''
+        pass
+
+    @abstractmethod
     async def get_task(self, *queues):
         '''Asynchronously retrieve a :class:`.Task` from queues
 
         :return: a :class:`.Task` or ``None``.
         '''
+        pass
 
     @abstractmethod
     async def flush_queues(self, *queues):
         '''Clear a list of task queues
         '''
+        pass
 
     @abstractmethod
     async def queue_message(self, queue, message):

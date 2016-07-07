@@ -33,3 +33,10 @@ class MQ(mq.MQ):
         '''Asynchronously queue a task
         '''
         await self._client.lpush(queue, message)
+
+    async def size(self, *queues):
+        pipe = self._client.pipeline()
+        for queue in queues:
+            pipe.execute('llen', queue)
+        sizes = await pipe.commit()
+        return sizes

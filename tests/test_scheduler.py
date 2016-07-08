@@ -15,6 +15,17 @@ class TestScheduler(TaskQueueBase, unittest.TestCase):
         self.assertEqual(self.tq.cfg.default_task_queue, '%s1' % self.name())
         self.assertTrue(backend.next_run)
 
+    def test_next_scheduled(self):
+        backend = self.tq.backend
+        entry, t = backend.next_scheduled()
+        self.assertEqual(entry, 'testperiodic')
+
+    def test_next_scheduled_entries(self):
+        backend = self.tq.backend
+        entry, t = backend.next_scheduled(['anchoredeveryhour'])
+        self.assertEqual(entry, 'anchoredeveryhour')
+        self.assertTrue(t > 0)
+
     async def test_test_periodic(self):
         backend = self.tq.backend
         future = asyncio.Future()

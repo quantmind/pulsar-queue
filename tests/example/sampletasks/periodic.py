@@ -11,6 +11,8 @@ class TestPeriodicJob(api.PeriodicJob):
 
 @api.job(run_every=timedelta(seconds=1))
 def testperiodic(self):
+    assert self.cfg == self.backend.cfg
+    assert self.wait
     return time.time()
 
 

@@ -73,9 +73,9 @@ class SchedulerMixin:
                     next_time = next_time_to_run
                     next_entry = entry
         if next_entry:
-            return (next_entry.name, max(next_time, 0))
+            return next_entry.name, max(next_time, 0)
         else:
-            return (jobnames, None)
+            return jobnames, None
 
     def _setup_schedule(self):
         entries = {}

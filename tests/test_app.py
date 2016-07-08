@@ -249,6 +249,12 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
         self.assertTrue(tasks[0].result['end'] < tasks[1].result['start'])
         self.assertTrue(tasks[1].result['end'] < tasks[2].result['start'])
 
+    async def test_queue_from_task(self):
+        task = await self.tq.backend.queue_task('queue.from.task')
+        self.assertEqual(task.status_string, 'SUCCESS')
+        other_task = task.result
+        self.assertEqual(other_task['from_task'], task.id)
+
     # RPC
     async def test_rpc_job_list(self):
         data = await self.proxy.job_list()

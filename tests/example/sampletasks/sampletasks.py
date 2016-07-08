@@ -51,6 +51,12 @@ async def notoverlap(self, lag=1):
         }
 
 
+@api.job(concurrency=api.ASYNC_IO)
+async def queue_from_task(self):
+    task = await self.queue_task('asynchronous')
+    return task.tojson()
+
+
 class WorkerInfo(api.Job):
     concurrency = api.GREEN_IO
 

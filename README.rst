@@ -133,10 +133,42 @@ The task backend is obtained from the Task application ``backend`` attribute:
 
     tasks = TaskApp(...).backend
 
-.. py:method::tasks.execute_task
+
+* tasks. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
+
+    Queue a task and return a **TaskFuture** which is resolved once the task has finished.
+    It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
+    
+    .. code:: python
+    
+        task = await tasks.queue_task(..., callback=False)
+        task.status_string  # QUEUED
+        
+* task. **queue_task_local** (*jobname*, *\*args*, *\*\*kwargs*)
+
+    Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
+    
+    .. code:: python
+    
+        task = await tasks.queue_task(..., queue=tasks.node_name)
+        task.queue  # tasks.node_name
+    
+    
+* tasks. **execute_task** (*jobname*, *\*args*, *\*\*kwargs*)
 
     Execute a task immediately, it does not put the task in the task queue.
-    This method is useful for debugging and testing.
+    This method is useful for debugging and testing. It is equivalent to execute:
+    
+    .. code:: python
+    
+        task = await tasks.queue_task(..., queue=False)
+        task.queue          # None
+        task.status_string  # SUCCESS
+        
+    
+* tasks. **queues** ()
+    
+    Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
 
 Application
 ~~~~~~~~~~~~~~~~

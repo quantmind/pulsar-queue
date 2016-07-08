@@ -11,7 +11,9 @@ from pq.api import job, ASYNC_IO
 
 @job(concurrency=ASYNC_IO)
 async def execute_python(self, code=None):
-    """Execute arbitrary python code on a subprocess
+    """Execute arbitrary python code on a subprocess. For example:
+
+        tasks.queue_task('execute.python', code='print("Hello World!")')
     """
     assert isinstance(code, str), "code must be a string"
     fp, path = tempfile.mkstemp(suffix='.py', text=True)

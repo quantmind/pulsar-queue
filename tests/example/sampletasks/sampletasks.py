@@ -40,13 +40,15 @@ class Asynchronous(api.Job):
         return time.time() - start
 
 
-class NotOverLap(api.Job):
-
-    async def __call__(self, lag=1):
-        with self.lock():
-            start = time.time()
-            await asyncio.sleep(lag)
-            return time.time() - start
+@api.job(concurrency=api.ASYNC_IO)
+async def notoverlap(self, lag=1):
+    async with self.lock():
+        start = time.time()
+        await asyncio.sleep(lag)
+        return {
+            'start': start,
+            'end': time.time()
+        }
 
 
 class WorkerInfo(api.Job):

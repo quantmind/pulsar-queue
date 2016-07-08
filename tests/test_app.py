@@ -219,15 +219,35 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
         self.assertEqual(task.result, sys.executable)
 
     async def test_queue_size(self):
-        code = "import time;time.sleep(2)"
-        task = await self.tq.queue_task('execute.python', code=code,
-                                        callback=False)
-        self.assertEqual(task.status_string, 'QUEUED')
-        size = await self.tq.backend.broker.size(task.queue)
+        code = "import time;time.sleep(1)"
+        task = await asyncio.gather(
+            self.tq.queue_task('execute.python', code=code, callback=False),
+            self.tq.queue_task('execute.python', code=code, callback=False),
+            self.tq.queue_task('execute.python', code=code, callback=False),
+            self.tq.queue_task('execute.python', code=code, callback=False)
+        )
+        self.assertEqual(task[0].status_string, 'QUEUED')
+        size = await self.tq.backend.broker.size(task[0].queue)
+        task = await asyncio.gather(
+            task[0].done_callback,
+            task[1].done_callback,
+            task[2].done_callback,
+            task[3].done_callback
+        )
+        self.assertEqual(task[0].status_string, 'SUCCESS')
         self.assertEqual(len(size), 1)
         self.assertTrue(size[0] > 0)
-        task = await task.done_callback
-        self.assertEqual(task.status_string, 'SUCCESS')
+
+    async def test_lock(self):
+        # make sure the lock is release (in case of errors)
+        tasks = await asyncio.gather(
+            self.tq.queue_task('notoverlap'),
+            self.tq.queue_task('notoverlap'),
+            self.tq.queue_task('notoverlap')
+        )
+        tasks = sorted(tasks, key=lambda task: task.result['start'])
+        self.assertTrue(tasks[0].result['end'] < tasks[1].result['start'])
+        self.assertTrue(tasks[1].result['end'] < tasks[2].result['start'])
 
     # RPC
     async def test_rpc_job_list(self):

@@ -58,8 +58,16 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
     async def start(self, worker=None):
         pass
 
+    def queues(self):
+        return ()
+
     def gen_unique_id(self):
         return uuid4().hex
+
+    def lock(self, name, **kwargs):
+        """aquire a distributed global lock for ``name``
+        """
+        return self.pubsub.lock('lock-%s' % name, **kwargs)
 
     def http_sessions(self, concurrency):
         """Return an HTTP session handler for a given concurrency model

@@ -33,6 +33,11 @@ class PubSub(Component):
             self._event_callbacks.remove(callback)
         return self._event_callbacks
 
+    def lock(self, name, **kwargs):
+        """Global distributed lock
+        """
+        return self.store.client().lock(name, **kwargs)
+
     async def publish(self, event, task):
         '''Publish a task to the ``<prefix>_task_<event>`` channel
 

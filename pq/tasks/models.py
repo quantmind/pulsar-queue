@@ -297,11 +297,10 @@ class Job(metaclass=JobMetaClass):
         meta_params['from_task'] = self.task.id
         return meta_params
 
-    def lock(self, name=None, revoke=False):
+    def lock(self, name=None, **kw):
         '''Acquire a lock if possible
         '''
-        name = name or self.name
-        return self.backend.lock(name, revoke)
+        return self.backend.lock(name or self.name, **kw)
 
     async def shell(self, command, input=None, chdir=None, interactive=False,
                     stderr=None, stdout=None, **kw):
@@ -397,6 +396,7 @@ class job:
             self.class_name = callable.__name__
         self.class_name = slugify(self.class_name, '_')
         self.attrs['__call__'] = callable
+        self.attrs['__doc__'] = callable.__doc__
         cls = JobMetaClass(self.class_name, self.bases, self.attrs)
         module = inspect.getmodule(callable)
         job_list = getattr(module, JOB_LIST, None)

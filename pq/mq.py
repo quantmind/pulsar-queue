@@ -8,18 +8,25 @@ from .tasks.task import Task
 
 class TaskFuture(Future):
 
-    def __init__(self, task_id, *, loop=None):
+    def __init__(self, task_id, backend, *, loop=None):
         super().__init__(loop=loop)
         self.task_id = task_id
+        self.backend = backend
 
     def wait(self):     # pragma    nocover
         assert not self._loop.is_running(), 'cannot wait if loop is running'
-        return self._loop.run_until_complete(self)
+        return self._loop.run_until_complete(_wait(self))
 
     def _repr_info(self):
         info = super()._repr_info()
         info.append('ID=%s' % self.task_id)
         return info
+
+
+async def _wait(task_future):
+    await task_future.backend.pubsub.start()
+    result = await task_future
+    return result
 
 
 class Component:
@@ -72,7 +79,7 @@ class MQ(Component, ABC):
         called back once the task is done, otherwise return a future
         called back once the task is queued
         '''
-        future = TaskFuture(task.id, loop=self._loop)
+        future = TaskFuture(task.id, self.backend, loop=self._loop)
         if task.queue:
             self.callbacks[task.id] = future
         else:   # the task is not queued instead it is executed immediately

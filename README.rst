@@ -42,7 +42,9 @@ blocking IO tasks and long running CPU bound tasks.
 * Can schedule tasks when run as a scheduler (``--schedule-periodic`` flag)
 * Build on top of pulsar_ and asyncio_
 
-.. contents:: Contents
+
+.. contents:: **CONTENTS**
+
 
 Four steps tutorial
 ========================
@@ -197,11 +199,15 @@ The task backend is obtained from the Task application ``backend`` attribute:
         #   'doc': 'Execute arbitrary python code on a subprocess ... '
         # }
 
-Application
-~~~~~~~~~~~~~~~~
+Configure
+=================
 
 It is possible to enhance the task queue by passing an application ``callable``
-during initialisation. This callable must be picklable:
+during initialisation (usually a class or an instance factory).
+This callable must be picklable and should return an object which can implement one or
+more methods which override the ``beckend`` implementation.
+
+For example:
 
 .. code:: python
 

@@ -67,6 +67,7 @@ from pulsar.utils.slugify import slugify
 from pulsar.utils.importer import import_modules
 from pulsar.utils.log import lazyproperty
 from pulsar.utils.string import to_bytes
+from pulsar.utils.structures import inverse_mapping
 
 
 ASYNC_IO = 1        # tasks run in the worker event loop
@@ -79,6 +80,8 @@ _concurrency = {'asyncio': ASYNC_IO,
                 'greenio': GREEN_IO,
                 'thread': THREAD_IO,
                 'process': CPUBOUND}
+
+_concurrency_name = dict(inverse_mapping(_concurrency))
 
 
 class ShellError(RuntimeError):
@@ -103,6 +106,7 @@ class RegistryMixin:
             job = registry[name]()
             d = {'doc': job.__doc__,
                  'doc_syntax': job.doc_syntax,
+                 'concurrency': _concurrency_name.get(job.concurrency),
                  'type': job.type}
             all.append((name, d))
         return all

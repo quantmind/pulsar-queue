@@ -1,11 +1,7 @@
 |pulsar-queue|
 
-Asynchronous task queue for consuming asynchronous IO tasks, green IO tasks,
-blocking IO tasks and long running CPU bound tasks.
-
 :Badges: |license|  |pyversions| |status| |pypiversion|
 :Master CI: |master-build| |coverage-master|
-:Dev CI: |dev-build| |coverage-dev|
 :Documentation: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 :Downloads: http://pypi.python.org/pypi/pulsar-queue
 :Source: https://github.com/quantmind/pulsar-queue
@@ -36,6 +32,17 @@ blocking IO tasks and long running CPU bound tasks.
 .. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png
    :target: https://github.com/quantmind/pulsar-queue
 
+
+Asynchronous server for consuming asynchronous IO tasks, green IO tasks,
+blocking IO tasks and long running CPU bound tasks.
+
+* Fully configurable
+* Consumers poll tasks from distributed message brokers (redis broker implemented)
+* Publish/subscribe for real-time event and logging (redis pub/sub backend)
+* Can schedule tasks when run as a scheduler (``--schedule-periodic`` flag)
+* Build on top of pulsar_ and asyncio_
+
+.. contents:: Contents
 
 Four steps tutorial
 ------------------------
@@ -80,19 +87,17 @@ It can be a directory containing several submodules.
     from pq import api
 
 
-    class Addition(api.Job):
+    @api.job()
+    def addition(self, a=0, b=0):
+        return a + b
 
-        def __call__(self, a=0, b=0):
-            return a + b
 
+    @api.job(concurrency=api.ASYNC_IO)
+    async def asynchronous(self, lag=1):
+        start = time.time()
+        await asyncio.sleep(lag)
+        return time.time() - start
 
-    class Asynchronous(api.Job):
-        concurrency = api.ASYNC_IO
-
-        async def __call__(self, lag=1):
-            start = time.time()
-            await asyncio.sleep(lag)
-            return time.time() - start
 
 **3 - Run the server**
 
@@ -138,52 +143,53 @@ The task backend is obtained from the Task application ``backend`` attribute:
 
     Queue a task and return a **TaskFuture** which is resolved once the task has finished.
     It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
-    
+
     .. code:: python
-    
+
         task = await tasks.queue_task(..., callback=False)
         task.status_string  # QUEUED
-        
-* task. **queue_task_local** (*jobname*, *\*args*, *\*\*kwargs*)
+
+* tasks. **queue_task_local** (*jobname*, *\*args*, *\*\*kwargs*)
 
     Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
-    
+
     .. code:: python
-    
+
         task = await tasks.queue_task(..., queue=tasks.node_name)
         task.queue  # tasks.node_name
-    
-    
+
+
 * tasks. **execute_task** (*jobname*, *\*args*, *\*\*kwargs*)
 
     Execute a task immediately, it does not put the task in the task queue.
     This method is useful for debugging and testing. It is equivalent to execute:
-    
+
     .. code:: python
-    
+
         task = await tasks.queue_task(..., queue=False)
         task.queue          # None
         task.status_string  # SUCCESS
-        
-    
+
+
 * tasks. **queues** ()
-    
+
     Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
 
-* tasks. **job_list** (*jobnames* = **None**)
-    
+* tasks. **job_list** (*jobnames* = *None*)
+
     Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
-    
+
     .. code:: python
-    
+
         jobs = dict(tasks.job_lits())
         jobs['execute.python']
         # {
         #   'type': 'regular',
+        #   'concurrency': 'asyncio',
         #   'doc_syntax': 'markdown',
         #   'doc': 'Execute arbitrary python code on a subprocess ... '
         # }
-    
+
 Application
 ~~~~~~~~~~~~~~~~
 
@@ -218,3 +224,5 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _`Luca Sbardella`: http://lucasbardella.com
 .. _`Quantmind`: http://quantmind.com
 .. _`creative common license`: http://creativecommons.org/licenses/by-nc/3.0/
+.. _pulsar: https://github.com/quantmind/pulsar
+.. _asyncio: https://docs.python.org/3/library/asyncio.html

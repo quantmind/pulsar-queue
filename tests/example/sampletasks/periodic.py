@@ -1,3 +1,4 @@
+import time
 from datetime import timedelta
 
 from pq import api
@@ -8,11 +9,9 @@ class TestPeriodicJob(api.PeriodicJob):
     run_every = timedelta(hours=1)
 
 
-class TestPeriodic(TestPeriodicJob):
-    run_every = timedelta(seconds=5)
-
-    def __call__(self):
-        return 'OK'
+@api.job(run_every=timedelta(seconds=1))
+def testperiodic(self):
+    return time.time()
 
 
 class TestPeriodicError(TestPeriodicJob):

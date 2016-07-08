@@ -26,10 +26,12 @@ class PubSub(Component):
 
     def on_events(self, callback):
         self._event_callbacks.append(callback)
+        return callback
 
     def remove_event_callback(self, callback):
         if callback in self._event_callbacks:
             self._event_callbacks.remove(callback)
+        return self._event_callbacks
 
     async def publish(self, event, task):
         '''Publish a task to the ``<prefix>_task_<event>`` channel

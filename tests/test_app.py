@@ -22,13 +22,14 @@ def task_function(N = 10, lag = 0.1):
 PATH = os.path.dirname(__file__)
 
 
-class TaskQueueBase(object):
+class TaskQueueBase:
     concurrency = 'process'
     # used for both keep-alive and timeout in JsonProxy
     # long enough to allow to wait for tasks
     rpc_timeout = 500
     tq = None
     rpc = None
+    schedule_periodic = False
 
     @classmethod
     def name(cls):
@@ -53,6 +54,7 @@ class TaskQueueBase(object):
                              queue_callable=dummy,
                              task_queues=queues,
                              default_task_queue=queues[0],
+                             schedule_periodic=cls.schedule_periodic,
                              rpc_bind='127.0.0.1:0',
                              concurrency=cls.concurrency,
                              rpc_concurrency=cls.concurrency,
@@ -74,7 +76,7 @@ class TaskQueueBase(object):
         return asyncio.gather(*coros)
 
 
-class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
+class TestTaskQueue(TaskQueueBase, unittest.TestCase):
 
     def test_registry(self):
         backend = self.tq.backend
@@ -88,6 +90,8 @@ class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
         backend = self.tq.backend
         self.assertTrue(str(backend).startswith('task producer <'))
         self.assertEqual(self.tq.cfg.default_task_queue, '%s1' % self.name())
+        self.assertEqual(backend.next_scheduled(), None)
+        self.assertEqual(backend.entries, {})
 
     def test_job_list(self):
         jobs = self.tq.backend.job_list()
@@ -164,6 +168,9 @@ class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
         task = await backend.queue_task('asynchronous', callback=False)
         self.assertTrue(task.id)
         self.assertEqual(task.status_string, 'QUEUED')
+        self.assertTrue('ID=%s' % task.id in repr(task.done_callback))
+        task = await task.done_callback
+        self.assertEqual(task.status_string, 'SUCCESS')
 
     async def test_cpubound_task(self):
         task = await self.tq.queue_task('cpubound')
@@ -187,7 +194,6 @@ class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
         task = await self.tq.queue_task('cpuboundwithasync', asyncio=True)
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
-        # If the task is asyncio it drops out of the greenlet
         self.assertEqual(task.result, False)
 
     async def test_big_log(self):
@@ -211,3 +217,14 @@ class TestTaskQueueOnProcess(TaskQueueBase, unittest.TestCase):
                                           script=script)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, sys.executable)
+
+    async def test_queue_size(self):
+        code = "import time;time.sleep(2)"
+        task = await self.tq.queue_task('execute.python', code=code,
+                                        callback=False)
+        self.assertEqual(task.status_string, 'QUEUED')
+        size = await self.tq.backend.broker.size(task.queue)
+        self.assertEqual(len(size), 1)
+        self.assertTrue(size[0] > 0)
+        task = await task.done_callback
+        self.assertEqual(task.status_string, 'SUCCESS')

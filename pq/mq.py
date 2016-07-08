@@ -12,7 +12,7 @@ class TaskFuture(Future):
         super().__init__(loop=loop)
         self.task_id = task_id
 
-    def wait(self):
+    def wait(self):     # pragma    nocover
         assert not self._loop.is_running(), 'cannot wait if loop is running'
         return self._loop.run_until_complete(self)
 
@@ -72,18 +72,17 @@ class MQ(Component, ABC):
         called back once the task is done, otherwise return a future
         called back once the task is queued
         '''
-        if callback:
-            callback = TaskFuture(task.id, loop=self._loop)
-            if task.queue:
-                self.callbacks[task.id] = callback
-            else:   # the task is not queued instead it is executed immediately
-                coro = self.backend._execute_task(task)
-                return chain_future(coro, next=callback)
-        result = ensure_future(self._queue_task(task), loop=self._loop)
-        return callback or result
+        future = TaskFuture(task.id, loop=self._loop)
+        if task.queue:
+            self.callbacks[task.id] = future
+        else:   # the task is not queued instead it is executed immediately
+            coro = self.backend._execute_task(task)
+            return chain_future(coro, next=future)
+        result = ensure_future(self._queue_task(task, future), loop=self._loop)
+        return future if callback else result
 
     @abstractmethod
-    async def size(self, *queues):
+    async def size(self, *queues):  # pragma    nocover
         '''Asynchronously retrieve the size of queues
 
         :return: the list of sizes
@@ -91,7 +90,7 @@ class MQ(Component, ABC):
         pass
 
     @abstractmethod
-    async def get_task(self, *queues):
+    async def get_task(self, *queues):  # pragma    nocover
         '''Asynchronously retrieve a :class:`.Task` from queues
 
         :return: a :class:`.Task` or ``None``.
@@ -99,22 +98,23 @@ class MQ(Component, ABC):
         pass
 
     @abstractmethod
-    async def flush_queues(self, *queues):
+    async def flush_queues(self, *queues):  # pragma    nocover
         '''Clear a list of task queues
         '''
         pass
 
     @abstractmethod
-    async def queue_message(self, queue, message):
+    async def queue_message(self, queue, message):  # pragma    nocover
         """Add a message to the ``queue``
         """
         pass
 
     # INTERNALS
-    async def _queue_task(self, task):
+    async def _queue_task(self, task, future):
         '''Asynchronously queue a task
         '''
         await self.pubsub.publish('queued', task)
         await self.queue_message(task.queue, self.serialise(task))
         self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
+        task.done_callback = future
         return task

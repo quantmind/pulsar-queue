@@ -34,6 +34,12 @@ class TestScheduler(TaskQueueBase, unittest.TestCase):
         result = await future
         self.assertTrue(result < time.time())
 
+    async def test_rpc_next_scheduled_tasks(self):
+        next = await self.proxy.next_scheduled_tasks()
+        self.assertTrue(isinstance(next, list))
+        self.assertEqual(len(next), 2)
+        self.assertEqual(next[0], 'testperiodic')
+
     def _test_periodic(self, future, event, task):
         try:
             self.assertEqual(task.name, 'testperiodic')

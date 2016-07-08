@@ -72,12 +72,17 @@ class Task:
         '''
         return states.status_string(self.status)
 
+    def tojson(self):
+        '''Json serialisable dictionary
+        '''
+        return self.__dict__.copy()
+
     def serialise(self, method=None):
         '''Serialise this task using the serialisation ``method``
         '''
         method = method or 'json'
         if method == 'json':
-            return json.dumps(self.__dict__)
+            return json.dumps(self.tojson())
         else:
             raise ImproperlyConfigured('Unknown serialisation "%s"' % method)
 

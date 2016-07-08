@@ -228,3 +228,12 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
         self.assertTrue(size[0] > 0)
         task = await task.done_callback
         self.assertEqual(task.status_string, 'SUCCESS')
+
+    # RPC
+    async def test_rpc_job_list(self):
+        data = await self.proxy.job_list()
+        self.assertIsInstance(data, list)
+
+    async def test_rpc_queue_task(self):
+        task = await self.proxy.queue_task('cpubound')
+        self.assertEqual(task['status'], 1)

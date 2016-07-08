@@ -2,17 +2,6 @@ import pulsar
 from pulsar import get_application
 from pulsar.apps import rpc
 
-from ..tasks.task import Task
-
-
-def task_to_json(task):
-    if task:
-        if isinstance(task, (list, tuple)):
-            task = [task_to_json(t) for t in task]
-        elif isinstance(task, Task):
-            task = task.to_json()
-    return task
-
 
 class TaskQueueRpc(rpc.JSONRPC):
     '''A :class:`.JSONRPC` mixin for communicating with  a :class:`.TaskQueue`.
@@ -25,7 +14,7 @@ class TaskQueueRpc(rpc.JSONRPC):
         application which exposes the remote procedure calls.
 
     '''
-    _task_backend = None
+    _task_backend_ = None
 
     def __init__(self, taskqueue, **kwargs):
         if not isinstance(taskqueue, str):
@@ -42,11 +31,11 @@ class TaskQueueRpc(rpc.JSONRPC):
         If a list of ``jobnames`` is given, it returns only jobs
         included in the list.
         '''
-        task_backend = await self.task_backend()
+        task_backend = await self._task_backend()
         return task_backend.job_list(jobnames=jobnames)
 
     def rpc_next_scheduled_tasks(self, request, jobnames=None):
-        return self._rq(request, 'next_scheduled', jobnames=jobnames)
+        return self._rq(request, next_scheduled, jobnames=jobnames)
 
     async def rpc_queue_task(self, request, jobname=None, **kw):
         '''Queue a new ``jobname`` in the task queue.
@@ -57,42 +46,13 @@ class TaskQueueRpc(rpc.JSONRPC):
 
         It returns the task :attr:`~Task.id`.
         '''
-        result = await self.queue_task(request, jobname, **kw)
-        return task_to_json(result)
-
-    async def rpc_wait_for_task(self, request, id=None, timeout=None):
-        '''Wait for a task to have finished.
-
-        :param id: the id of the task to wait for.
-        :param timeout: optional timeout in seconds.
-        :return: the json representation of the task once it has finished.
-        '''
-        if id:
-            task_backend = await self.task_backend()
-            result = await task_backend.wait_for_task(id, timeout=timeout)
-            return task_to_json(result)
+        task = await self._queue_task(request, jobname, **kw)
+        return task.tojson()
 
     async def rpc_num_tasks(self, request):
         '''Return the approximate number of tasks in the task queue.'''
-        task_backend = await self.task_backend()
+        task_backend = await self._task_backend()
         return task_backend.num_tasks()
-
-    ########################################################################
-    #    INTERNALS
-    async def task_backend(self):
-        if not self._task_backend:
-            app = await get_application(self.taskqueue)
-            self._task_backend = app.get_backend()
-        return self._task_backend
-
-    async def queue_task(self, request, jobname, meta_data=None, **kw):
-        if not jobname:
-            raise rpc.InvalidParams('"jobname" is not specified!')
-        meta_data = meta_data or {}
-        meta_data.update(self.task_request_parameters(request))
-        task_backend = await self.task_backend()
-        result = await task_backend.queue_task(jobname, meta_data, **kw)
-        return result
 
     def task_request_parameters(self, request):
         '''**Internal function** which returns a dictionary of parameters
@@ -104,5 +64,27 @@ class TaskQueueRpc(rpc.JSONRPC):
         By default it returns an empty dictionary.'''
         return {}
 
-    def _rq(self, request, action, *args, **kw):
-        return pulsar.send(self.taskqueue, action, *args, **kw)
+    ########################################################################
+    #    INTERNALS
+    async def _task_backend(self):
+        if not self._task_backend_:
+            app = await get_application(self.taskqueue)
+            self._task_backend_ = await app.backend.start()
+        return self._task_backend_
+
+    async def _queue_task(self, request, jobname, meta_params=None, **kw):
+        if not jobname:
+            raise rpc.InvalidParams('"jobname" is not specified!')
+        meta_params = meta_params or {}
+        meta_params.update(self.task_request_parameters(request))
+        task_backend = await self._task_backend()
+        result = await task_backend.queue_task(
+            jobname, meta_params=meta_params, **kw)
+        return result
+
+    def _rq(self, request, func, *args, **kw):
+        return pulsar.send(self.taskqueue, 'run', func, *args, **kw)
+
+
+def next_scheduled(actor, jobnames=None):
+    return actor.app.backend.next_scheduled(jobnames=jobnames)

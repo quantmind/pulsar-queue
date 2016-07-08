@@ -45,9 +45,12 @@ blocking IO tasks and long running CPU bound tasks.
 .. contents:: Contents
 
 Four steps tutorial
-------------------------
+========================
 
-**1 - Create a script which runs your application**:
+1 - Create a script
+----------------------
+
+A simple python file which runs your application:
 
 .. code::
 
@@ -69,8 +72,10 @@ Four steps tutorial
         app().start()
 
 
-**2 - Create the modules where Jobs are implemented**
+2 - Implement Jobs
+---------------------
 
+Create the modules where Jobs are implemented.
 It can be a directory containing several submodules.
 
 .. code::
@@ -99,17 +104,19 @@ It can be a directory containing several submodules.
         return time.time() - start
 
 
-**3 - Run the server**
+3 - Run the server
+---------------------
 
 Run the server with two task consumers (pulsar actors).
 
-NOTE: Make sure you have Redis server up and running before you start the queue.
+**NOTE**: Make sure you have Redis server up and running before you start the queue.
 
 .. code::
 
     python manage.py -w 2
 
-**4 - Queue tasks**
+4 - Queue tasks
+---------------------
 
 Launch a python shell and play with the api
 

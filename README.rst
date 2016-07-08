@@ -52,7 +52,7 @@ Four steps tutorial
     from pq.api import TaskApp
 
 
-    task_paths = ['sampletasks.*']
+    task_paths = ['sampletasks.*', 'pq.jobs']
 
 
     def app():
@@ -170,6 +170,20 @@ The task backend is obtained from the Task application ``backend`` attribute:
     
     Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
 
+* tasks. **job_list** (*jobnames* = **None**)
+    
+    Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
+    
+    .. code:: python
+    
+        jobs = dict(tasks.job_lits())
+        jobs['execute.python']
+        # {
+        #   'type': 'regular',
+        #   'doc_syntax': 'markdown',
+        #   'doc': 'Execute arbitrary python code on a subprocess ... '
+        # }
+    
 Application
 ~~~~~~~~~~~~~~~~
 

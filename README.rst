@@ -199,6 +199,55 @@ The task backend is obtained from the Task application ``backend`` attribute:
         #   'doc': 'Execute arbitrary python code on a subprocess ... '
         # }
 
+Tasks Concurrency
+======================
+
+A task can run in one of four ``concurrency`` modes.
+If not specified by the ``Job``, the concurrency mode is given by the
+``default_task_concurrency`` parameter whch can be specified in the ``config`` file or in the command line.
+
+ASYNC_IO
+-----------
+
+The asynchronous IO mode is associated with tasks which return
+an asyncio Future or a coroutine. These tasks run concurrently
+in the worker event loop.
+An example can be a Job to scrape web pages and create new tasks to process the html
+    
+.. code:: python
+
+    @api.job(concurrency=api.ASYNC_IO)
+    async def scrape(self, url=None):
+        assert url, "url is required"
+        http = self.http()
+        request = await http.get(url)
+        html = request.text()
+        task = self.queue_task('process.html', html=html, callback=False)
+        return task.id
+
+GREEN_IO
+----------
+
+The green IO mode is associated with tasks that runs on a child greenlet.
+This can be useful when using applications which use the greenlet_
+library for implicit asynchronous behaviour.
+
+THREAD_IO
+-------------
+
+It assumes the task performs blocking IO operations
+which make it suitable to be run in the event loop executor.
+You can use this model for most blocking operation unless
+
+* Long running CPU bound
+* The operation does not release the GIL
+
+CPUBOUND
+------------
+
+It assumes the task performs blocking CPU bound operations.
+These tasks are run on sub-processes.
+
 Configure
 =================
 

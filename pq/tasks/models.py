@@ -1,62 +1,3 @@
-'''
-A :ref:`task queue <apps-taskqueue>` application implements several
-:class:`Job` classes which specify the way a :class:`.Task` is run.
-Each :class:`Job` class is a :class:`.Task` factory, therefore,
-a :class:`.Task` is always associated
-with one :class:`Job`, which can be of two types:
-
-* standard (:class:`.Job`)
-* periodic (:class:`.PeriodicJob`), a generator of scheduled tasks.
-
-.. _job-callable:
-
-Job callable method
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To define a job is simple, subclass from :class:`.Job` and implement the
-**job callable method**::
-
-    from pulsar.apps import tasks
-
-    class Addition(tasks.Job):
-
-        def __call__(self, consumer, a=0, b=0):
-            "Add two numbers"
-            return a+b
-
-The ``consumer``, instance of :class:`.TaskConsumer`,
-is passed by the :ref:`Task backend <apps-taskqueue-backend>` and should
-always be the first positional parameter in the callable method.
-The remaining (optional key-valued only!) parameters are needed by
-your job implementation.
-
-A :ref:`job callable <job-callable>` can also return a
-:ref:`coroutine <coroutine>` if it needs to perform asynchronous IO during its
-execution::
-
-    class Crawler(tasks.Job):
-
-        def __call__(self, consumer, sample=100, size=10):
-            response = yield http.request(...)
-            content = response.content
-            ...
-
-This allows for cooperative task execution.
-
-.. _job-non-overlap:
-
-Non overlapping Jobs
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The :attr:`~.Job.can_overlap` attribute controls the way tasks are generated
-by a specific :class:`.Job`. By default, a :class:`.Job` creates a new task
-every time the :class:`.TaskBackend` requests it.
-
-However, when setting the :attr:`~.Job.can_overlap` attribute to ``False``,
-a new task cannot be started unless a previous task of the same job
-is done.
-
-'''
 import sys
 import logging
 import inspect
@@ -218,7 +159,6 @@ class Job(metaclass=JobMetaClass):
     timeout = None
     expires = None
     doc_syntax = 'markdown'
-    can_overlap = True
     queue = None
     concurrency = None
 

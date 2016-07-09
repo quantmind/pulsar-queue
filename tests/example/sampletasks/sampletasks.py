@@ -112,3 +112,10 @@ class CpuBoundBigLog(api.Job):
         # Log more date then the pipe buffer, as logs are send through the pipe
         for i in range(1024):
             self.backend.logger.info('*'*1024)
+
+
+@api.job(concurrency=api.ASYNC_IO)
+async def scrape(self, url=None):
+    assert url, "url is required"
+    request = await self.http.get(url)
+    return request.text()

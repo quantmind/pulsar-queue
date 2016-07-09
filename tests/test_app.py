@@ -255,6 +255,12 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
         other_task = task.result
         self.assertEqual(other_task['from_task'], task.id)
 
+    async def test_scrape(self):
+        task = await self.tq.backend.queue_task('scrape',
+                                                url='https://www.bbc.co.uk/')
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertTrue(task.result)
+
     # RPC
     async def test_rpc_job_list(self):
         data = await self.proxy.job_list()

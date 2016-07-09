@@ -139,7 +139,10 @@ Launch a python shell and play with the api
 API
 =============
 
-The task backend is obtained from the Task application ``backend`` attribute:
+Tasks backend
+-----------------
+
+The tasks backend is obtained from the Task application ``backend`` attribute:
 
 .. code:: python
 
@@ -199,6 +202,37 @@ The task backend is obtained from the Task application ``backend`` attribute:
         #   'doc': 'Execute arbitrary python code on a subprocess ... '
         # }
 
+
+The Job class
+-----------------
+
+The **Job** class is how task factories are implemented and added to the
+tasks backend registry. When writing a new **Job** one can either subclass::
+
+.. code:: python
+
+    import asyncio
+
+
+    class AsyncSleep(api.Job):
+        concurrency api.ASYNC_IO
+
+        async def __call__(self, lag=1):
+            await asyncio.sleep(lag)
+
+
+or use the less verbose **job** decorator:
+
+.. code:: python
+
+    @api.job(concurrency api.ASYNC_IO
+    async def asyncsleep(self, lag=1):
+        await asyncio.sleep(lag)
+
+
+In either cases the ``self`` parameter is an instance of the **Job** class.
+
+
 Tasks Concurrency
 ======================
 
@@ -213,14 +247,13 @@ The asynchronous IO mode is associated with tasks which return
 an asyncio Future or a coroutine. These tasks run concurrently
 in the worker event loop.
 An example can be a Job to scrape web pages and create new tasks to process the html
-    
+
 .. code:: python
 
     @api.job(concurrency=api.ASYNC_IO)
     async def scrape(self, url=None):
         assert url, "url is required"
-        http = self.http()
-        request = await http.get(url)
+        request = await self.http.get(url)
         html = request.text()
         task = self.queue_task('process.html', html=html, callback=False)
         return task.id

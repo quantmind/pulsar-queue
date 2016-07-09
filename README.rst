@@ -2,7 +2,6 @@
 
 :Badges: |license|  |pyversions| |status| |pypiversion|
 :Master CI: |master-build| |coverage-master|
-:Documentation: https://github.com/quantmind/pulsar-queue/blob/master/docs/index.md
 :Downloads: http://pypi.python.org/pypi/pulsar-queue
 :Source: https://github.com/quantmind/pulsar-queue
 :Mailing list: `google user group`_
@@ -234,28 +233,68 @@ In either cases the ``self`` parameter is an instance of the **Job** class.
 * job. **backend**
 
     The tasks backend that is processing this Job run
-    
+
 * job. **task**
 
     The task_ instance associated with this job run
-    
+
 * job. **http**
 
     Best possible HTTP session handler for the job concurrency mode.
-    
+
 * job. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
 
     Queue a new job. It is equivalent to:
 
     .. code:: python
-        
+
         meta_params = {'from_task': self.task.id}
         self.backend.queue_task(..., meta_params=meta_params)
-    
+
 The Task
 -----------
 
 A task contains the metadata information of a job run and it is exchanged between task producers and task consumers via a distributed task queue.
+
+
+Task States
+-----------------
+
+A task_ can have one of the following ``task.status``:
+
+* ``QUEUED = 6`` A task queued but not yet executed.
+* ``STARTED = 5`` task where execution has started.
+* ``RETRY = 4`` A task is retrying calculation.
+* ``REVOKED = 3`` the task execution has been revoked (or timed-out).
+* ``FAILURE = 2`` task execution has finished with failure.
+* ``SUCCESS = 1`` task execution has finished with success.
+
+
+**FULL_RUN_STATES**
+
+The set of states for which a task_ has run: ``FAILURE`` and ``SUCCESS``
+
+
+**READY_STATES**
+
+The set of states for which a task_ has finished: ``REVOKED``, ``FAILURE`` and ``SUCCESS``
+
+
+Configuration
+------------------
+
+There are several parameters you can use to twick the way the task queue works.
+
+* **concurrent_tasks** (``--concurrent-tasks 5``)
+
+    The maximum number of concurrent tasks for a given worker in task consumer server.
+
+* **schedule_periodic** (``--schedule-periodic``)
+
+    When ``True``, the task application can schedule periodic Jobs_.
+    Usually, only one running server is responsible for
+    scheduling tasks.
+
 
 Tasks Concurrency
 ======================
@@ -331,6 +370,13 @@ For example:
 
 The application callable is invoked when the backend handler is initialised
 (on each consumer and in the scheduler).
+
+Changelog
+==============
+
+* `Versions 0.3 <https://github.com/quantmind/pulsar-queue/blob/master/docs/history/0.3.md>`_
+* `Versions 0.2 <https://github.com/quantmind/pulsar-queue/blob/master/docs/history/0.2.md>`_
+* `Versions 0.1 <https://github.com/quantmind/pulsar-queue/blob/master/docs/history/0.1.md>`_
 
 License
 =============

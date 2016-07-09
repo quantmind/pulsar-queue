@@ -223,7 +223,7 @@ or use the less verbose **job** decorator:
 
 .. code:: python
 
-    @api.job(concurrency api.ASYNC_IO
+    @api.job(concurrency=api.ASYNC_IO
     async def asyncsleep(self, lag=1):
         await asyncio.sleep(lag)
 
@@ -236,7 +236,7 @@ In either cases the ``self`` parameter is an instance of the **Job** class.
 
 * job. **task**
 
-    The task_ instance associated with this job run
+    The Task_ instance associated with this job run
 
 * job. **http**
 
@@ -260,11 +260,11 @@ A task contains the metadata information of a job run and it is exchanged betwee
 Task States
 -----------------
 
-A task_ can have one of the following ``task.status``:
+A Task_ can have one of the following ``task.status``:
 
-* ``QUEUED = 6`` A task queued but not yet executed.
-* ``STARTED = 5`` task where execution has started.
-* ``RETRY = 4`` A task is retrying calculation.
+* ``QUEUED = 6`` a task queued but not yet executed.
+* ``STARTED = 5`` a task where execution has started.
+* ``RETRY = 4`` a task is retrying calculation.
 * ``REVOKED = 3`` the task execution has been revoked (or timed-out).
 * ``FAILURE = 2`` task execution has finished with failure.
 * ``SUCCESS = 1`` task execution has finished with success.
@@ -272,12 +272,12 @@ A task_ can have one of the following ``task.status``:
 
 **FULL_RUN_STATES**
 
-The set of states for which a task_ has run: ``FAILURE`` and ``SUCCESS``
+The set of states for which a Task_ has run: ``FAILURE`` and ``SUCCESS``
 
 
 **READY_STATES**
 
-The set of states for which a task_ has finished: ``REVOKED``, ``FAILURE`` and ``SUCCESS``
+The set of states for which a Task_ has finished: ``REVOKED``, ``FAILURE`` and ``SUCCESS``
 
 
 Configuration
@@ -392,4 +392,4 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _pulsar: https://github.com/quantmind/pulsar
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
 .. _Jobs: #the-job-class
-.. _task: #the-task
+.. _Task: #the-task

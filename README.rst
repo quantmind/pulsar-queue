@@ -28,8 +28,6 @@
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
 .. |coverage-dev| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=dev
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=dev
-.. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png
-   :target: https://github.com/quantmind/pulsar-queue
 
 
 Asynchronous server for consuming asynchronous IO tasks, green IO tasks,
@@ -223,20 +221,20 @@ or use the less verbose **job** decorator:
 
 .. code:: python
 
-    @api.job(concurrency=api.ASYNC_IO
+    @api.job(concurrency=api.ASYNC_IO)
     async def asyncsleep(self, lag=1):
         await asyncio.sleep(lag)
 
 
-In either cases the ``self`` parameter is an instance of the **Job** class.
+In either cases the ``self`` parameter is an instance of a **Job** class.
 
 * job. **backend**
 
-    The tasks backend that is processing this Job run
+    The tasks backend that is processing this Task_ run
 
 * job. **task**
 
-    The Task_ instance associated with this job run
+    The Task_ instance associated with this task run
 
 * job. **http**
 
@@ -244,7 +242,7 @@ In either cases the ``self`` parameter is an instance of the **Job** class.
 
 * job. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
 
-    Queue a new job. It is equivalent to:
+    Queue a new job form a task run. It is equivalent to:
 
     .. code:: python
 
@@ -391,5 +389,8 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _`creative common license`: http://creativecommons.org/licenses/by-nc/3.0/
 .. _pulsar: https://github.com/quantmind/pulsar
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _greenlet: https://greenlet.readthedocs.io/en/latest/
 .. _Jobs: #the-job-class
 .. _Task: #the-task
+.. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png
+   :target: https://github.com/quantmind/pulsar-queue

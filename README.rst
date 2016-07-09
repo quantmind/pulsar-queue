@@ -77,7 +77,7 @@ A simple python file which runs your application:
 2 - Implement Jobs
 ---------------------
 
-Create the modules where Jobs are implemented.
+Create the modules where Jobs_ are implemented.
 It can be a directory containing several submodules.
 
 .. code::
@@ -207,12 +207,11 @@ The Job class
 -----------------
 
 The **Job** class is how task factories are implemented and added to the
-tasks backend registry. When writing a new **Job** one can either subclass::
+tasks backend registry. When writing a new **Job** one can either subclass:
 
 .. code:: python
 
     import asyncio
-
 
     class AsyncSleep(api.Job):
         concurrency api.ASYNC_IO
@@ -232,6 +231,31 @@ or use the less verbose **job** decorator:
 
 In either cases the ``self`` parameter is an instance of the **Job** class.
 
+* job. **backend**
+
+    The tasks backend that is processing this Job run
+    
+* job. **task**
+
+    The task_ instance associated with this job run
+    
+* job. **http**
+
+    Best possible HTTP session handler for the job concurrency mode.
+    
+* job. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
+
+    Queue a new job. It is equivalent to:
+
+    .. code:: python
+        
+        meta_params = {'from_task': self.task.id}
+        self.backend.queue_task(..., meta_params=meta_params)
+    
+The Task
+-----------
+
+A task contains the metadata information of a job run and it is exchanged between task producers and task consumers via a distributed task queue.
 
 Tasks Concurrency
 ======================
@@ -321,3 +345,5 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _`creative common license`: http://creativecommons.org/licenses/by-nc/3.0/
 .. _pulsar: https://github.com/quantmind/pulsar
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _Jobs: #the-job-class
+.. _task: #the-task

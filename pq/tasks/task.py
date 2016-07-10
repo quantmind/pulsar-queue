@@ -37,6 +37,7 @@ class Task:
     exception = None
     stacktrace = None
     worker = None
+    delay = None
 
     def __init__(self, id=None, name=None, time_queued=None,
                  expiry=None, status=None, kwargs=None, queue=None,

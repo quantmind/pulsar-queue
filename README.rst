@@ -133,6 +133,24 @@ Launch a python shell and play with the api
     >>> task.status_string
     'SUCCESS'
 
+You can also queue tasks with a ``delay``
+
+.. code:: python
+
+    >>> task = api.queue_task('addition', a=4, b=6, callback=False, delay=2).wait()
+    >>> task.status_string
+    'QUEUED'
+    >>> task.time_queued    # timestamp
+    >>> task = task.done_callback.wait()
+    >>> task.status_string
+    'SUCCESS'
+    >>> task.time_started - task.time_queued
+    2.00
+
+**NOTE**: The ``wait`` method in a task future can only be used on the shell
+or when the event loop is not running. In all other cases one should ``await``
+for the task future in a coroutine.
+
 API
 =============
 

@@ -64,7 +64,7 @@ class PubSub(Component):
 
     def _channel(self, event=''):
         event = 'task_%s' % event
-        prefix = self.cfg.task_queue_prefix
+        prefix = self.cfg.name
         return '%s_%s' % (prefix, event) if prefix else event
 
 

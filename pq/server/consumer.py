@@ -32,17 +32,26 @@ class ExecutorMixin:
                 expiry = task.expiry
                 if expiry and time_ended > expiry:
                     raise TaskTimeout
-                else:
-                    kwargs = task.kwargs or {}
-                    task.status = states.STARTED
-                    task.time_started = time_ended
-                    if worker:
-                        task.worker = worker.aid
-                    logger.info(task.lazy_info())
-                    await self.pubsub.publish('started', task)
-                    job = JobClass(self, task)
-                    # This may block for a while
-                    task.result = await self._consume(job, kwargs)
+
+                if task.delay:  # Task with delay
+                    start_time = task.time_queued + task.delay
+                    gap = start_time - time_ended
+                    if gap > 0:
+                        self._loop.call_later(gap, self._queue_again, task)
+                        if self._concurrent_tasks:
+                            self._concurrent_tasks.discard(task_id)
+                        return task
+
+                kwargs = task.kwargs or {}
+                task.status = states.STARTED
+                task.time_started = time_ended
+                if worker:
+                    task.worker = worker.aid
+                logger.info(task.lazy_info())
+                await self.pubsub.publish('started', task)
+                job = JobClass(self, task)
+                # This may block for a while
+                task.result = await self._consume(job, kwargs)
             else:
                 raise TaskError('Invalid status %s' % task.status_string)
         except TaskTimeout:
@@ -107,6 +116,9 @@ class ExecutorMixin:
         if job.task.stacktrace:
             raise RemoteStackTrace
         return job.task.result
+
+    def _queue_again(self, task):
+        self.broker.queue(task, False)
 
     def json_params(self):
         for name, value in self.cfg.items():

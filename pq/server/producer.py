@@ -26,22 +26,23 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
     """
     app = None
 
-    def __init__(self, cfg, logger=None, **kw):
+    def __init__(self, cfg, *, logger=None, **kw):
         self.cfg = cfg
         self.logger = logger or logging.getLogger('pulsar.queue')
         self._closing = False
-        store = create_store(cfg.data_store)
+        loop = cfg.params.pop('loop', None)
+        store = create_store(cfg.data_store, loop=loop)
         if not cfg.message_broker:
             broker = store
         else:
-            broker = create_store(cfg.message_broker)
+            broker = create_store(cfg.message_broker, loop=loop)
         if self.cfg.callable:
             self.app = self.cfg.callable(self)
         self.store_task = getattr(self.app, 'store_task', store_task)
         self.pubsub = PubSub(self, store)
         self.broker = brokers.get(broker.name)(self, broker)
         self.green_pool = getattr(self.app, 'green_pool', GreenPool())
-        self.http = getattr(self.app, 'http', HttpClient())
+        self.http = getattr(self.app, 'http', HttpClient(loop=loop))
 
     def __str__(self):
         return repr(self)
@@ -103,7 +104,11 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
         '''
         task = self._create_task(jobname, **kwargs)
         if task:
-            return self.broker.queue(task, callback)
+            future = self.broker.queue(task, callback)
+            if self._loop.is_running():
+                return self.green_pool.wait(future)
+            else:
+                return future
 
     def queue_task_local(self, jobname, **kwargs):
         kwargs['queue'] = self.node_name
@@ -118,7 +123,7 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
 
     # INTERNALS
     def _create_task(self, jobname, meta_params=None, expiry=None, queue=True,
-                     **kwargs):
+                     delay=None, **kwargs):
         '''Try to queue a new :ref:`Task`.
 
         This method returns a :class:`.Future` which results in the
@@ -160,6 +165,7 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
                         expiry=expiry,
                         kwargs=kwargs,
                         status=states.QUEUED,
+                        delay=delay,
                         **meta_params)
         else:
             raise TaskNotAvailable(jobname)

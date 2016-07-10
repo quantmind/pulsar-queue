@@ -46,19 +46,16 @@ class TaskQueueBase:
     @classmethod
     async def setUpClass(cls):
         # The name of the task queue application
-        name = cls.name()
-        queues = ['%s1' % name, '%s2' % name]
-        pq = api.PulsarQueue(cls.name(),
-                             wsgi=True,
-                             config='tests.config',
-                             queue_callable=dummy,
-                             task_queues=queues,
-                             default_task_queue=queues[0],
-                             schedule_periodic=cls.schedule_periodic,
-                             rpc_bind='127.0.0.1:0',
-                             concurrency=cls.concurrency,
-                             rpc_concurrency=cls.concurrency,
-                             rpc_keep_alive=cls.rpc_timeout)
+        params = cls.params()
+        params.update(dict(
+            wsgi=True,
+            schedule_periodic=cls.schedule_periodic,
+            rpc_bind='127.0.0.1:0',
+            concurrency=cls.concurrency,
+            rpc_concurrency=cls.concurrency,
+            rpc_keep_alive=cls.rpc_timeout
+        ))
+        pq = api.PulsarQueue(**params)
         cfgs = await pq.start()
         cls.tq = cfgs[0].app()
         cls.rpc = cfgs[1].app()
@@ -67,13 +64,29 @@ class TaskQueueBase:
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
         backend = await cls.tq.backend.start()
-        await backend.flush_queues(*queues)
+        await backend.flush_queues(*cls.queues())
 
     @classmethod
     def tearDownClass(cls):
         coros = [send('arbiter', 'kill_actor', a.name) for a in
                  (cls.tq, cls.rpc) if a is not None]
         return asyncio.gather(*coros)
+
+    @classmethod
+    def queues(cls):
+        name = cls.name()
+        return ['%s1' % name, '%s2' % name]
+
+    @classmethod
+    def params(cls):
+        queues = cls.queues()
+        return dict(
+            name=cls.name(),
+            config='tests.config',
+            queue_callable=dummy,
+            task_queues=queues,
+            default_task_queue=queues[0]
+        )
 
 
 class TestTaskQueue(TaskQueueBase, unittest.TestCase):
@@ -260,6 +273,35 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
                                                 url='https://www.bbc.co.uk/')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertTrue(task.result)
+
+    async def test_delay(self):
+        task = await self.tq.backend.queue_task('scrape',
+                                                delay=2,
+                                                url='https://www.bbc.co.uk/')
+
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertEqual(task.delay, 2)
+        self.assertTrue(task.time_started - task.time_queued > 2)
+        self.assertTrue(task.result)
+
+    def test_sync(self):
+        loop = asyncio.new_event_loop()
+        tasks = api.TaskApp(loop=loop, **self.params()).backend
+        self.assertEqual(tasks._loop, loop)
+        task = tasks.queue_task('scrape', url='https://github.com')
+        self.assertIsInstance(task, asyncio.Future)
+        self.assertTrue(task.task_id)
+        task = task.wait()
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertFalse(tasks._loop.is_running())
+        #
+        task = tasks.queue_task('scrape', url='https://github.com',
+                                callback=False)
+        task = task.wait()
+        self.assertEqual(task.status_string, 'QUEUED')
+        self.assertTrue(task.done_callback)
+        task = task.done_callback.wait()
+        self.assertEqual(task.status_string, 'SUCCESS')
 
     # RPC
     async def test_rpc_job_list(self):

@@ -79,14 +79,19 @@ class MQ(Component, ABC):
         called back once the task is done, otherwise return a future
         called back once the task is queued
         '''
-        future = TaskFuture(task.id, self.backend, loop=self._loop)
+        future_done = TaskFuture(task.id, self.backend, loop=self._loop)
         if task.queue:
-            self.callbacks[task.id] = future
+            self.callbacks[task.id] = future_done
         else:   # the task is not queued instead it is executed immediately
             coro = self.backend._execute_task(task)
+            return chain_future(coro, next=future_done)
+        coro = self._queue_task(task, future_done)
+        if callback:
+            ensure_future(coro, loop=self._loop)
+            return future_done
+        else:
+            future = TaskFuture(task.id, self.backend, loop=self._loop)
             return chain_future(coro, next=future)
-        result = ensure_future(self._queue_task(task, future), loop=self._loop)
-        return future if callback else result
 
     @abstractmethod
     async def size(self, *queues):  # pragma    nocover

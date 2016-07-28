@@ -57,16 +57,19 @@ class PubSub(Component):
     def __call__(self, channel, message):
         # PubSub callback
         event = channel[len(self._channel()):]
-        task = Task.load(message)
+        if event.startswith('task_'):
+            payload = Task.load(message)
+        else:
+            payload = json.loads(message.decode('utf-8'))
         if event == 'task_done':
-            done = self._callbacks.pop(task.id, None)
+            done = self._callbacks.pop(payload.id, None)
             if done:
-                done.set_result(task)
+                done.set_result(payload)
         for callback in self._event_callbacks:
             try:
-                callback(event, task)
+                callback(event, payload)
             except Exception:
-                self.logger.exception('During %s callbacks', task)
+                self.logger.exception('During %s callbacks', event)
 
     def _channel(self, event=''):
         prefix = self.cfg.name

@@ -40,9 +40,11 @@ class TestScheduler(TaskQueueBase, unittest.TestCase):
         self.assertEqual(next[0], 'testperiodic')
 
     def _test_periodic(self, future, event, task):
+        if not event.startswith('task_'):
+            return
         try:
             self.assertEqual(task.name, 'testperiodic')
-            if event != 'done':
+            if event != 'task_done':
                 return
             cbs = self.tq.pubsub.remove_event_callback(self.cbk)
             self.assertEqual(len(cbs), 0)

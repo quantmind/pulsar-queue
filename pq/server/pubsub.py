@@ -1,3 +1,5 @@
+import json
+
 from ..mq import Component, Task
 
 
@@ -43,16 +45,20 @@ class PubSub(Component):
 
         :return: a coroutine
         '''
-        channel = self._channel(event)
+        channel = self._channel('task_%s' % event)
         await self.backend.store_task(task)
         await self._pubsub.publish(channel, self.serialise(task))
+
+    async def broadcast(self, event, payload):
+        channel = self._channel(event)
+        await self._pubsub.publish(channel, json.dumps(payload))
 
     # INTERNALS
     def __call__(self, channel, message):
         # PubSub callback
         event = channel[len(self._channel()):]
         task = Task.load(message)
-        if event == 'done':
+        if event == 'task_done':
             done = self._callbacks.pop(task.id, None)
             if done:
                 done.set_result(task)
@@ -63,7 +69,6 @@ class PubSub(Component):
                 self.logger.exception('During %s callbacks', task)
 
     def _channel(self, event=''):
-        event = 'task_%s' % event
         prefix = self.cfg.name
         return '%s_%s' % (prefix, event) if prefix else event
 

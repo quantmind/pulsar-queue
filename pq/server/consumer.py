@@ -13,6 +13,9 @@ from ..tasks import states
 from ..cpubound import StreamProtocol, PROCESS_FILE
 
 
+consumer_event = 'consumer_status'
+
+
 class RemoteStackTrace(TaskError):
     pass
 
@@ -158,7 +161,8 @@ class ConsumerMixin:
         return len(self._concurrent_tasks)
 
     def info(self):
-        return {'concurrent': list(self._concurrent_tasks),
+        return {'node': self.node_name,
+                'concurrent': list(self._concurrent_tasks),
                 'processed': self._processed,
                 'queues': self.queues()}
 
@@ -214,8 +218,16 @@ class ConsumerMixin:
                         self._processed += 1
                         self._concurrent_tasks.add(task.id)
                         ensure_future(self._execute_task(task, worker))
+                    await self._broadcast(worker)
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
                                   self.num_concurrent_tasks)
                 next_time = 1
+                await self._broadcast(worker)
         self._pool_tasks(worker, next_time)
+
+    def _broadcast(self, worker):
+        info = self.info()
+        info['worker'] = worker.aid
+        info['time'] = time.time()
+        return self.pubsub.broadcast(consumer_event, info)

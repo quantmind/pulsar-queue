@@ -19,14 +19,7 @@ class SchedulerMixin:
         return o
 
     def __repr__(self):
-        if self.cfg.schedule_periodic:
-            return 'task scheduler <%s>' % self.broker
-        else:
-            return 'task producer <%s>' % self.broker
-
-    async def start(self, worker=None):
-        await self.pubsub.start()
-        return self
+        return 'task scheduler <%s>' % self.broker
 
     @lazyproperty
     def entries(self):

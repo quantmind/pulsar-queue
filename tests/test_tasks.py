@@ -22,16 +22,3 @@ class TestTasks(unittest.TestCase):
         self.assertEqual(job(value=4), 10)
         self.assertEqual(str(job), 'bla.foo')
         self.assertFalse(job.task)
-
-    def test_periodic_entries(self):
-        tq = self.app(schedule_periodic=True)
-        self.assertTrue(tq.cfg.schedule_periodic)
-        backend = tq.backend
-        self.assertIsInstance(backend, api.TaskScheduler)
-        entries = backend.entries
-        self.assertTrue(entries)
-        self.assertEqual(entries, backend.entries)
-        next_run = backend.next_run
-        self.assertTrue(next_run)
-        backend.tick()
-        self.assertGreater(backend.next_run, next_run)

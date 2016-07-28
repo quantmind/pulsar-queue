@@ -14,7 +14,7 @@ class TaskQueueRpc(rpc.JSONRPC):
         application which exposes the remote procedure calls.
 
     '''
-    _task_backend_ = None
+    _task_api_ = None
 
     def __init__(self, taskqueue, **kwargs):
         if not isinstance(taskqueue, str):
@@ -67,10 +67,10 @@ class TaskQueueRpc(rpc.JSONRPC):
     ########################################################################
     #    INTERNALS
     async def _task_backend(self):
-        if not self._task_backend_:
+        if not self._task_api_:
             app = await get_application(self.taskqueue)
-            self._task_backend_ = await app.backend.start()
-        return self._task_backend_
+            self._task_api_ = await app.api().start()
+        return self._task_api_
 
     async def _queue_task(self, request, jobname, meta_params=None, **kw):
         if not jobname:
@@ -87,4 +87,4 @@ class TaskQueueRpc(rpc.JSONRPC):
 
 
 def next_scheduled(actor, jobnames=None):
-    return actor.app.backend.next_scheduled(jobnames=jobnames)
+    return actor.app.next_scheduled(jobnames=jobnames)

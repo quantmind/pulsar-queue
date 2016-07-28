@@ -100,7 +100,7 @@ async def main(syspath, params, stask):
         params = json.loads(params)
         params.update({'python_path': False,
                        'parse_console': False})
-        producer = TaskApp(**params).backend
+        producer = TaskApp(**params).api()
         pubsub = producer.pubsub
         await pubsub.start()
         logger = producer.logger

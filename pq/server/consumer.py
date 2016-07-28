@@ -177,11 +177,12 @@ class ConsumerMixin:
         if self._closing:
             if not self._concurrent_tasks:
                 self.logger.warning(self._closing)
-                worker._loop.stop()
+                if not worker.is_monitor():
+                    worker._loop.stop()
         else:
             if worker.is_running() and not next_time:
                 ensure_future(self._may_pool_task(worker), loop=worker._loop)
-            else:
+            elif not worker.after_run():
                 next_time = next_time or 0
                 worker._loop.call_later(next_time, self._pool_tasks, worker)
 

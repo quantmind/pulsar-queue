@@ -27,17 +27,13 @@ class TaskQueueBase:
     # used for both keep-alive and timeout in JsonProxy
     # long enough to allow to wait for tasks
     rpc_timeout = 500
-    tq = None
+    tq_app = None
     rpc = None
     schedule_periodic = False
 
     @classmethod
     def name(cls):
         return cls.__name__.lower()
-
-    @classmethod
-    def task_backend(cls):
-        return None
 
     @classmethod
     def rpc_name(cls):
@@ -57,19 +53,19 @@ class TaskQueueBase:
         ))
         pq = api.PulsarQueue(**params)
         cfgs = await pq.start()
-        cls.tq = cfgs[0].app()
+        cls.tq_app = cfgs[0].app()
         cls.rpc = cfgs[1].app()
         # make sure the time out is high enough (bigger than test-timeout)
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
-        backend = await cls.tq.backend.start()
-        await backend.flush_queues(*cls.queues())
+        cls.tq = await cls.tq_app.api().start()
+        await cls.tq.flush_queues(*cls.queues())
 
     @classmethod
     def tearDownClass(cls):
         coros = [send('arbiter', 'kill_actor', a.name) for a in
-                 (cls.tq, cls.rpc) if a is not None]
+                 (cls.tq_app, cls.rpc) if a is not None]
         return asyncio.gather(*coros)
 
     @classmethod
@@ -92,22 +88,18 @@ class TaskQueueBase:
 class TestTaskQueue(TaskQueueBase, unittest.TestCase):
 
     def test_registry(self):
-        backend = self.tq.backend
-        self.assertTrue(isinstance(backend.registry, dict))
-        regular = backend.registry.regular()
-        periodic = backend.registry.periodic()
+        self.assertTrue(isinstance(self.tq.registry, dict))
+        regular = self.tq.registry.regular()
+        periodic = self.tq.registry.periodic()
         self.assertTrue(regular)
         self.assertTrue(periodic)
 
     def test_producer(self):
-        backend = self.tq.backend
-        self.assertTrue(str(backend).startswith('task producer <'))
+        self.assertTrue(str(self.tq).startswith('task producer <'))
         self.assertEqual(self.tq.cfg.default_task_queue, '%s1' % self.name())
-        self.assertEqual(backend.next_scheduled(), None)
-        self.assertEqual(backend.entries, {})
 
     def test_job_list(self):
-        jobs = self.tq.backend.job_list()
+        jobs = self.tq.job_list()
         self.assertTrue(jobs)
         self.assertTrue(isinstance(jobs, list))
         d = dict(jobs)
@@ -169,16 +161,14 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
         self.assertEqual(len(task.result['queues']), 3)
 
     async def test_local_queue(self):
-        backend = self.tq.backend
-        task = await backend.queue_task_local('testlocalqueue')
+        task = await self.tq.queue_task_local('testlocalqueue')
         self.assertIsInstance(task, api.Task)
         self.assertIsInstance(task.result, list)
         self.assertEqual(len(task.result), 3)
-        self.assertEqual(task.result[0], backend.node_name)
+        self.assertEqual(task.result[0], self.tq.node_name)
 
     async def test_no_callback(self):
-        backend = self.tq.backend
-        task = await backend.queue_task('asynchronous', callback=False)
+        task = await self.tq.queue_task('asynchronous', callback=False)
         self.assertTrue(task.id)
         self.assertEqual(task.status_string, 'QUEUED')
         self.assertTrue('ID=%s' % task.id in repr(task.done_callback))
@@ -240,7 +230,7 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
             self.tq.queue_task('execute.python', code=code, callback=False)
         )
         self.assertEqual(task[0].status_string, 'QUEUED')
-        size = await self.tq.backend.broker.size(task[0].queue)
+        size = await self.tq.broker.size(task[0].queue)
         task = await asyncio.gather(
             task[0].done_callback,
             task[1].done_callback,
@@ -263,30 +253,28 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
         self.assertTrue(tasks[1].result['end'] < tasks[2].result['start'])
 
     async def test_queue_from_task(self):
-        task = await self.tq.backend.queue_task('queue.from.task')
+        task = await self.tq.queue_task('queue.from.task')
         self.assertEqual(task.status_string, 'SUCCESS')
         other_task = task.result
         self.assertEqual(other_task['from_task'], task.id)
 
     async def test_scrape(self):
-        task = await self.tq.backend.queue_task('scrape',
-                                                url='https://www.bbc.co.uk/')
+        task = await self.tq.queue_task('scrape', url='https://www.bbc.co.uk/')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertTrue(task.result)
 
     async def test_delay(self):
-        task = await self.tq.backend.queue_task('scrape',
-                                                delay=2,
-                                                url='https://www.bbc.co.uk/')
-
+        task = await self.tq.queue_task('scrape',
+                                        delay=2,
+                                        url='https://www.bbc.co.uk/')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.delay, 2)
         self.assertTrue(task.time_started - task.time_queued > 2)
         self.assertTrue(task.result)
 
-    def test_sync(self):
+    def _test_sync(self):
         loop = asyncio.new_event_loop()
-        tasks = api.TaskApp(loop=loop, **self.params()).backend
+        tasks = api.TaskApp(loop=loop, **self.params()).api()
         self.assertEqual(tasks._loop, loop)
         task = tasks.queue_task('scrape', url='https://github.com')
         self.assertIsInstance(task, asyncio.Future)

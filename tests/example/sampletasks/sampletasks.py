@@ -111,7 +111,7 @@ class CpuBoundBigLog(api.Job):
     def __call__(self):
         # Log more date then the pipe buffer, as logs are send through the pipe
         for i in range(1024):
-            self.backend.logger.info('*'*1024)
+            self.backend.logger.debug('*'*1024)
 
 
 @api.job(concurrency=api.ASYNC_IO)

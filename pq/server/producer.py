@@ -1,5 +1,4 @@
 from uuid import uuid4
-from abc import ABC, abstractmethod
 import time
 import logging
 import platform
@@ -19,7 +18,7 @@ from .consumer import ExecutorMixin
 from .pubsub import PubSub, store_task
 
 
-class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
+class TaskProducer(models.RegistryMixin, ExecutorMixin):
     """Produce tasks by queuing them
 
     Abstract base class for both task schedulers and task consumers
@@ -47,6 +46,9 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
     def __str__(self):
         return repr(self)
 
+    def __repr__(self):
+        return 'task producer <%s>' % self.broker
+
     @property
     def _loop(self):
         return self.broker._loop
@@ -55,9 +57,9 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin, ABC):
     def node_name(self):
         return platform.node()
 
-    @abstractmethod
     async def start(self, worker=None):
-        pass
+        await self.pubsub.start()
+        return self
 
     def queues(self):
         return ()

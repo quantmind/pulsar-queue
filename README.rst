@@ -122,7 +122,7 @@ Launch a python shell and play with the api
 .. code:: python
 
     >>> from manage import app
-    >>> api = app().backend
+    >>> api = app().api()
     >>> task = api.queue_task('addition', a=4, b=6)
     >>> task
     <TaskFuture pending ID=i26ad5c14c5bb422e87b0f7ccbce5ba06>
@@ -244,7 +244,8 @@ or use the less verbose **job** decorator:
         await asyncio.sleep(lag)
 
 
-In either cases the ``self`` parameter is an instance of a **Job** class.
+In either cases the ``self`` parameter is an instance of a **Job** class and
+it has the following useful attributes and methods:
 
 * job. **backend**
 
@@ -266,6 +267,15 @@ In either cases the ``self`` parameter is an instance of a **Job** class.
 
         meta_params = {'from_task': self.task.id}
         self.backend.queue_task(..., meta_params=meta_params)
+
+* job. **shell** (*command*, *\*\*kwargs*):
+
+    Execute a shell command and returns a coroutine:
+
+    .. code:: python
+
+        await self.shell("...")
+
 
 The Task
 -----------

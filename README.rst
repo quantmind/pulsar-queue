@@ -163,10 +163,10 @@ The tasks backend is obtained from the Task application ``backend`` attribute:
 
     from pq.api import TaskApp
 
-    tasks = TaskApp(...).backend
+    api = TaskApp(...).api()
 
 
-* tasks. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
+* api. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
 
     Queue a task and return a **TaskFuture** which is resolved once the task has finished.
     It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
@@ -176,7 +176,7 @@ The tasks backend is obtained from the Task application ``backend`` attribute:
         task = await tasks.queue_task(..., callback=False)
         task.status_string  # QUEUED
 
-* tasks. **queue_task_local** (*jobname*, *\*args*, *\*\*kwargs*)
+* api. **queue_task_local** (*jobname*, *\*args*, *\*\*kwargs*)
 
     Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
 
@@ -186,7 +186,7 @@ The tasks backend is obtained from the Task application ``backend`` attribute:
         task.queue  # tasks.node_name
 
 
-* tasks. **execute_task** (*jobname*, *\*args*, *\*\*kwargs*)
+* api. **execute_task** (*jobname*, *\*args*, *\*\*kwargs*)
 
     Execute a task immediately, it does not put the task in the task queue.
     This method is useful for debugging and testing. It is equivalent to execute:
@@ -198,11 +198,11 @@ The tasks backend is obtained from the Task application ``backend`` attribute:
         task.status_string  # SUCCESS
 
 
-* tasks. **queues** ()
+* api. **queues** ()
 
     Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
 
-* tasks. **job_list** (*jobnames* = *None*)
+* api. **job_list** (*jobnames* = *None*)
 
     Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
 

@@ -104,7 +104,7 @@ async def main(syspath, params, stask):
         pubsub = producer.pubsub
         await pubsub.start()
         logger = producer.logger
-        task = pubsub.load(stask)
+        task = pubsub.decode(stask, 'json')
         JobClass = producer.registry.get(task.name)
         if not JobClass:
             raise RuntimeError('%s not in registry' % task.name)

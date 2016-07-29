@@ -1,5 +1,7 @@
 import pulsar
 
+from ..utils.serializers import serializers
+
 
 DEFAULT_TASK_BACKEND = 'redis://127.0.0.1:6379/7'
 
@@ -18,33 +20,6 @@ class MessageBroker(TaskSetting):
     desc = """\
         Connection string to message broker.
     """
-
-
-class DefaultTaskConcurrency(TaskSetting):
-    name = "default_task_concurrency"
-    flags = ["--default-task-concurrency"]
-    choices = ('asyncio', 'greenio', 'thread', 'process')
-    default = 'greenio'
-    desc = """\
-        Default concurrency for tasks
-        """
-
-
-class BroadCastPrefix(TaskSetting):
-    name = "task_queue_prefix"
-    flags = ["--task_queue_prefix"]
-    default = ''
-    desc = """\
-        Prefix for all broadcast channels and queues
-
-        Messages emitted in these channels by the application will be:
-
-        <prefix>_task_queued
-        <prefix>_task_started
-        <prefix>_task_finished
-
-        if the prefix is set. Same for queues.
-        """
 
 
 class ConcurrentTasks(TaskSetting):
@@ -87,7 +62,7 @@ class TaskPoolTimeout(TaskSetting):
     default = 2
     type = int
     desc = """\
-        Timeout for asynchronously poolling tasks from the queues
+        Timeout for asynchronously polling tasks from the queues
         """
 
 
@@ -114,4 +89,14 @@ class SchedulePeriodic(TaskSetting):
 
         If enabled, :class:`.PeriodicJob` will produce
         tasks according to their schedule.
+        '''
+
+
+class MessageSerializer(TaskSetting):
+    name = 'message_serializer'
+    flags = ["--message-serializer"]
+    choices = tuple(serializers)
+    default = tuple(serializers)[0]
+    desc = '''\
+        Message serializer
         '''

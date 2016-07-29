@@ -5,7 +5,7 @@ import platform
 
 from pulsar import new_event_loop
 from pulsar.apps.data import create_store
-from pulsar.apps.greenio import GreenPool, GreenHttp
+from pulsar.apps.greenio import GreenHttp
 from pulsar.apps.http import HttpClient
 
 from ..utils.time import get_time
@@ -13,9 +13,10 @@ from ..tasks import models
 from ..tasks import states
 from ..tasks.task import Task, TaskNotAvailable
 from ..backends import brokers
+from ..mq import TaskManager
 
 from .consumer import ExecutorMixin
-from .pubsub import PubSub, store_task
+from .pubsub import PubSub
 
 
 class TaskProducer(models.RegistryMixin, ExecutorMixin):
@@ -35,13 +36,11 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
             broker = store
         else:
             broker = create_store(cfg.message_broker, loop=loop)
-        if self.cfg.callable:
-            self.app = self.cfg.callable(self)
-        self.store_task = getattr(self.app, 'store_task', store_task)
+        self.manager = (self.cfg.callable or TaskManager)(self)
         self.pubsub = PubSub(self, store)
         self.broker = brokers.get(broker.name)(self, broker)
-        self.green_pool = getattr(self.app, 'green_pool', GreenPool())
-        self.http = getattr(self.app, 'http', HttpClient(loop=loop))
+        self.http = self.manager.http()
+        self.green_pool = self.manager.green_pool()
 
     def __str__(self):
         return repr(self)

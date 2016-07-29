@@ -1,8 +1,7 @@
-from pulsar import ImproperlyConfigured, PulsarException
-from pulsar.utils.system import json
+from pulsar import PulsarException
 from pulsar.utils.log import LazyString
-from pulsar.utils.string import to_string
 
+from ..utils.serializers import Message
 from . import states
 
 
@@ -28,7 +27,7 @@ class TaskTimeout(TaskError):
     pass
 
 
-class Task:
+class Task(Message):
     '''A class containing task execution data
     '''
     time_started = None
@@ -55,14 +54,6 @@ class Task:
         return self.info()
     __str__ = __repr__
 
-    @classmethod
-    def load(cls, data, method=None):
-        method = method or 'json'
-        if method == 'json':
-            return cls(**json.loads(to_string(data)))
-        else:
-            raise ImproperlyConfigured('Unknown serialisation "%s"' % method)
-
     @property
     def full_name(self):
         return 'task.%s' % self.name
@@ -72,20 +63,6 @@ class Task:
         '''A string representation of :attr:`status` code
         '''
         return states.status_string(self.status)
-
-    def tojson(self):
-        '''Json serialisable dictionary
-        '''
-        return self.__dict__.copy()
-
-    def serialise(self, method=None):
-        '''Serialise this task using the serialisation ``method``
-        '''
-        method = method or 'json'
-        if method == 'json':
-            return json.dumps(self.tojson())
-        else:
-            raise ImproperlyConfigured('Unknown serialisation "%s"' % method)
 
     def done(self):
         '''Return ``True`` if the :class:`Task` has finshed.

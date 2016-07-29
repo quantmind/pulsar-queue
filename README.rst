@@ -96,7 +96,7 @@ It can be a directory containing several submodules.
         return a + b
 
 
-    @api.job(concurrency=api.ASYNC_IO)
+    @api.job()
     async def asynchronous(self, lag=1):
         start = time.time()
         await asyncio.sleep(lag)
@@ -154,10 +154,10 @@ for the task future in a coroutine.
 API
 =============
 
-Tasks backend
+Tasks Producer
 -----------------
 
-The tasks backend is obtained from the Task application ``backend`` attribute:
+The tasks producer API is obtained from the Task application ``api`` method:
 
 .. code:: python
 
@@ -229,7 +229,6 @@ tasks backend registry. When writing a new **Job** one can either subclass:
     import asyncio
 
     class AsyncSleep(api.Job):
-        concurrency api.ASYNC_IO
 
         async def __call__(self, lag=1):
             await asyncio.sleep(lag)
@@ -239,7 +238,7 @@ or use the less verbose **job** decorator:
 
 .. code:: python
 
-    @api.job(concurrency=api.ASYNC_IO)
+    @api.job()
     async def asyncsleep(self, lag=1):
         await asyncio.sleep(lag)
 
@@ -310,10 +309,29 @@ Configuration
 ------------------
 
 There are several parameters you can use to twick the way the task queue works.
+In this list the name in bold is the entry point in the config file and **cfg**
+dictionary, while, the value between brackets shows the command line entry with default
+value.
 
 * **concurrent_tasks** (``--concurrent-tasks 5``)
 
-    The maximum number of concurrent tasks for a given worker in task consumer server.
+    The maximum number of concurrent tasks for a given worker in a task consumer server.
+
+* **data_store** (``--data-store redis://127.0.0.1:6379/7``)
+
+    Data store used for publishing and subscribing to messages (redis is the
+    only backend available at the moment)
+
+* **message_broker** (``--message-broker ...``)
+
+    Data store used as distributed task queue. If not provided (default) the
+    ``data_store`` is used instead. Redis is the
+    only backend available at the moment.
+
+* **message_serializer** (``message-serializer json``)
+
+    The decoder/encoder for messages and tasks. Te default is **JSON** but **Message Pack**
+    is also available if msgpack_ is installed.
 
 * **schedule_periodic** (``--schedule-periodic``)
 
@@ -321,13 +339,20 @@ There are several parameters you can use to twick the way the task queue works.
     Usually, only one running server is responsible for
     scheduling tasks.
 
+* **task_pool_timeout** (``--task-pool-timeout 2``)
+
+    Timeout in seconds for asynchronously polling tasks from the queues. No need to change this parameter really.
+
+* **workers** (``--workers 4``)
+
+    Number of workers (processes) consuming tasks.
+
 
 Tasks Concurrency
 ======================
 
 A task can run in one of four ``concurrency`` modes.
-If not specified by the ``Job``, the concurrency mode is given by the
-``default_task_concurrency`` parameter whch can be specified in the ``config`` file or in the command line.
+If not specified by the ``Job``, the concurrency mode is ``ASYNC_IO``.
 
 ASYNC_IO
 -----------
@@ -339,7 +364,7 @@ An example can be a Job to scrape web pages and create new tasks to process the 
 
 .. code:: python
 
-    @api.job(concurrency=api.ASYNC_IO)
+    @api.job()
     async def scrape(self, url=None):
         assert url, "url is required"
         request = await self.http.get(url)
@@ -350,7 +375,7 @@ An example can be a Job to scrape web pages and create new tasks to process the 
 GREEN_IO
 ----------
 
-The green IO mode is associated with tasks that runs on a child greenlet.
+The green IO mode is associated with tasks that runs on child greenlets.
 This can be useful when using applications which use the greenlet_
 library for implicit asynchronous behaviour.
 
@@ -373,28 +398,24 @@ These tasks are run on sub-processes.
 Configure
 =================
 
-It is possible to enhance the task queue by passing an application ``callable``
-during initialisation (usually a class or an instance factory).
-This callable must be picklable and should return an object which can implement one or
-more methods which override the ``beckend`` implementation.
-
+It is possible to enhance the task queue by passing a custom ``TaskManager``
+during initialisation.
 For example:
 
 .. code:: python
 
-    class Application:
+    from pq import api
 
-        def __init__(self, backend):
-            self.backend = backend
+    class TaskManager(api.TaskManager):
 
-        async def store_task(self, task):
-            """Store task into a backend database"""
+        async def store_message(self, message):
+            """Store message into a backend database"""
             ...
 
-    tq = TaskApp(Application, ...)
+    tq = TaskApp(TaskManager, ...)
 
 
-The application callable is invoked when the backend handler is initialised
+The ``TaskManager`` class is initialised when the backend handler is initialised
 (on each consumer and in the scheduler).
 
 Changelog
@@ -418,6 +439,7 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _pulsar: https://github.com/quantmind/pulsar
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
 .. _greenlet: https://greenlet.readthedocs.io/en/latest/
+.. _msgpack: https://pypi.python.org/pypi/msgpack-python
 .. _Jobs: #the-job-class
 .. _Task: #the-task
 .. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png

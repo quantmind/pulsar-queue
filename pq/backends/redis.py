@@ -19,7 +19,7 @@ class MQ(mq.MQ):
         qt = await self._client.execute('brpop', *args)
         if qt:
             _, stask = qt
-            return self.load(stask)
+            return self.decode(stask)
 
     async def flush_queues(self, *queues):
         '''Clear a list of task queues

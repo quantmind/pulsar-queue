@@ -2,8 +2,10 @@ from abc import ABC, abstractmethod
 from asyncio import Future, ensure_future
 
 from pulsar import chain_future
+from pulsar.apps.http import HttpClient
+from pulsar.apps.greenio import GreenPool
 
-from .tasks.task import Task
+from .utils.serializers import serializers
 
 
 class TaskFuture(Future):
@@ -29,16 +31,10 @@ async def _wait(task_future):
     return result
 
 
-class Component:
+class BaseComponent:
 
-    def __init__(self, backend, store):
+    def __init__(self, backend):
         self.backend = backend
-        self.store = store
-
-    def __repr__(self):
-        return self.store.dns
-
-    __str__ = __repr__
 
     @property
     def cfg(self):
@@ -48,17 +44,56 @@ class Component:
     def logger(self):
         return self.backend.logger
 
+    def encode(self, message, serializer=None):
+        """Encode a message"""
+        serializer = serializer or self.cfg.message_serializer
+        return serializers[serializer].encode(message)
+
+    def decode(self, data, serializer=None):
+        """Decode a message"""
+        serializer = serializer or self.cfg.message_serializer
+        return serializers[serializer].decode(data)
+
+
+class TaskManager(BaseComponent):
+
+    @property
+    def _loop(self):
+        return self.backend._loop
+
+    def green_pool(self):
+        return GreenPool(loop=self._loop)
+
+    def http(self):
+        return HttpClient(loop=self._loop)
+
+    def queues(self):
+        """List of queue names for Task consumers
+        """
+        queues = [self.backend.node_name]
+        queues.extend(self.cfg.task_queues)
+        return queues
+
+    async def store_message(self, message):
+        """Dummy function to store a message into a persistent database
+        """
+        pass
+
+
+class Component(BaseComponent):
+
+    def __init__(self, backend, store):
+        super().__init__(backend)
+        self.store = store
+
+    def __repr__(self):
+        return self.store.dns
+
+    __str__ = __repr__
+
     @property
     def _loop(self):
         return self.store._loop
-
-    def serialise(self, task):
-        method = self.cfg.params.get('TASK_SERIALISATION')
-        return task.serialise(method)
-
-    def load(self, stask):
-        method = self.cfg.params.get('TASK_SERIALISATION')
-        return Task.load(stask, method)
 
 
 class MQ(Component, ABC):
@@ -126,7 +161,7 @@ class MQ(Component, ABC):
         '''Asynchronously queue a task
         '''
         await self.pubsub.publish('queued', task)
-        await self.queue_message(task.queue, self.serialise(task))
+        await self.queue_message(task.queue, self.encode(task))
         self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
         task.done_callback = future
         return task

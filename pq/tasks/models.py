@@ -204,21 +204,13 @@ class Job(metaclass=JobMetaClass):
     def get_concurrency(self):
         '''The concurrency for this job
         '''
-        default = self.backend.cfg.default_task_concurrency
-        return self.concurrency or _concurrency[default.lower()]
+        return self.concurrency or ASYNC_IO
 
-    def run_in_executor(self, callable, *args, **kw):
+    def run_in_executor(self, callable, *args):
         '''Run a callable in the event loop executor.
-
-        If the concurrency is set to GRENN_IO, wait for the future
-        to execute
         '''
         future = self._loop.run_in_executor(None, callable, *args)
-        concurrency = self.get_concurrency()
-        if concurrency == GREEN_IO:
-            return self.green_pool.wait(future)
-        else:
-            return future
+        return self.green_pool.wait(future)
 
     def queue_task(self, jobname, meta_params=None, **kw):
         '''Queue a new task in the task queue

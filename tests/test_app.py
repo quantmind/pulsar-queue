@@ -4,12 +4,10 @@ import sys
 import unittest
 import asyncio
 
-from pulsar import send, ImproperlyConfigured
+from pulsar import send
 from pulsar.apps import rpc
 
 from pq import api
-
-from tests import dummy
 
 
 CODE_TEST = '''\
@@ -79,7 +77,6 @@ class TaskQueueBase:
         return dict(
             name=cls.name(),
             config='tests.config',
-            queue_callable=dummy,
             task_queues=queues,
             default_task_queue=queues[0]
         )
@@ -203,10 +200,7 @@ class TestTaskQueue(TaskQueueBase, unittest.TestCase):
         # If this test fails, it is because the test runner will timeout on
         # this future, this is because the pipe fills up and blocks the
         # cpu bound task
-        task = await self.tq.queue_task('cpuboundbiglog')
-        self.assertRaises(ImproperlyConfigured, task.serialise, 'foo')
-        jtask = task.serialise()
-        self.assertRaises(ImproperlyConfigured, api.Task.load, jtask, 'foo')
+        await self.tq.queue_task('cpuboundbiglog')
 
     async def test_execute_python_code(self):
         task = await self.tq.execute_task('execute.python',

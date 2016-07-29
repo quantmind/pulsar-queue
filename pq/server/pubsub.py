@@ -1,6 +1,5 @@
-import json
-
-from ..mq import Component, Task
+from ..utils.serializers import Message
+from ..mq import Component
 
 
 class PubSub(Component):
@@ -40,43 +39,32 @@ class PubSub(Component):
         """
         return self.store.client().lock(name, **kwargs)
 
-    async def publish(self, event, task):
+    async def publish(self, event, message):
         '''Publish a task to the ``<prefix>_task_<event>`` channel
 
         :return: a coroutine
         '''
-        channel = self._channel('task_%s' % event)
-        await self.backend.store_task(task)
-        await self._pubsub.publish(channel, self.serialise(task))
-
-    async def broadcast(self, event, payload):
+        if isinstance(message, Message):
+            event = '%s_%s' % (message.type, event)
+            await self.backend.manager.store_message(message)
         channel = self._channel(event)
-        await self._pubsub.publish(channel, json.dumps(payload))
+        await self._pubsub.publish(channel, self.encode(message))
 
     # INTERNALS
     def __call__(self, channel, message):
         # PubSub callback
         event = channel[len(self._channel()):]
-        if event.startswith('task_'):
-            payload = Task.load(message)
-        else:
-            payload = json.loads(message.decode('utf-8'))
+        message = self.decode(message)
         if event == 'task_done':
-            done = self._callbacks.pop(payload.id, None)
+            done = self._callbacks.pop(message.id, None)
             if done:
-                done.set_result(payload)
+                done.set_result(message)
         for callback in self._event_callbacks:
             try:
-                callback(event, payload)
+                callback(event, message)
             except Exception:
                 self.logger.exception('During %s callbacks', event)
 
     def _channel(self, event=''):
         prefix = self.cfg.name
         return '%s_%s' % (prefix, event) if prefix else event
-
-
-async def store_task(task):
-    """Dummy function to store a task into a persistent database
-    """
-    return

@@ -4,7 +4,7 @@ import traceback
 from asyncio import ensure_future
 from asyncio.subprocess import Process
 
-from pulsar import isawaitable, ImproperlyConfigured, CANCELLED_ERRORS
+from pulsar import CANCELLED_ERRORS
 from pulsar.utils.system import json
 
 from ..tasks.task import TaskError, TaskTimeout
@@ -85,23 +85,14 @@ class ExecutorMixin:
     def _consume(self, job, kwargs):
         concurrency = job.get_concurrency()
 
-        if concurrency == models.ASYNC_IO:
-            result = job(**kwargs)
-            assert isawaitable(result), "ASYNC_IO tasks not asynchronous"
-            return result
-
-        elif concurrency == models.GREEN_IO:
-            return self.green_pool.submit(job, **kwargs)
-
-        elif concurrency == models.THREAD_IO:
+        if concurrency == models.THREAD_IO:
             return job._loop.run_in_executor(None, lambda: job(**kwargs))
 
         elif concurrency == models.CPUBOUND:
             return self._consume_in_subprocess(job, kwargs)
 
         else:
-            raise ImproperlyConfigured('invalid concurrency "%d"' %
-                                       concurrency)
+            return self.green_pool.submit(job, **kwargs)
 
     async def _consume_in_subprocess(self, job, kwargs):
         params = dict(self.json_params())
@@ -113,7 +104,7 @@ class ExecutorMixin:
             PROCESS_FILE,
             json.dumps(sys.path),
             json.dumps(params),
-            job.task.serialise())
+            json.dumps(job.task.tojson()))
         process = Process(transport, protocol, loop)
         await process.communicate()
         if job.task.stacktrace:
@@ -135,8 +126,6 @@ class ExecutorMixin:
 class ConsumerMixin:
     """A mixin for consuming tasks from a distributed task queue.
     """
-    queues = None
-
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
@@ -150,9 +139,7 @@ class ConsumerMixin:
     def queues(self):
         '''List of task queues consumed by this task consumer
         '''
-        queues = [self.node_name]
-        queues.extend(self.cfg.task_queues)
-        return queues
+        return self.manager.queues()
 
     @property
     def num_concurrent_tasks(self):
@@ -230,4 +217,4 @@ class ConsumerMixin:
         info = self.info()
         info['worker'] = worker.aid
         info['time'] = time.time()
-        return self.pubsub.broadcast(consumer_event, info)
+        return self.pubsub.publish(consumer_event, info)

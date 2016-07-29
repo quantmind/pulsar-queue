@@ -68,10 +68,11 @@ class Json:
 if msgpack:
 
     @serializer
-    class Msgpack:
+    class MsgPack:
 
-        def decode(self, data):
-            return as_message(msgpack.unpackb(data))
+        @classmethod
+        def decode(cls, data):
+            return as_message(msgpack.unpackb(data, encoding='utf-8'))
 
         @classmethod
         def encode(cls, message):

@@ -4,7 +4,7 @@ from unittest import mock
 
 from pq import api
 
-from tests import simple_task
+from tests.app import simple_task
 
 
 class TestTasks(unittest.TestCase):

@@ -330,7 +330,7 @@ value.
 
 * **message_serializer** (``message-serializer json``)
 
-    The decoder/encoder for messages and tasks. Te default is **JSON** but **Message Pack**
+    The decoder/encoder for messages and tasks. The default is **JSON** but **Message Pack**
     is also available if msgpack_ is installed.
 
 * **schedule_periodic** (``--schedule-periodic``)

@@ -1,9 +1,10 @@
+"""Tests task scheduling"""
 import time
 import asyncio
 import unittest
 from functools import partial
 
-from tests.test_app import TaskQueueBase
+from tests.app import TaskQueueBase
 
 
 class TestScheduler(TaskQueueBase, unittest.TestCase):

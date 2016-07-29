@@ -1,7 +1,6 @@
 """Tests task scheduling and execution"""
 import os
 import sys
-import unittest
 import asyncio
 
 from pulsar import send
@@ -20,6 +19,10 @@ def task_function(N = 10, lag = 0.1):
 PATH = os.path.dirname(__file__)
 
 
+def simple_task(self, value=0):
+    return self.v0 + value
+
+
 class TaskQueueBase:
     concurrency = 'process'
     # used for both keep-alive and timeout in JsonProxy
@@ -28,6 +31,7 @@ class TaskQueueBase:
     tq_app = None
     rpc = None
     schedule_periodic = False
+    message_serializer = 'json'
 
     @classmethod
     def name(cls):
@@ -46,6 +50,7 @@ class TaskQueueBase:
             schedule_periodic=cls.schedule_periodic,
             rpc_bind='127.0.0.1:0',
             concurrency=cls.concurrency,
+            message_serializer=cls.message_serializer,
             rpc_concurrency=cls.concurrency,
             rpc_keep_alive=cls.rpc_timeout
         ))
@@ -82,7 +87,7 @@ class TaskQueueBase:
         )
 
 
-class TestTaskQueue(TaskQueueBase, unittest.TestCase):
+class TaskQueueApp(TaskQueueBase):
 
     def test_registry(self):
         self.assertTrue(isinstance(self.tq.registry, dict))

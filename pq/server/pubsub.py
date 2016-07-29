@@ -5,6 +5,8 @@ from ..mq import Component
 class PubSub(Component):
     '''Class implementing publish/subscribe for task producers
     '''
+    component_type = 'pubsub'
+
     def __init__(self, backend, store):
         super().__init__(backend, store)
         self._callbacks = {}
@@ -22,8 +24,16 @@ class PubSub(Component):
 
         This a coroutine and must be waited
         """
-        await self._pubsub.psubscribe(self._channel('*'))
-        self.logger.info('%s ready and listening to events', self._pubsub)
+        try:
+            await self._pubsub.psubscribe(self._channel('*'))
+            if self.connection_ok():
+                self.logger.info('%s ready and listening for events', self)
+        except ConnectionRefusedError:
+            self.connection_error = True
+            self.logger.critical(
+                'Could not subscribe to %s - connection error',
+                self
+            )
 
     def on_events(self, callback):
         self._event_callbacks.append(callback)
@@ -47,8 +57,19 @@ class PubSub(Component):
         if isinstance(message, Message):
             event = '%s_%s' % (message.type, event)
             await self.backend.manager.store_message(message)
+
         channel = self._channel(event)
-        await self._pubsub.publish(channel, self.encode(message))
+        try:
+            await self._pubsub.publish(channel, self.encode(message))
+        except ConnectionRefusedError:
+            self.connection_error = True
+            self.logger.critical(
+                '%s cannot publish on "%s" channel - connection error',
+                self,
+                channel
+            )
+        else:
+            self.connection_ok()
 
     # INTERNALS
     def __call__(self, channel, message):

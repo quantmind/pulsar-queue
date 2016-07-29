@@ -81,13 +81,15 @@ class TaskManager(BaseComponent):
 
 
 class Component(BaseComponent):
+    component_type = None
 
     def __init__(self, backend, store):
         super().__init__(backend)
+        self.connection_error = False
         self.store = store
 
     def __repr__(self):
-        return self.store.dns
+        return '%s - %s' % (self.component_type, self.store.dns)
 
     __str__ = __repr__
 
@@ -95,10 +97,22 @@ class Component(BaseComponent):
     def _loop(self):
         return self.store._loop
 
+    def connection_ok(self):
+        if self.connection_error:
+            self.logger.warning(
+                'connection with %s established - all good',
+                self
+            )
+            self.connection_error = False
+        else:
+            return True
+
 
 class MQ(Component, ABC):
     """Interface class for a distributed message queue
     """
+    component_type = 'message-broker'
+
     @property
     def pubsub(self):
         return self.backend.pubsub
@@ -161,7 +175,11 @@ class MQ(Component, ABC):
         '''Asynchronously queue a task
         '''
         await self.pubsub.publish('queued', task)
-        await self.queue_message(task.queue, self.encode(task))
-        self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
+        try:
+            await self.queue_message(task.queue, self.encode(task))
+        except ConnectionRefusedError:
+            self.logger.critical('Could not queue task - connection error')
+        else:
+            self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
         task.done_callback = future
         return task

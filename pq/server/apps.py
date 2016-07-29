@@ -50,7 +50,7 @@ class TaskApp(Application):
             return self._backend.close()
 
     async def worker_start(self, worker, exc=None):
-        if not exc:
+        if not exc and not worker.is_monitor():
             self._backend = await self._start(worker)
 
     def worker_stopping(self, worker, exc=None):

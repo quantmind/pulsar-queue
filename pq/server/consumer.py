@@ -16,6 +16,10 @@ from ..cpubound import StreamProtocol, PROCESS_FILE
 consumer_event = 'consumer_status'
 
 
+def backoff(value):
+    return min(value + 0.25, 16)
+
+
 class RemoteStackTrace(TaskError):
     pass
 
@@ -130,6 +134,7 @@ class ConsumerMixin:
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
         o._processed = 0
+        o._next_time = 1
         o._concurrent_tasks = set()
         return o
 
@@ -158,7 +163,7 @@ class ConsumerMixin:
         '''
         await self.pubsub.start()
         self._pool_tasks(worker)
-        self.logger.debug('%s started polling tasks', self)
+        self.logger.info('%s started polling tasks', self)
         return self
 
     # #######################################################################
@@ -195,12 +200,25 @@ class ConsumerMixin:
                     try:
                         task = await self.broker.get_task(*self.queues())
                     except ConnectionRefusedError:
+                        if self.broker.connection_error:
+                            self._next_time = backoff(self._next_time)
+                        else:
+                            self._next_time = 2
+                            self.broker.connection_error = True
+                        next_time = self._next_time
+                        task = None
                         if worker.is_running():
-                            self.logger.exception('Could not pool tasks')
-                            next_time = 2
+                            self.logger.critical(
+                                'Cannot not pool tasks from %s - '
+                                'connection error - try again in %s seconds',
+                                self.broker,
+                                next_time
+                            )
                     except CANCELLED_ERRORS:
                         self.logger.debug('stopped polling tasks')
                         raise
+                    else:
+                        self.broker.connection_ok()
                     if task:  # Got a new task
                         self._processed += 1
                         self._concurrent_tasks.add(task.id)
@@ -209,8 +227,10 @@ class ConsumerMixin:
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
                                   self.num_concurrent_tasks)
-                next_time = 1
+                self._next_time = 1
+                next_time = self._next_time
                 await self._broadcast(worker)
+
         self._pool_tasks(worker, next_time)
 
     def _broadcast(self, worker):

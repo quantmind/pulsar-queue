@@ -108,53 +108,6 @@ class JobMetaClass(type):
 
 
 class Job(metaclass=JobMetaClass):
-    '''The Job class which is used in a distributed task queue.
-
-    .. attribute:: name
-
-        The unique name which defines the Job and which can be used to retrieve
-        it from the job registry. This attribute is set to the Job class name
-        in lower case by default, unless a ``name`` class attribute is defined.
-
-    .. attribute:: abstract
-
-        If set to ``True`` (default is ``False``), the :class:`.Job` won't be
-        registered with the :class:`.JobRegistry`. Useful when creating a new
-        base class for several other jobs.
-
-    .. attribute:: type
-
-        Type of Job, one of ``regular`` and ``periodic``.
-
-    .. attribute:: concurrency
-
-        Concurrency type can be either: ASYNC_IO, GREEN_IO, THREAD_IO
-        or CPUBOUND.
-        Tasks of the first two concurrency types are run concurrently in
-        the event loop of workers, THREAD_IO tasks run in the evnt loop
-        executor while the last one is associated with CPU-bound tasks and
-        a run in subprocess.
-
-        Default: ``CPUBOUND``
-
-    .. attribute:: timeout
-
-        An instance of a datetime.timedelta or ``None``.
-        If set, it represents the time lag after which a task which
-        did not start expires.
-
-        Default: ``None``.
-
-    .. attribute:: doc_syntax
-
-        The doc string syntax.
-
-        Default: ``markdown``
-
-    .. attribute:: logger
-
-        an instance of a logger. Created at runtime.
-    '''
     abstract = True
     timeout = None
     expires = None

@@ -250,13 +250,22 @@ it has the following useful attributes and methods:
 
     The tasks backend that is processing this Task_ run
 
-* job. **task**
-
-    The Task_ instance associated with this task run
-
 * job. **http**
 
     Best possible HTTP session handler for the job concurrency mode.
+
+* job. **logger**
+
+    Python logging handler for this job. The name of this handler
+    is ``<app_name>.<job.name>``.
+
+* job. **name**
+
+    The name of this job. Used to queue tasks
+
+* job. **task**
+
+    The Task_ instance associated with this task run
 
 * job. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
 

@@ -14,11 +14,11 @@ def get_time(expiry, start):
 
 
 def format_time(dt):
-    if isinstance(dt, (float, int)):
-        dt = datetime.fromtimestamp(dt)
+    dt = timestamp_to_datetime(dt)
     return dt.isoformat() if dt else '?'
 
 
 def timestamp_to_datetime(timestamp):
-    if timestamp:
-        return datetime.fromtimestamp(timestamp)
+    if isinstance(timestamp, (float, int)):
+        timestamp = datetime.fromtimestamp(timestamp)
+    return timestamp

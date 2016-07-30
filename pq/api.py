@@ -4,7 +4,7 @@ from .server.config import DEFAULT_TASK_BACKEND
 from .mq import TaskFuture, MQ, TaskManager
 from .server import TaskScheduler, TaskConsumer
 from .tasks.task import TaskError, TaskNotAvailable, TaskTimeout, Task
-from .tasks.states import StatusType
+from .tasks.states import StatusType, status_string
 from .tasks.models import (job, Job, PeriodicJob, EventDriven, anchorDate,
                            ASYNC_IO, GREEN_IO, THREAD_IO, CPUBOUND)
 
@@ -18,6 +18,7 @@ __all__ = ['Message',
            'TaskTimeout',
            'Task',
            'StatusType',
+           'status_string',
            'TaskFuture',
            'TaskScheduler',
            'TaskConsumer',

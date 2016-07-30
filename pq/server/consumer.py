@@ -11,7 +11,7 @@ from ..tasks.task import TaskError, TaskTimeout
 from ..tasks import models
 from ..tasks import states
 from ..cpubound import StreamProtocol, PROCESS_FILE
-from .pubsub import backoff
+from .pubsub import backoff, RECONNECT_LAG
 
 
 consumer_event = 'consumer_status'
@@ -200,7 +200,7 @@ class ConsumerMixin:
                         if self.broker.connection_error:
                             self._next_time = backoff(self._next_time)
                         else:
-                            self._next_time = 2
+                            self._next_time = RECONNECT_LAG
                             self.broker.connection_error = True
                         next_time = self._next_time
                         task = None

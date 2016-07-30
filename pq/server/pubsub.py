@@ -2,6 +2,9 @@ from ..utils.serializers import Message
 from ..mq import Component
 
 
+RECONNECT_LAG = 2
+
+
 def backoff(value):
     return min(value + 0.25, 16)
 
@@ -38,7 +41,7 @@ class PubSub(Component):
                 pattern
             )
         except ConnectionRefusedError:
-            next_time = backoff(next_time) if next_time else 2
+            next_time = backoff(next_time) if next_time else RECONNECT_LAG
             self.logger.critical(
                 '%s cannot subscribe to %s - connection error - '
                 'try again in %s seconds',
@@ -52,7 +55,7 @@ class PubSub(Component):
         self._pubsub.remove_callback('connection_lost', self._connection_lost)
         await self._pubsub.close()
 
-    def connect(self, next_time=1):
+    def connect(self, next_time=None):
         loop = self._loop
         if loop.is_running():
             loop.create_task(self.start(next_time))

@@ -328,7 +328,7 @@ value.
     ``data_store`` is used instead. Redis is the
     only backend available at the moment.
 
-* **message_serializer** (``message-serializer json``)
+* **message_serializer** (``--message-serializer json``)
 
     The decoder/encoder for messages and tasks. The default is **JSON** but **Message Pack**
     is also available if msgpack_ is installed.
@@ -388,6 +388,30 @@ You can use this model for most blocking operation unless
 
 * Long running CPU bound
 * The operation does not release the GIL
+
+Example of tasks suitable for thread IO are IO operations on files.
+For example the test suite uses this Job for testing ``THREAD_IO``
+concurrency (check the ``tests.example.jobs.standard`` module
+for the full code):
+
+
+.. code:: python
+
+    @api.job(concurrency=api.THREAD_IO)
+    def extract_docx(self, input=None, output=None):
+        """
+        Extract text from a docx document
+        """
+        import docx
+        assert input and output, "input and output must be given"
+        document = docx.Document(input)
+        text = '\n\n'.join(_docx_text(document))
+        with open(output, 'w') as fp:
+            fp.write(text)
+        return {
+            'thread': threading.get_ident(),
+            'text': len(text)
+        }
 
 CPUBOUND
 ------------

@@ -1,5 +1,6 @@
 import time
 import asyncio
+import threading
 from datetime import timedelta
 
 import greenlet
@@ -32,7 +33,6 @@ class Addition(api.Job):
 
 
 class Asynchronous(api.Job):
-    concurrency = api.ASYNC_IO
 
     async def __call__(self, lag=1):
         start = time.time()
@@ -40,7 +40,7 @@ class Asynchronous(api.Job):
         return time.time() - start
 
 
-@api.job(concurrency=api.ASYNC_IO)
+@api.job()
 async def notoverlap(self, lag=1):
     async with self.lock():
         start = time.time()
@@ -51,21 +51,19 @@ async def notoverlap(self, lag=1):
         }
 
 
-@api.job(concurrency=api.ASYNC_IO)
+@api.job()
 async def queue_from_task(self):
     task = await self.queue_task('asynchronous')
     return task.tojson()
 
 
 class WorkerInfo(api.Job):
-    concurrency = api.GREEN_IO
 
     def __call__(self):
         return self.backend.info()
 
 
 class GreenExecutor(api.Job):
-    concurrency = api.GREEN_IO
 
     def __call__(self):
         return self.run_in_executor(self.backend.info)
@@ -114,8 +112,50 @@ class CpuBoundBigLog(api.Job):
             self.backend.logger.debug('*'*1024)
 
 
-@api.job(concurrency=api.ASYNC_IO)
+@api.job()
 async def scrape(self, url=None):
     assert url, "url is required"
     request = await self.http.get(url)
     return request.text()
+
+
+@api.job(concurrency=api.THREAD_IO)
+def extract_docx(self, input=None, output=None):
+    """
+    Extract text from a docx document
+
+    This task is not async friendly and therefore it should be run as
+    THREAD_IO or as CPUBOUND
+
+    :return: the length of the text extracted
+    """
+    import docx
+    assert input and output, "input and output must be given"
+    document = docx.Document(input)
+    text = '\n\n'.join(_docx_text(document))
+    with open(output, 'w') as fp:
+        fp.write(text)
+    return {
+        'thread': threading.get_ident(),
+        'text': len(text)
+    }
+
+
+def _docx_text(document):
+    for paragraph in document.paragraphs:
+        yield paragraph.text
+
+    yield from _docx_tables(document.tables)
+
+
+def _docx_tables(tables):
+    for table in tables:
+        for row in table.rows:
+            for cell in row.cells:
+                # For every cell in every row of the table, extract text from
+                # child paragraphs.
+                for paragraph in cell.paragraphs:
+                    yield paragraph.text
+
+                # Then recursively extract text from child tables.
+                yield from _docx_tables(cell.tables)

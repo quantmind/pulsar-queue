@@ -40,6 +40,11 @@ class TestConnectionDrop(unittest.TestCase):
         args, kw = await critical.end
         self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.broker)
+        self.assertEqual(args[2], 2)
+        critical.end = Future()
+        args, kw = await critical.end
+        self.assertEqual(args[1], self.backend.broker)
+        self.assertEqual(args[2], 2.25)
 
     async def test_fail_publish(self):
         original, warning, critical = self._patch(

@@ -1,4 +1,5 @@
 coverage
 flake8
 msgpack-python
+python-docx
 -e git+https://github.com/quantmind/pulsar.git@master#egg=pulsar

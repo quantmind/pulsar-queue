@@ -94,24 +94,19 @@ async def main(syspath, params, stask):
     logger = LOGGER
     try:
         sys.path[:] = json.loads(syspath)
-        from pulsar import isawaitable
         from pq.api import TaskApp
 
         params = json.loads(params)
         params.update({'python_path': False,
                        'parse_console': False})
-        producer = TaskApp(**params).api()
-        pubsub = producer.pubsub
-        await pubsub.start()
+        producer = await TaskApp(**params).api().start()
         logger = producer.logger
-        task = pubsub.decode(stask, 'json')
+        task = producer.pubsub.decode(stask, 'json')
         JobClass = producer.registry.get(task.name)
         if not JobClass:
             raise RuntimeError('%s not in registry' % task.name)
         job = JobClass(producer, task)
         result = await job.green_pool.submit(job, **task.kwargs)
-        if isawaitable(result):
-            result = await result
         sys.stdout.write({'cpubound_result': result})
     except Exception:
         exc_info = sys.exc_info()

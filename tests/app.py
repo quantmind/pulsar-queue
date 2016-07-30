@@ -2,6 +2,7 @@
 import os
 import sys
 import asyncio
+import threading
 
 from pulsar import send
 from pulsar.apps import rpc
@@ -270,6 +271,19 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(task.delay, 2)
         self.assertTrue(task.time_started - task.time_queued > 2)
         self.assertTrue(task.result)
+
+    async def test_thread_io(self):
+        output = os.path.join(PATH, 'test.txt')
+        task = await self.tq.queue_task(
+            'extract.docx',
+            input=os.path.join(PATH, 'example', 'test.docx'),
+            output=output
+        )
+        self.assertEqual(task.status_string, 'SUCCESS')
+        self.assertTrue(os.path.isfile(output))
+        os.remove(output)
+        self.assertNotEqual(task.result['thread'], threading.get_ident())
+        self.assertEqual(task.result['text'], 306)
 
     def _test_sync(self):
         loop = asyncio.new_event_loop()

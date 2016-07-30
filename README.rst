@@ -419,11 +419,11 @@ CPUBOUND
 It assumes the task performs blocking CPU bound operations.
 These tasks are run on sub-processes.
 
-Configure
+Extend
 =================
 
-It is possible to enhance the task queue by passing a custom ``TaskManager``
-during initialisation.
+It is possible to enhance the task queue application by passing
+a custom ``TaskManager`` during initialisation.
 For example:
 
 .. code:: python
@@ -433,8 +433,21 @@ For example:
     class TaskManager(api.TaskManager):
 
         async def store_message(self, message):
-            """Store message into a backend database"""
-            ...
+            """This method is called when a message/task is queued,
+            started and finished
+            """
+            if message.type == 'task':
+                # save this task into a db for example
+
+        def queues(self):
+            """List of queue names for Task consumers
+            By default it returns the node name and the task_queues
+            in the config dictionary.
+            """
+            queues = [self.backend.node_name]
+            queues.extend(self.cfg.task_queues)
+            return queues
+
 
     tq = TaskApp(TaskManager, ...)
 

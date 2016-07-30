@@ -14,9 +14,8 @@ class Tester:
         self.end = Future()
 
     def __call__(self, *args, **kwargs):
-        if self.end:
-            end, self.end = self.end, None
-            end.set_result((args, kwargs))
+        if not self.end.done():
+            self.end.set_result((args, kwargs))
 
 
 class TestConnectionDrop(unittest.TestCase):
@@ -36,18 +35,40 @@ class TestConnectionDrop(unittest.TestCase):
             await send('arbiter', 'kill_actor', self.app.name)
 
     async def test_fail_get_task(self):
-        publish, tester = self._patch(self.backend.broker, 'get_task')
-        args, kw = await tester.end
+        original, warning, critical = self._patch(
+            self.backend.broker, 'get_task')
+        args, kw = await critical.end
         self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.broker)
 
     async def test_fail_publish(self):
-        get_task, tester = self._patch(self.backend.pubsub._pubsub, 'publish')
+        original, warning, critical = self._patch(
+            self.backend.pubsub._pubsub, 'publish')
         task = self.backend.queue_task('addition', a=1, b=2)
-        args, kw = await tester.end
+        args, kw = await critical.end
         self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.pubsub)
         task.cancel()
+
+    async def test_fail_subscribe(self):
+        await self.backend.pubsub.close()
+        original, warning, critical = self._patch(
+            self.backend.pubsub._pubsub, 'psubscribe')
+        await self.backend.pubsub.start()
+        args, kw = await critical.end
+        self.assertEqual(len(args), 4)
+        self.assertEqual(args[1], self.backend.pubsub)
+        self.assertEqual(args[3], 2)
+        critical.end = Future()
+        args, kw = await critical.end
+        self.assertEqual(len(args), 4)
+        self.assertEqual(args[1], self.backend.pubsub)
+        self.assertEqual(args[3], 2.25)
+        self.backend.pubsub._pubsub.psubscribe = original
+        args, kw = await warning.end
+        self.assertEqual(len(args), 3)
+        self.assertEqual(args[1], self.backend.pubsub)
+        self.assertEqual(args[2], '%s_*' % self.app.name)
 
     def _log_error(self, coro, *args, **kwargs):
         coro.switch((args, kwargs))
@@ -58,6 +79,8 @@ class TestConnectionDrop(unittest.TestCase):
     def _patch(self, obj, method):
         original = getattr(obj, method)
         setattr(obj, method, self._connection_error)
-        tester = Tester()
-        self.backend.logger.critical = tester
-        return original, tester
+        critical = Tester()
+        warning = Tester()
+        self.backend.logger.critical = critical
+        self.backend.logger.warning = warning
+        return original, warning, critical

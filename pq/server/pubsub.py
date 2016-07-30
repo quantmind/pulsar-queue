@@ -2,6 +2,10 @@ from ..utils.serializers import Message
 from ..mq import Component
 
 
+def backoff(value):
+    return min(value + 0.25, 16)
+
+
 class PubSub(Component):
     '''Class implementing publish/subscribe for task producers
     '''
@@ -19,21 +23,39 @@ class PubSub(Component):
         """Dictionary of callbacks for tasks"""
         return self._callbacks
 
-    async def start(self):
+    async def start(self, next_time=None):
         """Subscribe to all channels
 
         This a coroutine and must be waited
         """
+        self._pubsub.bind_event('connection_lost', self._connection_lost)
+        pattern = self._channel('*')
         try:
-            await self._pubsub.psubscribe(self._channel('*'))
-            if self.connection_ok():
-                self.logger.info('%s ready and listening for events', self)
-        except ConnectionRefusedError:
-            self.connection_error = True
-            self.logger.critical(
-                'Could not subscribe to %s - connection error',
-                self
+            await self._pubsub.psubscribe(pattern)
+            self.logger.warning(
+                '%s ready and listening for events on %s - all good',
+                self,
+                pattern
             )
+        except ConnectionRefusedError:
+            next_time = backoff(next_time) if next_time else 2
+            self.logger.critical(
+                '%s cannot subscribe to %s - connection error - '
+                'try again in %s seconds',
+                self,
+                pattern,
+                next_time
+            )
+            self._loop.call_later(next_time, self.connect, next_time)
+
+    async def close(self):
+        self._pubsub.remove_callback('connection_lost', self._connection_lost)
+        await self._pubsub.close()
+
+    def connect(self, next_time=1):
+        loop = self._loop
+        if loop.is_running():
+            loop.create_task(self.start(next_time))
 
     def on_events(self, callback):
         self._event_callbacks.append(callback)
@@ -89,3 +111,6 @@ class PubSub(Component):
     def _channel(self, event=''):
         prefix = self.cfg.name
         return '%s_%s' % (prefix, event) if prefix else event
+
+    def _connection_lost(self, *args):
+        self.connect()

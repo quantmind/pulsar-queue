@@ -11,13 +11,10 @@ from ..tasks.task import TaskError, TaskTimeout
 from ..tasks import models
 from ..tasks import states
 from ..cpubound import StreamProtocol, PROCESS_FILE
+from .pubsub import backoff
 
 
 consumer_event = 'consumer_status'
-
-
-def backoff(value):
-    return min(value + 0.25, 16)
 
 
 class RemoteStackTrace(TaskError):
@@ -163,7 +160,7 @@ class ConsumerMixin:
         '''
         await self.pubsub.start()
         self._pool_tasks(worker)
-        self.logger.info('%s started polling tasks', self)
+        self.logger.warning('%s started polling tasks', self)
         return self
 
     # #######################################################################
@@ -209,7 +206,7 @@ class ConsumerMixin:
                         task = None
                         if worker.is_running():
                             self.logger.critical(
-                                'Cannot not pool tasks from %s - '
+                                '%s cannot pool tasks - '
                                 'connection error - try again in %s seconds',
                                 self.broker,
                                 next_time

@@ -1,7 +1,7 @@
 import sys
 import time
 import traceback
-from asyncio import ensure_future
+from asyncio import ensure_future, Future
 from asyncio.subprocess import Process
 
 from pulsar import CANCELLED_ERRORS
@@ -132,6 +132,8 @@ class ConsumerMixin:
         o = super().__new__(cls)
         o._processed = 0
         o._next_time = 1
+        o._closing_msg = None
+        o._closing_waiter = None
         o._concurrent_tasks = set()
         return o
 
@@ -163,15 +165,22 @@ class ConsumerMixin:
         self.logger.warning('%s started polling tasks', self)
         return self
 
+    def closing(self):
+        return self._closing_waiter is not None
+
+    def close(self, msg=None):
+        if not self.closing():
+            self._closing_waiter = Future(loop=self._loop)
+            self._closing_msg = msg
+        return self._closing_waiter
+
     # #######################################################################
     # #    PRIVATE METHODS
     # #######################################################################
     def _pool_tasks(self, worker, next_time=None):
-        if self._closing:
+        if self.closing():
             if not self._concurrent_tasks:
-                self.logger.warning(self._closing)
-                if not worker.is_monitor():
-                    worker._loop.stop()
+                self._do_close()
         else:
             if worker.is_running() and not next_time:
                 ensure_future(self._may_pool_task(worker), loop=worker._loop)
@@ -190,10 +199,11 @@ class ConsumerMixin:
             if self.num_concurrent_tasks < self.cfg.concurrent_tasks:
                 max_tasks = self.cfg.max_requests
                 if max_tasks and self._processed >= max_tasks:
-                    self._closing = ('Processed %s tasks. Restarting.'
-                                     % self._processed)
+                    self.close(
+                        'Processed %s tasks. Restarting.' % self._processed
+                    )
 
-                if not self._closing:
+                if not self.closing():
                     try:
                         task = await self.broker.get_task(*self.queues())
                     except ConnectionRefusedError:
@@ -235,3 +245,9 @@ class ConsumerMixin:
         info['worker'] = worker.aid
         info['time'] = time.time()
         return self.pubsub.publish(consumer_event, info)
+
+    def _do_close(self):
+        if self._closing_msg:
+            self.logger.warning(self._closing_msg)
+        self.manager.close()
+        self._closing_waiter.set_result(True)

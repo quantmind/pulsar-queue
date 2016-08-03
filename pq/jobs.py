@@ -6,10 +6,10 @@ import sys
 import os
 import tempfile
 
-from pq.api import job, ASYNC_IO
+from pq.api import job
 
 
-@job(concurrency=ASYNC_IO)
+@job()
 async def execute_python(self, code=None):
     """Execute arbitrary python code on a subprocess. For example:
 
@@ -28,7 +28,7 @@ async def execute_python(self, code=None):
     return result
 
 
-@job(concurrency=ASYNC_IO)
+@job()
 async def execute_python_script(self, script=None):
     """Execute arbitrary python code on a subprocess
     """

@@ -79,6 +79,9 @@ class TaskManager(BaseComponent):
         """
         pass
 
+    def close(self):
+        pass
+
 
 class Component(BaseComponent):
     component_type = None

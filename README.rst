@@ -391,8 +391,9 @@ library for implicit asynchronous behaviour.
 THREAD_IO
 -------------
 
-It assumes the task performs blocking IO operations
-which make it suitable to be run in the event loop executor.
+THis consurrency mode is best suited for tasks performing
+*blocking* IO operations.
+A ``THREAD_IO`` job runs its tasks in the event loop executor.
 You can use this model for most blocking operation unless
 
 * Long running CPU bound
@@ -426,7 +427,8 @@ CPUBOUND
 ------------
 
 It assumes the task performs blocking CPU bound operations.
-These tasks are run on sub-processes.
+Jobs with this consurrency mode run their tasks on sub-processeses
+using `asyncio subprocess`_ module.
 
 Extend
 =================
@@ -486,6 +488,7 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
 .. _greenlet: https://greenlet.readthedocs.io/en/latest/
 .. _msgpack: https://pypi.python.org/pypi/msgpack-python
+.. _`asyncio subprocess`: https://docs.python.org/3/library/asyncio-subprocess.html
 .. _Jobs: #the-job-class
 .. _Task: #the-task
 .. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png

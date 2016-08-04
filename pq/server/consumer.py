@@ -178,10 +178,10 @@ class ConsumerMixin:
     # #######################################################################
     def _poll_tasks(self, worker, next_time=None):
         if self.closing() and not self._concurrent_tasks:
-            self._do_close()
+            self._do_close(worker)
         elif worker.is_running() and not next_time:
             ensure_future(self._may_poll_task(worker), loop=worker._loop)
-        elif not worker.after_run():
+        else:
             next_time = next_time or 0
             worker._loop.call_later(next_time, self._poll_tasks, worker)
 
@@ -244,8 +244,9 @@ class ConsumerMixin:
         info['time'] = time.time()
         return self.pubsub.publish(consumer_event, info)
 
-    def _do_close(self):
+    def _do_close(self, worker):
         self.logger.warning('Closing %s', self)
         self.manager.close()
         self._closing_waiter.set_result(True)
-        self._loop.call_later(1, self._loop.stop)
+        if not worker.is_monitor():
+            self._loop.call_later(1, self._loop.stop)

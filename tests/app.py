@@ -269,11 +269,11 @@ class TaskQueueApp(TaskQueueBase):
 
     async def test_delay(self):
         task = await self.tq.queue_task('scrape',
-                                        delay=2,
+                                        delay=5,
                                         url='https://www.bbc.co.uk/')
         self.assertEqual(task.status_string, 'SUCCESS')
-        self.assertEqual(task.delay, 2)
-        self.assertTrue(task.time_started - task.time_queued > 2)
+        self.assertEqual(task.delay, 5)
+        self.assertTrue(task.time_started - task.time_queued > 5)
         self.assertTrue(task.result)
 
     async def test_thread_io(self):

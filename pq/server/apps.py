@@ -38,6 +38,8 @@ class TaskApp(Application):
         if not exc:
             if self.cfg.schedule_periodic:
                 self.backend_factory = TaskScheduler
+            elif self.cfg.workers:
+                self.backend_factory = TaskProducer
             self._backend = await self._start(monitor)
 
     def monitor_task(self, monitor):

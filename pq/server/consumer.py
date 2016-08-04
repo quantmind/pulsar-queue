@@ -132,7 +132,6 @@ class ConsumerMixin:
         o = super().__new__(cls)
         o._processed = 0
         o._next_time = 1
-        o._closing_msg = None
         o._closing_waiter = None
         o._concurrent_tasks = set()
         return o
@@ -161,7 +160,7 @@ class ConsumerMixin:
         '''Starts consuming tasks
         '''
         await self.pubsub.start()
-        self._pool_tasks(worker)
+        self._poll_tasks(worker)
         self.logger.warning('%s started polling tasks', self)
         return self
 
@@ -171,24 +170,22 @@ class ConsumerMixin:
     def close(self, msg=None):
         if not self.closing():
             self._closing_waiter = Future(loop=self._loop)
-            self._closing_msg = msg
+            self.logger.warning(msg)
         return self._closing_waiter
 
     # #######################################################################
     # #    PRIVATE METHODS
     # #######################################################################
-    def _pool_tasks(self, worker, next_time=None):
-        if self.closing():
-            if not self._concurrent_tasks:
-                self._do_close()
-        else:
-            if worker.is_running() and not next_time:
-                ensure_future(self._may_pool_task(worker), loop=worker._loop)
-            elif not worker.after_run():
-                next_time = next_time or 0
-                worker._loop.call_later(next_time, self._pool_tasks, worker)
+    def _poll_tasks(self, worker, next_time=None):
+        if self.closing() and not self._concurrent_tasks:
+            self._do_close()
+        elif worker.is_running() and not next_time:
+            ensure_future(self._may_poll_task(worker), loop=worker._loop)
+        elif not worker.after_run():
+            next_time = next_time or 0
+            worker._loop.call_later(next_time, self._poll_tasks, worker)
 
-    async def _may_pool_task(self, worker):
+    async def _may_poll_task(self, worker):
         # Called in the ``worker`` event loop.
         #
         # It pools a new task if possible, and add it to the queue of
@@ -200,7 +197,8 @@ class ConsumerMixin:
                 max_tasks = self.cfg.max_requests
                 if max_tasks and self._processed >= max_tasks:
                     self.close(
-                        'Processed %s tasks. Restarting.' % self._processed
+                        'Processed %s tasks. Stop polling tasks.'
+                        % self._processed
                     )
 
                 if not self.closing():
@@ -238,7 +236,7 @@ class ConsumerMixin:
                 next_time = self._next_time
                 await self._broadcast(worker)
 
-        self._pool_tasks(worker, next_time)
+        self._poll_tasks(worker, next_time)
 
     def _broadcast(self, worker):
         info = self.info()
@@ -247,7 +245,7 @@ class ConsumerMixin:
         return self.pubsub.publish(consumer_event, info)
 
     def _do_close(self):
-        if self._closing_msg:
-            self.logger.warning(self._closing_msg)
+        self.logger.warning('Closing %s', self)
         self.manager.close()
         self._closing_waiter.set_result(True)
+        self._loop.call_later(1, self._loop.stop)

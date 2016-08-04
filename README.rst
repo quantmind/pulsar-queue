@@ -331,6 +331,12 @@ value.
     Data store used for publishing and subscribing to messages (redis is the
     only backend available at the moment)
 
+* **max_requests** (``--max-requests 0``)
+
+    The maximum number of tasks a worker will process before restarting.
+    A 0 value (the default) means no maximum number, workers will process
+    all tasks forever.
+
 * **message_broker** (``--message-broker ...``)
 
     Data store used as distributed task queue. If not provided (default) the

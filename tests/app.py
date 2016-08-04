@@ -29,6 +29,8 @@ class TaskQueueBase:
     # used for both keep-alive and timeout in JsonProxy
     # long enough to allow to wait for tasks
     rpc_timeout = 500
+    max_requests = 0
+    concurrent_tasks = 5
     tq_app = None
     rpc = None
     schedule_periodic = False
@@ -46,15 +48,17 @@ class TaskQueueBase:
     async def setUpClass(cls):
         # The name of the task queue application
         params = cls.params()
-        params.update(dict(
+        params.update(
             wsgi=True,
             schedule_periodic=cls.schedule_periodic,
             rpc_bind='127.0.0.1:0',
             concurrency=cls.concurrency,
+            concurrent_tasks=cls.concurrent_tasks,
+            max_requests=cls.max_requests,
             message_serializer=cls.message_serializer,
             rpc_concurrency=cls.concurrency,
             rpc_keep_alive=cls.rpc_timeout
-        ))
+        )
         pq = api.PulsarQueue(**params)
         cfgs = await pq.start()
         cls.tq_app = cfgs[0].app()
@@ -284,6 +288,10 @@ class TaskQueueApp(TaskQueueBase):
         os.remove(output)
         self.assertNotEqual(task.result['thread'], threading.get_ident())
         self.assertEqual(task.result['text'], 306)
+
+    async def test_bad_task(self):
+        task = await self.tq.queue_task('asynchronous', sleep=2)
+        self.assertEqual(task.status_string, 'FAILURE')
 
     def _test_sync(self):
         loop = asyncio.new_event_loop()

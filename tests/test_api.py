@@ -38,3 +38,26 @@ class TestTasks(unittest.TestCase):
         st2 = format_time(timestamp)
         self.assertEqual(st, st2)
         self.assertEqual(format_time(None), '?')
+
+    def test_close(self):
+        t = api.TaskApp().api()
+        self.assertEqual(t.closing(), False)
+        t.close()
+        self.assertEqual(t.closing(), True)
+        warn = mock.MagicMock()
+        t.logger.warning = warn
+        self.assertFalse(t.queue_task('foo'))
+        self.assertEqual(warn.call_count, 1)
+        self.assertEqual(
+            warn.call_args[0][0],
+            'Cannot queue task, task backend closing'
+        )
+
+    def test_task_not_available(self):
+        t = api.TaskApp().api()
+        self.assertRaises(api.TaskNotAvailable,
+                          t.queue_task, 'jsdbcjsdhbc')
+
+    def test_no_queues(self):
+        t = api.TaskApp().api()
+        self.assertEqual(t.queues(), ())

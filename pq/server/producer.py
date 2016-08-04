@@ -29,8 +29,7 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
     def __init__(self, cfg, *, logger=None, **kw):
         self.cfg = cfg
         self.logger = logger or logging.getLogger('pulsar.queue')
-        self._closing_waiter = None
-        self._closing = None
+        self._closing = False
         loop = cfg.params.pop('loop', None)
         store = create_store(cfg.data_store, loop=loop)
         if not cfg.message_broker:
@@ -88,12 +87,17 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
     def on_events(self, callback):
         self.pubsub.on_events(callback)
 
+    def closing(self):
+        return self._closing
+
     def close(self):
         '''Close this :class:`.TaskBackend`.
 
         Invoked by the :class:`.Actor` when stopping.
         '''
-        self.manager.close()
+        if not self._closing:
+            self._closing = True
+            self.manager.close()
 
     def queue_task(self, jobname, callback=True, **kwargs):
         '''Try to queue a new :task

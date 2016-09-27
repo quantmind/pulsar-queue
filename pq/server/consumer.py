@@ -25,9 +25,14 @@ class RemoteStackTrace(TaskError):
 
 
 class ExecutorMixin:
+    # Mixin for both TaskConsumer and TaskProducer
+    #
+    # The TaskProducer can execute a task inline, while the consumer executes
+    # task from a task queue via the ConsumerMixin
+    #
     _concurrent_tasks = None
 
-    async def _execute_task(self, task_exc, worker=None):
+    async def _execute_task(self, task, worker=None):
         # Function executing a task
         #
         # - If the stat_time is greater than task.expiry Revoke the Task
@@ -36,7 +41,6 @@ class ExecutorMixin:
         #   - otherwise proceed to next
         # - Set status to STARTED and consume the task
         logger = self.logger
-        task = task_exc.task
         task_id = task.id
         time_ended = time.time()
         JobClass = self.registry.get(task.name)
@@ -71,10 +75,14 @@ class ExecutorMixin:
                 logger.info(task.lazy_info())
                 await self.pubsub.publish('started', task)
                 job = JobClass(self, task)
-                task_exc.future = self._consume(job, kwargs)
+                future = self._consume(job, kwargs)
+                #
+                # record future for cancellation
+                if self._concurrent_tasks:
+                    self._concurrent_tasks[task_id].future = future
                 #
                 # This may block until timeout
-                task.result = await wait_for(task_exc.future, timeout)
+                task.result = await wait_for(future, timeout)
             else:
                 raise TaskError('Invalid status %s' % task.status_string)
 
@@ -98,7 +106,9 @@ class ExecutorMixin:
             logger.info(task.lazy_info())
         #
         task.time_ended = time.time()
-        self._concurrent_tasks.pop(task_id, None)
+        if self._concurrent_tasks:
+            self._concurrent_tasks.pop(task_id, None)
+
         await self.pubsub.publish('done', task)
         return task
 
@@ -248,9 +258,8 @@ class ConsumerMixin:
                         self.broker.connection_ok()
                     if task:  # Got a new task
                         self._processed += 1
-                        task_exc = TaskExecutor(task)
-                        self._concurrent_tasks[task.id] = task_exc
-                        ensure_future(self._execute_task(task_exc, worker))
+                        self._concurrent_tasks[task.id] = TaskExecutor(task)
+                        ensure_future(self._execute_task(task, worker))
                     await self._broadcast(worker)
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
@@ -279,7 +288,4 @@ class TaskExecutor:
 
     def __init__(self, task):
         self.task = task
-
-    @property
-    def id(self):
-        return self.task.id
+        self.future = None

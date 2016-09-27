@@ -4,8 +4,9 @@ import sys
 
 
 def execute():
-    """Simply return the python executable"""
-    print(sys.executable)
+    """Simply write the python executable
+    """
+    sys.stdout.write(sys.executable)
 
 
 if __name__ == '__main__':

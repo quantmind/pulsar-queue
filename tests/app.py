@@ -216,7 +216,7 @@ class TaskQueueApp(TaskQueueBase):
         task = await self.tq.execute_task('execute.python',
                                           code='print("Hello World!")')
         self.assertEqual(task.status_string, 'SUCCESS')
-        self.assertEqual(task.result, 'Hello World!')
+        self.assertEqual(task.result, 'Hello World!\n')
 
     async def test_execute_python_script(self):
         script = os.path.join(PATH, 'example', 'executable.py')

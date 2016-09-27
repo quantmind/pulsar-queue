@@ -11,6 +11,7 @@ from ..tasks.task import TaskError, TaskTimeout
 from ..tasks import models
 from ..tasks import states
 from ..cpubound import StreamProtocol, PROCESS_FILE
+from ..utils.exc import string_exception
 from .pubsub import backoff, RECONNECT_LAG
 
 
@@ -67,7 +68,7 @@ class ExecutorMixin:
             logger.error(task.lazy_info())
         except Exception as exc:
             exc_info = sys.exc_info()
-            task.result = str(exc)
+            task.result = string_exception(exc)
             task.status = states.FAILURE
             task.stacktrace = traceback.format_tb(exc_info[2])
             task.exception = traceback.format_exception_only(

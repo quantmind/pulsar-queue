@@ -218,9 +218,9 @@ class Job(metaclass=JobMetaClass):
             _interact(proc, 2, interactive, stderr or sys.stderr)
         )
         if proc.returncode:
-            msg = '%s%s' % (msg.decode('utf-8'), err.decode('utf-8'))
-            raise ShellError(msg.strip(), proc.returncode)
-        return msg.decode('utf-8').strip()
+            msg = err.decode('utf-8') or msg.decode('utf-8')
+            raise ShellError(msg, proc.returncode)
+        return msg.decode('utf-8')
 
 
 class PeriodicJob(Job):

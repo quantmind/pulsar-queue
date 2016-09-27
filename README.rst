@@ -11,7 +11,7 @@
 
 
 .. |pypiversion| image:: https://badge.fury.io/py/pulsar-queue.svg
-    :target: https://pypi.python.org/pypi/pulsar-queue
+  :target: https://pypi.python.org/pypi/pulsar-queue
 .. |pyversions| image:: https://img.shields.io/pypi/pyversions/pulsar-queue.svg
   :target: https://pypi.python.org/pypi/pulsar-queue
 .. |license| image:: https://img.shields.io/pypi/l/pulsar-queue.svg

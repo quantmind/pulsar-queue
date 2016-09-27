@@ -1,6 +1,7 @@
 import sys
 import time
 import traceback
+import multiprocessing
 from asyncio import ensure_future, Future
 from asyncio.subprocess import Process
 
@@ -193,8 +194,11 @@ class ConsumerMixin:
         # tasks consumed by the ``worker`` CPU-bound thread.'''
         next_time = None
         if worker.is_running():
+            cpu_count = multiprocessing.cpu_count()
+            concurrent_tasks = cpu_count*self.cfg.concurrent_tasks
+
             # executor = worker.executor()
-            if self.num_concurrent_tasks < self.cfg.concurrent_tasks:
+            if self.num_concurrent_tasks < concurrent_tasks:
                 max_tasks = self.cfg.max_requests
                 if max_tasks and self._processed >= max_tasks:
                     self.close(
@@ -232,7 +236,7 @@ class ConsumerMixin:
                     await self._broadcast(worker)
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
-                                  self.num_concurrent_tasks)
+                                  concurrent_tasks)
                 self._next_time = 1
                 next_time = self._next_time
                 await self._broadcast(worker)

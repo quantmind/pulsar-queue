@@ -2,7 +2,8 @@ import sys
 import time
 import traceback
 import multiprocessing
-from asyncio import ensure_future, Future
+from asyncio import ensure_future, Future, wait_for
+from asyncio import CancelledError, TimeoutError
 from asyncio.subprocess import Process
 
 from pulsar import CANCELLED_ERRORS
@@ -26,18 +27,32 @@ class RemoteStackTrace(TaskError):
 class ExecutorMixin:
     _concurrent_tasks = None
 
-    async def _execute_task(self, task, worker=None):
+    async def _execute_task(self, task_exc, worker=None):
+        # Function executing a task
+        #
+        # - If the stat_time is greater than task.expiry Revoke the Task
+        # - If the task has a delay not yet reached
+        #   - queue the task at the right time
+        #   - otherwise proceed to next
+        # - Set status to STARTED and consume the task
         logger = self.logger
+        task = task_exc.task
         task_id = task.id
         time_ended = time.time()
         JobClass = self.registry.get(task.name)
+
         try:
             if not JobClass:
                 raise RuntimeError('%s not in registry' % task.name)
+
             if task.status > states.STARTED:
                 expiry = task.expiry
-                if expiry and time_ended > expiry:
-                    raise TaskTimeout
+                timeout = None
+
+                if expiry:  # Handle expiry
+                    timeout = expiry - time_ended
+                    if timeout <= 0:
+                        raise TaskTimeout
 
                 if task.delay:  # Task with delay
                     start_time = task.time_queued + task.delay
@@ -45,7 +60,7 @@ class ExecutorMixin:
                     if gap > 0:
                         self._loop.call_later(gap, self._queue_again, task)
                         if self._concurrent_tasks:
-                            self._concurrent_tasks.discard(task_id)
+                            self._concurrent_tasks.pop(task_id, None)
                         return task
 
                 kwargs = task.kwargs or {}
@@ -56,11 +71,14 @@ class ExecutorMixin:
                 logger.info(task.lazy_info())
                 await self.pubsub.publish('started', task)
                 job = JobClass(self, task)
-                # This may block for a while
-                task.result = await self._consume(job, kwargs)
+                task_exc.future = self._consume(job, kwargs)
+                #
+                # This may block until timeout
+                task.result = await wait_for(task_exc.future, timeout)
             else:
                 raise TaskError('Invalid status %s' % task.status_string)
-        except TaskTimeout:
+
+        except (CancelledError, TimeoutError, TaskTimeout):
             task.result = None
             task.status = states.REVOKED
             logger.info(task.lazy_info())
@@ -80,8 +98,7 @@ class ExecutorMixin:
             logger.info(task.lazy_info())
         #
         task.time_ended = time.time()
-        if self._concurrent_tasks:
-            self._concurrent_tasks.discard(task_id)
+        self._concurrent_tasks.pop(task_id, None)
         await self.pubsub.publish('done', task)
         return task
 
@@ -135,7 +152,7 @@ class ConsumerMixin:
         o._processed = 0
         o._next_time = 1
         o._closing_waiter = None
-        o._concurrent_tasks = set()
+        o._concurrent_tasks = {}
         return o
 
     def __repr__(self):
@@ -231,8 +248,9 @@ class ConsumerMixin:
                         self.broker.connection_ok()
                     if task:  # Got a new task
                         self._processed += 1
-                        self._concurrent_tasks.add(task.id)
-                        ensure_future(self._execute_task(task, worker))
+                        task_exc = TaskExecutor(task)
+                        self._concurrent_tasks[task.id] = task_exc
+                        ensure_future(self._execute_task(task_exc, worker))
                     await self._broadcast(worker)
             else:
                 self.logger.debug('%s concurrent requests. Cannot poll.',
@@ -255,3 +273,13 @@ class ConsumerMixin:
         self._closing_waiter.set_result(True)
         if not worker.is_monitor():
             self._loop.call_later(1, self._loop.stop)
+
+
+class TaskExecutor:
+
+    def __init__(self, task):
+        self.task = task
+
+    @property
+    def id(self):
+        return self.task.id

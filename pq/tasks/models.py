@@ -192,7 +192,7 @@ class Job(metaclass=JobMetaClass):
         return self.backend.lock(name or self.name, **kw)
 
     async def shell(self, command, input=None, chdir=None, interactive=False,
-                    stderr=None, stdout=None, **kw):
+                    interactive_stderr=None, stderr=None, stdout=None, **kw):
         """Execute a shell command
         :param command: command to execute
         :param input: optional input
@@ -203,6 +203,9 @@ class Job(metaclass=JobMetaClass):
         stdin = asyncio.subprocess.PIPE if input is not None else None
         if chdir:
             command = 'cd %s && %s' % (chdir, command)
+
+        if interactive_stderr is None:
+            interactive_stderr = interactive
 
         proc = await asyncio.create_subprocess_shell(
             command,
@@ -215,7 +218,7 @@ class Job(metaclass=JobMetaClass):
 
         msg, err = await asyncio.gather(
             _interact(proc, 1, interactive, stdout or sys.stdout),
-            _interact(proc, 2, interactive, stderr or sys.stderr)
+            _interact(proc, 2, interactive_stderr, stderr or sys.stderr)
         )
         if proc.returncode:
             msg = err.decode('utf-8') or msg.decode('utf-8')

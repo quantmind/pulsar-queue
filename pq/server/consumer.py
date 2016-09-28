@@ -93,6 +93,10 @@ class ExecutorMixin:
         except RemoteStackTrace:
             task.status = states.FAILURE
             logger.error(task.lazy_info())
+        except TaskError as exc:
+            task.result = string_exception(exc)
+            task.status = states.FAILURE
+            logger.error(task.lazy_info())
         except Exception as exc:
             exc_info = sys.exc_info()
             task.result = string_exception(exc)

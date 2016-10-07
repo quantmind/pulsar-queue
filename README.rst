@@ -177,7 +177,7 @@ It is possible to obtain a task future resolved when the task has been queued, r
     task = await tasks.queue_task(..., callback=False)
     task.status_string  # QUEUED
 
-*api*.queue_task_local(*jobname*, *\*args, *\*\*kwargs*)
+*api*.queue_task_local(*jobname*, *\*args*, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
@@ -188,7 +188,7 @@ Queue a job in the local task queue. The local task queue is processed by the sa
     task.queue  # tasks.node_name
 
 
-*api*.execute_task(*jobname*, *\*args, *\*\*kwargs*)
+*api*.execute_task(*jobname*, *\*args*, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Execute a task immediately, it does not put the task in the task queue.
@@ -206,7 +206,7 @@ This method is useful for debugging and testing. It is equivalent to execute:
 
 Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
 
-*api*.job_list(*jobname*=None)
+*api*.job_list(*jobname=None*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
@@ -309,7 +309,7 @@ The name of this job. Used to queue tasks
 
 The Task_ instance associated with this task run
 
-*job*.queue_task(*jobname*, *\*args, *\*\*kwargs)
+*job*.queue_task(*jobname*, *\*args*, *\*\*kwargs)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a new job form a task run. It is equivalent to:

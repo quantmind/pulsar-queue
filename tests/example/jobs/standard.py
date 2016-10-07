@@ -40,6 +40,13 @@ class Asynchronous(api.Job):
         return time.time() - start
 
 
+@api.job(max_concurrency=3)
+async def maxconcurrency(self, lag=1):
+    start = time.time()
+    await asyncio.sleep(lag)
+    return time.time() - start
+
+
 @api.job()
 async def notoverlap(self, lag=1):
     async with self.lock():

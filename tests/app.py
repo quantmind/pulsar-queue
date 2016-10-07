@@ -4,7 +4,7 @@ import sys
 import asyncio
 import threading
 
-from pulsar import send
+from pulsar import send, create_future
 from pulsar.apps import rpc
 
 from pq import api
@@ -292,6 +292,38 @@ class TaskQueueApp(TaskQueueBase):
     async def test_bad_task(self):
         task = await self.tq.queue_task('asynchronous', sleep=2)
         self.assertEqual(task.status_string, 'FAILURE')
+
+    async def test_retry(self):
+        meta = {'max_retries': 3, 'retry_delay': 1}
+        done = create_future()
+
+        class CheckRetry:
+            count = 1
+            task_id = None
+
+            def __call__(self, event, task):
+                if event == 'task_done' and task.name == 'addition':
+                    if task.meta.get('from_task') == self.task_id:
+                        self.count += 1
+                        if task.retry == 3:
+                            done.set_result(task)
+                        else:
+                            self.task_id = task.id
+
+        check_retry = CheckRetry()
+        self.tq.on_events(check_retry)
+        try:
+            task = await self.tq.queue_task('addition', a=1, b='foo',
+                                            delay=1,
+                                            callback=False,
+                                            meta_params=meta)
+            self.assertEqual(task.status_string, 'QUEUED')
+            check_retry.task_id = task.id
+            task = await done
+            self.assertEqual(check_retry.count, 3)
+            self.assertEqual(task.status_string, 'FAILURE')
+        finally:
+            self.tq.remove_event_callback(check_retry)
 
     def _test_sync(self):
         loop = asyncio.new_event_loop()

@@ -12,7 +12,7 @@ __all__ = ['TaskError',
 
 
 class TaskError(PulsarException):
-    pass
+    status = states.FAILURE
 
 
 class TaskNotAvailable(TaskError):
@@ -30,25 +30,30 @@ class TaskTimeout(TaskError):
 class Task(Message):
     '''A class containing task execution data
     '''
-    time_started = None
-    time_ended = None
-    result = None
-    exception = None
-    stacktrace = None
-    worker = None
-    delay = None
-
     def __init__(self, id=None, name=None, time_queued=None,
+                 time_started=None, time_ended=None,
+                 result=None, exception=None, stacktrace=None, worker=None,
                  expiry=None, status=None, kwargs=None, queue=None,
-                 **kw):
+                 retry=None, delay=None, meta=None, run_info=None, **kw):
+        self.__dict__.update(kw)
         self.id = id
         self.name = name
         self.queue = queue
         self.time_queued = time_queued
+        self.time_started = time_started
+        self.time_ended = time_ended
+        self.result = result
+        self.exception = exception
+        self.stacktrace = stacktrace
+        self.worker = worker
         self.expiry = expiry
         self.status = status
+        self.retry = retry or 1
+        self.delay = delay
         self.kwargs = kwargs
-        self.__dict__.update(kw)
+        self.run_info = run_info if run_info is not None else {}
+        self.meta = meta if meta is not None else {}
+        self.meta.update(kw)
 
     def __repr__(self):
         return self.info()

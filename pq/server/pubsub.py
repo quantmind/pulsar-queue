@@ -96,6 +96,9 @@ class PubSub(Component):
         else:
             self.connection_ok()
 
+    async def concurrent(self, jobname):
+        return 0
+
     # INTERNALS
     def __call__(self, channel, message):
         # PubSub callback

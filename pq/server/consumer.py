@@ -24,6 +24,10 @@ class RemoteStackTrace(TaskError):
     pass
 
 
+class TooManyTasksForJob(TaskError):
+    status = states.REVOKED
+
+
 class ExecutorMixin:
     # Mixin for both TaskConsumer and TaskProducer
     #
@@ -43,6 +47,7 @@ class ExecutorMixin:
         logger = self.logger
         task_id = task.id
         time_ended = time.time()
+        job = None
         JobClass = self.registry.get(task.name)
 
         try:
@@ -67,6 +72,14 @@ class ExecutorMixin:
                             self._concurrent_tasks.pop(task_id, None)
                         return task
 
+                job = JobClass(self, task)
+
+                if job.max_concurrency:
+                    concurrent = await self.pubsub.concurrent(job.name)
+                    if concurrent >= job.max_concurrency:
+                        raise TooManyTasksForJob('max concurrency %d reached',
+                                                 job.max_concurrency)
+
                 kwargs = task.kwargs or {}
                 task.status = states.STARTED
                 task.time_started = time_ended
@@ -74,7 +87,6 @@ class ExecutorMixin:
                     task.worker = worker.aid
                 logger.info(task.lazy_info())
                 await self.pubsub.publish('started', task)
-                job = JobClass(self, task)
                 future = self._consume(job, kwargs)
                 #
                 # record future for cancellation
@@ -95,7 +107,7 @@ class ExecutorMixin:
             logger.error(task.lazy_info())
         except TaskError as exc:
             task.result = string_exception(exc)
-            task.status = states.FAILURE
+            task.status = exc.status
             logger.error(task.lazy_info())
         except Exception as exc:
             exc_info = sys.exc_info()
@@ -114,6 +126,10 @@ class ExecutorMixin:
             self._concurrent_tasks.pop(task_id, None)
 
         await self.pubsub.publish('done', task)
+
+        if self._should_retry(job):
+            await self._requeue_task(job)
+
         return task
 
     def _consume(self, job, kwargs):
@@ -144,6 +160,26 @@ class ExecutorMixin:
         if job.task.stacktrace:
             raise RemoteStackTrace
         return job.task.result
+
+    def _should_retry(self, job):
+        return (job and
+                job.task.status != states.SUCCESS and
+                job.task.queue and
+                job.max_retries and
+                job.task.retry < job.max_retries)
+
+    def _requeue_task(self, job):
+        task = job.task
+        meta_params = task.meta.copy()
+        meta_params['retry'] = task.retry + 1
+        return job.queue_task(
+            job.name,
+            callback=False,
+            meta_params=meta_params,
+            queue=task.queue,
+            delay=job.retry_delay,
+            **task.kwargs
+        )
 
     def _queue_again(self, task):
         self.broker.queue(task, False)
@@ -266,7 +302,7 @@ class ConsumerMixin:
                         ensure_future(self._execute_task(task, worker))
                     await self._broadcast(worker)
             else:
-                self.logger.debug('%s concurrent requests. Cannot poll.',
+                self.logger.debug('%s concurrent tasks. Cannot poll.',
                                   concurrent_tasks)
                 self._next_time = 1
                 next_time = self._next_time

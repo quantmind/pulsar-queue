@@ -111,6 +111,9 @@ class Job(metaclass=JobMetaClass):
     abstract = True
     timeout = None
     expires = None
+    max_retries = None
+    retry_delay = 0
+    max_concurrency = None
     doc_syntax = 'markdown'
     queue = None
     concurrency = None
@@ -118,6 +121,8 @@ class Job(metaclass=JobMetaClass):
     def __init__(self, backend=None, task=None):
         self.backend = backend
         self.task = task
+        if task:
+            self.__dict__.update(task.meta)
 
     def __repr__(self):
         return 'job.%s' % self.task if self.task else self.name

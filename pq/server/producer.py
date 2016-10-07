@@ -54,7 +54,7 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
 
     @property
     def node_name(self):
-        return platform.node()
+        return platform.node().lower()
 
     async def start(self, worker=None):
         await self.pubsub.start()
@@ -86,6 +86,9 @@ class TaskProducer(models.RegistryMixin, ExecutorMixin):
 
     def on_events(self, callback):
         self.pubsub.on_events(callback)
+
+    def remove_event_callback(self, callback):
+        return self.pubsub.remove_event_callback(callback)
 
     def closing(self):
         return self._closing

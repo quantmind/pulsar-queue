@@ -166,56 +166,72 @@ The tasks producer API is obtained from the Task application ``api`` method:
     api = TaskApp(...).api()
 
 
-* api. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
+<a name="user-content-api-queue_task" href="#api-queue_task">#</a> api.<b>queue_task</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
 
-    Queue a task and return a **TaskFuture** which is resolved once the task has finished.
-    It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
+Queue a task and return a **TaskFuture** which is resolved once the task has finished.
+It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
 
-    .. code:: python
+.. code:: python
 
-        task = await tasks.queue_task(..., callback=False)
-        task.status_string  # QUEUED
+    task = await tasks.queue_task(..., callback=False)
+    task.status_string  # QUEUED
 
-* api. **queue_task_local** (*jobname*, *\*args*, *\*\*kwargs*)
+<a name="user-content-api-queue_task_local" href="#api-queue_task_local">#</a> api.<b>queue_task_local</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
 
-    Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
+Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
 
-    .. code:: python
+.. code:: python
 
-        task = await tasks.queue_task(..., queue=tasks.node_name)
-        task.queue  # tasks.node_name
-
-
-* api. **execute_task** (*jobname*, *\*args*, *\*\*kwargs*)
-
-    Execute a task immediately, it does not put the task in the task queue.
-    This method is useful for debugging and testing. It is equivalent to execute:
-
-    .. code:: python
-
-        task = await tasks.queue_task(..., queue=False)
-        task.queue          # None
-        task.status_string  # SUCCESS
+    task = await tasks.queue_task(..., queue=tasks.node_name)
+    task.queue  # tasks.node_name
 
 
-* api. **queues** ()
+<a name="user-content-api-execute_task" href="#api-execute_task">#</a> api.<b>execute_task</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
 
-    Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
+Execute a task immediately, it does not put the task in the task queue.
+This method is useful for debugging and testing. It is equivalent to execute:
 
-* api. **job_list** (*jobnames* = *None*)
+.. code:: python
 
-    Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
+    task = await tasks.queue_task(..., queue=False)
+    task.queue          # None
+    task.status_string  # SUCCESS
 
-    .. code:: python
 
-        jobs = dict(tasks.job_lits())
-        jobs['execute.python']
-        # {
-        #   'type': 'regular',
-        #   'concurrency': 'asyncio',
-        #   'doc_syntax': 'markdown',
-        #   'doc': 'Execute arbitrary python code on a subprocess ... '
-        # }
+<a name="user-content-api-queues" href="#api-queues">#</a> api.<b>queues</b>()
+
+Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
+
+<a name="user-content-api-job_list" href="#api-job_list">#</a> api.<b>job_list</b>(<i>jobname</i>=None)
+
+Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
+
+.. code:: python
+
+    jobs = dict(tasks.job_lits())
+    jobs['execute.python']
+    # {
+    #   'type': 'regular',
+    #   'concurrency': 'asyncio',
+    #   'doc_syntax': 'markdown',
+    #   'doc': 'Execute arbitrary python code on a subprocess ... '
+    # }
+
+<a name="user-content-api-on_events" href="#api-on_events">#</a> api.<b>on_events</b>(<i>callback</i>)
+
+Add a callback invoked every time a new event occurs. The *callback* has the following signature:
+
+.. code:: python
+
+    def event_callback(event, message):
+        # event is string
+        # message is either a task object of a message dictionary
+
+If the event is a task event (see events_) the message is a Task_ object.
+
+<a name="user-content-api-remove_event_callback" href="#api-remove_event_callback">#</a> api.<b>remove_event_callback</b>(<i>callback</i>)
+
+Remove a previously added event callback. This method is safe.
 
 
 The Job class
@@ -246,43 +262,56 @@ or use the less verbose **job** decorator:
 In either cases the ``self`` parameter is an instance of a **Job** class and
 it has the following useful attributes and methods:
 
-* job. **backend**
+<a name="user-content-job-backend" href="#job-backend">#</a> job.<b>backend</b>
 
-    The tasks backend that is processing this Task_ run
+The tasks backend that is processing this Task_ run
 
-* job. **http**
+<a name="user-content-job-http" href="#job-http">#</a> job.<b>http</b>
 
-    Best possible HTTP session handler for the job concurrency mode.
+Best possible HTTP session handler for the job concurrency mode.
 
-* job. **logger**
+<a name="user-content-job-logger" href="#job-logger">#</a> job.<b>logger</b>
 
-    Python logging handler for this job. The name of this handler
-    is ``<app_name>.<job.name>``.
+Python logging handler for this job. The name of this handler
+is ``<app_name>.<job.name>``.
 
-* job. **name**
+<a name="user-content-job-max-retries" href="#job-max-retries">#</a> job.<b>max_retries</b>
 
-    The name of this job. Used to queue tasks
+Optional positive integer which specify the maximum number of retries when a
+task fails or is revoked. If not available failing tasks are not re-queued.
+It can be specified as a class attribute or during initialisation from the task
+meta parameters.
 
-* job. **task**
+<a name="user-content-job-retry_delay" href="#job-retry_delay">#</a> job.<b>retry_delay</b>
 
-    The Task_ instance associated with this task run
+Optional positive integer which specifies the number of seconds to delay a task
+retry.
 
-* job. **queue_task** (*jobname*, *\*args*, *\*\*kwargs*)
+<a name="user-content-job-name" href="#job-name">#</a> job.<b>name</b>
 
-    Queue a new job form a task run. It is equivalent to:
+The name of this job. Used to queue tasks
 
-    .. code:: python
+<a name="user-content-job-task" href="#job-task">#</a> job.<b>task</b>
 
-        meta_params = {'from_task': self.task.id}
-        self.backend.queue_task(..., meta_params=meta_params)
+The Task_ instance associated with this task run
 
-* job. **shell** (*command*, *\*\*kwargs*):
+<a name="user-content-job-queue_task" href="#job-queue_task">#</a> job.<b>queue_task</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
 
-    Execute a shell command and returns a coroutine:
+Queue a new job form a task run. It is equivalent to:
 
-    .. code:: python
+.. code:: python
 
-        await self.shell("...")
+    meta_params = {'from_task': self.task.id}
+    self.backend.queue_task(..., meta_params=meta_params)
+
+
+<a name="user-content-job-shell" href="#job-shell">#</a> job.<b>shell</b>(<i>command</i>, <i>**kwargs</i>)
+
+Execute a shell command and returns a coroutine:
+
+.. code:: python
+
+    await self.shell("...")
 
 
 The Task
@@ -312,6 +341,15 @@ The set of states for which a Task_ has run: ``FAILURE`` and ``SUCCESS``
 **READY_STATES**
 
 The set of states for which a Task_ has finished: ``REVOKED``, ``FAILURE`` and ``SUCCESS``
+
+Events
+-------------
+
+The task queue broadcast several events during task execution and internal state:
+
+* ``task_queued``: a new Task_ has been queued, the message is a task instance
+* ``task_started``: a Task_ has started to be consumed by a task consumer, it is out of the task queue
+* ``task_done``: a Task_ is done, the message is a task in a **READY_STATES**
 
 
 Configuration
@@ -498,5 +536,7 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _`asyncio subprocess`: https://docs.python.org/3/library/asyncio-subprocess.html
 .. _Jobs: #the-job-class
 .. _Task: #the-task
+.. _Events: #events
+.. _events: #events
 .. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png
    :target: https://github.com/quantmind/pulsar-queue

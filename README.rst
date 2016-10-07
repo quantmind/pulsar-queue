@@ -166,7 +166,8 @@ The tasks producer API is obtained from the Task application ``api`` method:
     api = TaskApp(...).api()
 
 
-<a name="user-content-api-queue_task" href="#api-queue_task">#</a> api.<b>queue_task</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
+api.**queue_task**(*jobname*, *\*args*, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a task and return a **TaskFuture** which is resolved once the task has finished.
 It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:

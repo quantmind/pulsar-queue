@@ -41,7 +41,6 @@ blocking IO tasks and long running CPU bound tasks.
 
 
 .. contents:: **CONTENTS**
-   :maxdepth: 2
 
 
 Four steps tutorial
@@ -178,7 +177,7 @@ It is possible to obtain a task future resolved when the task has been queued, r
     task = await tasks.queue_task(..., callback=False)
     task.status_string  # QUEUED
 
-*api*.queue_task_local(*jobname*, *\*args</i>, *\*\*kwargs*)
+*api*.queue_task_local(*jobname*, *\*args, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
@@ -189,7 +188,7 @@ Queue a job in the local task queue. The local task queue is processed by the sa
     task.queue  # tasks.node_name
 
 
-*api*.execute_task(*jobname*, *\*args</i>, *\*\*kwargs*)
+*api*.execute_task(*jobname*, *\*args, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Execute a task immediately, it does not put the task in the task queue.
@@ -207,7 +206,8 @@ This method is useful for debugging and testing. It is equivalent to execute:
 
 Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
 
-<a name="user-content-api-job_list" href="#api-job_list">#</a> api.<b>job_list</b>(<i>jobname</i>=None)
+*api*.job_list(*jobname*=None)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
 
@@ -222,7 +222,8 @@ Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is 
     #   'doc': 'Execute arbitrary python code on a subprocess ... '
     # }
 
-<a name="user-content-api-on_events" href="#api-on_events">#</a> api.<b>on_events</b>(<i>callback</i>)
+*api*.on_events(*callback*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Add a callback invoked every time a new event occurs. The *callback* has the following signature:
 
@@ -234,7 +235,8 @@ Add a callback invoked every time a new event occurs. The *callback* has the fol
 
 If the event is a task event (see events_) the message is a Task_ object.
 
-<a name="user-content-api-remove_event_callback" href="#api-remove_event_callback">#</a> api.<b>remove_event_callback</b>(<i>callback</i>)
+*api*.remove_event_callback(*callback*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Remove a previously added event callback. This method is safe.
 
@@ -267,40 +269,48 @@ or use the less verbose **job** decorator:
 In either cases the ``self`` parameter is an instance of a **Job** class and
 it has the following useful attributes and methods:
 
-<a name="user-content-job-backend" href="#job-backend">#</a> job.<b>backend</b>
+*job*.backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tasks backend that is processing this Task_ run
 
-<a name="user-content-job-http" href="#job-http">#</a> job.<b>http</b>
+*job*.http
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Best possible HTTP session handler for the job concurrency mode.
 
-<a name="user-content-job-logger" href="#job-logger">#</a> job.<b>logger</b>
+*job*.logger
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Python logging handler for this job. The name of this handler
 is ``<app_name>.<job.name>``.
 
-<a name="user-content-job-max-retries" href="#job-max-retries">#</a> job.<b>max_retries</b>
+*job*.max_retries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Optional positive integer which specify the maximum number of retries when a
 task fails or is revoked. If not available failing tasks are not re-queued.
 It can be specified as a class attribute or during initialisation from the task
 meta parameters.
 
-<a name="user-content-job-retry_delay" href="#job-retry_delay">#</a> job.<b>retry_delay</b>
+*job*.retry_delay
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Optional positive integer which specifies the number of seconds to delay a task
 retry.
 
-<a name="user-content-job-name" href="#job-name">#</a> job.<b>name</b>
+*job*.name
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The name of this job. Used to queue tasks
 
-<a name="user-content-job-task" href="#job-task">#</a> job.<b>task</b>
+*job*.task
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Task_ instance associated with this task run
 
-<a name="user-content-job-queue_task" href="#job-queue_task">#</a> job.<b>queue_task</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
+*job*.queue_task(*jobname*, *\*args, *\*\*kwargs)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a new job form a task run. It is equivalent to:
 
@@ -310,7 +320,8 @@ Queue a new job form a task run. It is equivalent to:
     self.backend.queue_task(..., meta_params=meta_params)
 
 
-<a name="user-content-job-shell" href="#job-shell">#</a> job.<b>shell</b>(<i>command</i>, <i>**kwargs</i>)
+*job*.shell(*command*, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Execute a shell command and returns a coroutine:
 

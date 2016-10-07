@@ -32,7 +32,7 @@ class PubSub(Component):
         This a coroutine and must be waited
         """
         self._pubsub.bind_event('connection_lost', self._connection_lost)
-        pattern = self._channel('*')
+        pattern = self.prefixed('*')
         try:
             await self._pubsub.psubscribe(pattern)
             self.logger.warning(
@@ -83,7 +83,7 @@ class PubSub(Component):
             event = '%s_%s' % (message.type, event)
             await self.backend.manager.store_message(message)
 
-        channel = self._channel(event)
+        channel = self.prefixed(event)
         try:
             await self._pubsub.publish(channel, self.encode(message))
         except ConnectionRefusedError:
@@ -96,13 +96,10 @@ class PubSub(Component):
         else:
             self.connection_ok()
 
-    async def concurrent(self, jobname):
-        return 0
-
     # INTERNALS
     def __call__(self, channel, message):
         # PubSub callback
-        event = channel[len(self._channel()):]
+        event = channel[len(self.prefixed()):]
         message = self.decode(message)
         if event == 'task_done':
             done = self._callbacks.pop(message.id, None)
@@ -113,10 +110,6 @@ class PubSub(Component):
                 callback(event, message)
             except Exception:
                 self.logger.exception('During %s callbacks', event)
-
-    def _channel(self, event=''):
-        prefix = self.cfg.name
-        return '%s_%s' % (prefix, event) if prefix else event
 
     def _connection_lost(self, *args):
         self.connect()

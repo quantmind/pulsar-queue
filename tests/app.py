@@ -325,6 +325,21 @@ class TaskQueueApp(TaskQueueBase):
         finally:
             self.tq.remove_event_callback(check_retry)
 
+    async def test_max_concurrency(self):
+        meta = {'max_concurrency': 3}
+        tasks = [self.tq.queue_task('asynchronous', lag=2, meta_params=meta)
+                 for _ in range(5)]
+        tasks = await asyncio.gather(*tasks)
+        self.assertEqual(len(tasks), 5)
+        revoked = success = 0
+        for task in tasks:
+            if task.status_string == 'REVOKED':
+                revoked += 1
+            elif task.status_string == 'SUCCESS':
+                success += 1
+        self.assertEqual(revoked, 2)
+        self.assertEqual(success, 3)
+
     def _test_sync(self):
         loop = asyncio.new_event_loop()
         tasks = api.TaskApp(loop=loop, **self.params()).api()

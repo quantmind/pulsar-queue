@@ -40,3 +40,11 @@ class MQ(mq.MQ):
             pipe.execute('llen', queue)
         sizes = await pipe.commit()
         return sizes
+
+    async def incr(self, name):
+        concurrent = await self._client.incr(self.prefixed(name))
+        return concurrent
+
+    async def decr(self, name):
+        concurrent = await self._client.decr(self.prefixed(name))
+        return concurrent

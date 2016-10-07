@@ -72,13 +72,13 @@ class ExecutorMixin:
                             self._concurrent_tasks.pop(task_id, None)
                         return task
 
+                concurrent = await self.broker.incr(JobClass.name)
+
                 job = JobClass(self, task)
 
-                if job.max_concurrency:
-                    concurrent = await self.pubsub.concurrent(job.name)
-                    if concurrent >= job.max_concurrency:
-                        raise TooManyTasksForJob('max concurrency %d reached',
-                                                 job.max_concurrency)
+                if job.max_concurrency and concurrent > job.max_concurrency:
+                    raise TooManyTasksForJob('max concurrency %d reached',
+                                             job.max_concurrency)
 
                 kwargs = task.kwargs or {}
                 task.status = states.STARTED
@@ -127,8 +127,10 @@ class ExecutorMixin:
 
         await self.pubsub.publish('done', task)
 
-        if self._should_retry(job):
-            await self._requeue_task(job)
+        if job:
+            await self.broker.decr(job.name)
+            if self._should_retry(job):
+                await self._requeue_task(job)
 
         return task
 
@@ -162,8 +164,7 @@ class ExecutorMixin:
         return job.task.result
 
     def _should_retry(self, job):
-        return (job and
-                job.task.status != states.SUCCESS and
+        return (job.task.status != states.SUCCESS and
                 job.task.queue and
                 job.max_retries and
                 job.task.retry < job.max_retries)

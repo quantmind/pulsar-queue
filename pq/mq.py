@@ -54,6 +54,12 @@ class BaseComponent:
         serializer = serializer or self.cfg.message_serializer
         return serializers[serializer].decode(data)
 
+    def prefixed(self, name=''):
+        prefix = '%s_' % self.cfg.name
+        if not name.startswith(prefix):
+            name = '%s%s' % (prefix, name)
+        return name
+
 
 class TaskManager(BaseComponent):
 
@@ -170,6 +176,18 @@ class MQ(Component, ABC):
     @abstractmethod
     async def queue_message(self, queue, message):  # pragma    nocover
         """Add a message to the ``queue``
+        """
+        pass
+
+    @abstractmethod
+    async def incr(self, name):
+        """Increase the counter for name
+        """
+        pass
+
+    @abstractmethod
+    async def decr(self, name):
+        """Decrease the counter for name
         """
         pass
 

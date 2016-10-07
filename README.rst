@@ -41,6 +41,7 @@ blocking IO tasks and long running CPU bound tasks.
 
 
 .. contents:: **CONTENTS**
+   :maxdepth: 2
 
 
 Four steps tutorial
@@ -166,8 +167,8 @@ The tasks producer API is obtained from the Task application ``api`` method:
     api = TaskApp(...).api()
 
 
-api.**queue_task**(*jobname*, *\*args*, *\*\*kwargs*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*api*.queue_task(*jobname*, *\*args*, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a task and return a **TaskFuture** which is resolved once the task has finished.
 It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
@@ -177,7 +178,8 @@ It is possible to obtain a task future resolved when the task has been queued, r
     task = await tasks.queue_task(..., callback=False)
     task.status_string  # QUEUED
 
-<a name="user-content-api-queue_task_local" href="#api-queue_task_local">#</a> api.<b>queue_task_local</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
+*api*.queue_task_local(*jobname*, *\*args</i>, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
 
@@ -187,7 +189,8 @@ Queue a job in the local task queue. The local task queue is processed by the sa
     task.queue  # tasks.node_name
 
 
-<a name="user-content-api-execute_task" href="#api-execute_task">#</a> api.<b>execute_task</b>(<i>jobname</i>, <i>*args</i>, <i>**kwargs</i>)
+*api*.execute_task(*jobname*, *\*args</i>, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Execute a task immediately, it does not put the task in the task queue.
 This method is useful for debugging and testing. It is equivalent to execute:
@@ -199,7 +202,8 @@ This method is useful for debugging and testing. It is equivalent to execute:
     task.status_string  # SUCCESS
 
 
-<a name="user-content-api-queues" href="#api-queues">#</a> api.<b>queues</b>()
+*api*.queues()
+~~~~~~~~~~~~~~~~~~~~
 
 Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
 

@@ -28,7 +28,8 @@ class TaskApp(Application):
 
     async def monitor_start(self, monitor, exc=None):
         if not exc:
-            self._backend = await self._start(monitor, False)
+            consume = self.cfg.workers == 0
+            self._backend = await self._start(monitor, consume)
 
     def monitor_task(self, monitor):
         if monitor.is_running():
@@ -36,10 +37,12 @@ class TaskApp(Application):
 
     def monitor_stopping(self, worker, exc=None):
         if self._backend:
-            return self._backend.close()
+            backend = self._backend
+            self._backend = None
+            return backend.close()
 
     async def worker_start(self, worker, exc=None):
-        if not exc:
+        if not exc and not self._backend:
             self._backend = await self._start(worker)
 
     def worker_stopping(self, worker, exc=None):

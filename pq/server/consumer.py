@@ -4,7 +4,8 @@ from .producer import Producer
 
 
 class Consumer(Producer):
-
+    """The consumer is used by the server side application
+    """
     def __repr__(self):
         return 'consumer <%s>' % self.broker
 

@@ -43,6 +43,19 @@ blocking IO tasks and long running CPU bound tasks.
 .. contents:: **CONTENTS**
 
 
+TL;DR
+========
+
+Clone the repository::
+
+    git clone git@github.com:quantmind/pulsar-queue.git
+
+
+Move to the ``tests/example`` directory and run the server::
+
+    python manage.py
+
+
 Four steps tutorial
 ========================
 

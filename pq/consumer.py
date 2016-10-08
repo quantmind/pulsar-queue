@@ -39,7 +39,12 @@ class ConsumerAPI(BaseComponent):
         pass
 
     def tick(self):
-        pass
+        """Called periodically by the actor.
+
+        By default it checks for closing signal and it available do the close
+        """
+        if self._closing_waiter and not self._closing_waiter.done():
+            self.do_close()
 
     def info(self):
         pass
@@ -60,6 +65,7 @@ class ConsumerAPI(BaseComponent):
             self.tick()
         return self._closing_waiter
 
-    def do_close(self):
-        self.logger.warning('Closing %s', self)
+    def do_close(self, msg=None):
+        if msg:
+            self.logger.warning(msg)
         self._closing_waiter.set_result(True)

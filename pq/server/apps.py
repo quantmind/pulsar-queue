@@ -1,13 +1,12 @@
-import time
-
 from pulsar import Application, MultiApp, Config
 from pulsar.apps.wsgi import (WSGIServer, Router, LazyWsgi,
                               WsgiHandler, GZipMiddleware)
 
-from .. import __version__
 from .config import DEFAULT_TASK_BACKEND
 from .rpc import TaskQueueRpc
-from . import TaskScheduler, TaskConsumer, TaskProducer
+from .producer import Producer
+from .consumer import Consumer
+from .. import __version__
 
 
 class TaskApp(Application):
@@ -16,7 +15,7 @@ class TaskApp(Application):
     This application can also schedule periodic tasks when the
     :ref:`schedule_periodic <setting-schedule_periodic>` flag is ``True``.
     """
-    backend_factory = TaskConsumer
+    backend_factory = Consumer
     name = 'tasks'
     cfg = Config(apps=('tasks',),
                  version=__version__,
@@ -25,27 +24,15 @@ class TaskApp(Application):
     _backend = None
 
     def api(self):
-        return TaskProducer(self.cfg, logger=self.logger)
-
-    def scheduler(self):
-        return TaskScheduler(self.cfg, logger=self.logger)
-
-    def next_scheduled(self, jobnames=None):
-        if isinstance(self._backend, TaskScheduler):
-            return self._backend.next_scheduled(jobnames=jobnames)
+        return Producer(self.cfg, logger=self.logger)
 
     async def monitor_start(self, monitor, exc=None):
         if not exc:
-            if self.cfg.schedule_periodic:
-                self.backend_factory = TaskScheduler
-            elif self.cfg.workers:
-                self.backend_factory = TaskProducer
             self._backend = await self._start(monitor)
 
     def monitor_task(self, monitor):
-        if monitor.is_running() and self.cfg.schedule_periodic:
-            if self._backend.next_run <= time.time():
-                self._backend.tick()
+        if monitor.is_running():
+            self._backend.tick()
 
     def monitor_stopping(self, worker, exc=None):
         if self._backend:
@@ -65,7 +52,7 @@ class TaskApp(Application):
         cfg.set('schedule_periodic', False)
 
     def worker_info(self, worker, info=None):
-        info['tasks'] = self._backend.info()
+        info['queue'] = self._backend.info()
 
     def _start(self, actor):
         return self.backend_factory(

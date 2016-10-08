@@ -18,17 +18,17 @@ class SchedulerMixin:
         o.next_run = time.time()
         return o
 
-    def __repr__(self):
-        return 'task scheduler <%s>' % self.broker
-
     @lazyproperty
     def entries(self):
         return self._setup_schedule()
 
     def tick(self, now=None):
         # Run a tick, that is one iteration of the scheduler.
-        if self._closing or not self.cfg.schedule_periodic:
+        if (self.closing() or
+                not self.cfg.schedule_periodic or
+                self.next_run > time.time()):
             return
+
         remaining_times = []
         for entry in self.entries.values():
             is_due, next_time_to_run = entry.is_due(now=now)

@@ -25,7 +25,6 @@ def simple_task(self, value=0):
 
 
 class TaskQueueBase:
-    concurrency = 'process'
     # used for both keep-alive and timeout in JsonProxy
     # long enough to allow to wait for tasks
     rpc_timeout = 500
@@ -52,11 +51,9 @@ class TaskQueueBase:
             wsgi=True,
             schedule_periodic=cls.schedule_periodic,
             rpc_bind='127.0.0.1:0',
-            concurrency=cls.concurrency,
             concurrent_tasks=cls.concurrent_tasks,
             max_requests=cls.max_requests,
             message_serializer=cls.message_serializer,
-            rpc_concurrency=cls.concurrency,
             rpc_keep_alive=cls.rpc_timeout
         )
         pq = api.PulsarQueue(**params)

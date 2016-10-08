@@ -12,6 +12,18 @@ class TaskSetting(pulsar.Setting):
     section = "Task Consumer"
 
 
+class ConsumersPaths(TaskSetting):
+    name = "consumers"
+    validator = pulsar.validate_list
+    default = ['pq.api:Tasks']
+    desc = """\
+        List of python dotted paths where Consumer are implemented.
+
+        This parameter can only be specified during initialization or in a
+        :ref:`config file <setting-config>`.
+        """
+
+
 class MessageBroker(TaskSetting):
     name = 'message_broker'
     flags = ['--message-broker']

@@ -309,7 +309,7 @@ The name of this job. Used to queue tasks
 
 The Task_ instance associated with this task run
 
-*job*.queue_task(*jobname*, *\*args*, *\*\*kwargs)
+*job*.queue_task(*jobname*, *\*args*, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a new job form a task run. It is equivalent to:

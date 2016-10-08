@@ -154,16 +154,47 @@ for the task future in a coroutine.
 API
 =============
 
-Tasks API
------------------
-
-The tasks producer API is obtained from the Task application ``api`` method:
+The producer API is obtained from the Task application ``api`` method:
 
 .. code:: python
 
     from pq.api import TaskApp
 
-    tasks = TaskApp(...).api().tasks
+    api = TaskApp(...).api()
+
+
+API methods
+---------------
+
+*api*.on_events(*callback*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add a callback invoked every time a new event occurs. The *callback* has the following signature:
+
+.. code:: python
+
+    def event_callback(event, message):
+        # event is string
+        # message is either a task object of a message dictionary
+
+If the event is a task event (see events_) the message is a Task_ object.
+
+*api*.remove_event_callback(*callback*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Remove a previously added event callback. This method is safe.
+
+
+Tasks API
+-----------------
+
+The tasks producer is obtained vua the ``tasks`` property from the producer API instance
+
+.. code:: python
+
+    tasks = api.tasks
+
+The following methods are available for the tasks producer:
 
 
 *tasks*.queue(*jobname*, *\*args*, *\*\*kwargs*)
@@ -221,24 +252,6 @@ Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is 
     #   'doc_syntax': 'markdown',
     #   'doc': 'Execute arbitrary python code on a subprocess ... '
     # }
-
-*api*.on_events(*callback*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Add a callback invoked every time a new event occurs. The *callback* has the following signature:
-
-.. code:: python
-
-    def event_callback(event, message):
-        # event is string
-        # message is either a task object of a message dictionary
-
-If the event is a task event (see events_) the message is a Task_ object.
-
-*api*.remove_event_callback(*callback*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Remove a previously added event callback. This method is safe.
 
 
 The Job class

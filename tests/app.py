@@ -64,8 +64,8 @@ class TaskQueueBase:
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
-        cls.tq = await cls.tq_app.api().start()
-        await cls.tq.flush_queues(*cls.queues())
+        cls.api = await cls.tq_app.api().start()
+        await cls.api.tasks.flush_queues(*cls.queues())
 
     @classmethod
     def tearDownClass(cls):
@@ -92,15 +92,16 @@ class TaskQueueBase:
 class TaskQueueApp(TaskQueueBase):
 
     def test_registry(self):
-        self.assertTrue(isinstance(self.tq.registry, dict))
-        regular = self.tq.registry.regular()
-        periodic = self.tq.registry.periodic()
+        tasks = self.api.tasks
+        self.assertTrue(isinstance(tasks.registry, dict))
+        regular = tasks.registry.regular()
+        periodic = tasks.registry.periodic()
         self.assertTrue(regular)
         self.assertTrue(periodic)
 
     def test_producer(self):
-        self.assertTrue(str(self.tq).startswith('task producer <'))
-        self.assertEqual(self.tq.cfg.default_task_queue, '%s1' % self.name())
+        self.assertTrue(str(self.api).startswith('producer <'))
+        self.assertEqual(self.api.cfg.default_task_queue, '%s1' % self.name())
 
     def test_job_list(self):
         jobs = self.tq.job_list()

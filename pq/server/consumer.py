@@ -16,10 +16,11 @@ class Consumer(Producer):
         for consumer in self.consumers:
             consumer.tick()
 
-    async def start(self, worker=None):
+    async def start(self, worker, consume=True):
         await self.pubsub.start()
-        for consumer in self.consumers:
-            consumer.start(worker)
+        if consume:
+            for consumer in self.consumers:
+                consumer.start(worker)
         return self
 
     async def close(self, msg=None):

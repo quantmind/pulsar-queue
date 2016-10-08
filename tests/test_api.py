@@ -46,7 +46,7 @@ class TestTasks(unittest.TestCase):
         self.assertEqual(t.closing(), True)
         self.assertEqual(t.tasks.closing(), True)
         warn = mock.MagicMock()
-        t.logger.warning = warn
+        t.tasks.logger.warning = warn
         self.assertFalse(t.tasks.queue('foo'))
         self.assertEqual(warn.call_count, 1)
         self.assertEqual(

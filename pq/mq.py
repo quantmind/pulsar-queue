@@ -35,14 +35,11 @@ class BaseComponent:
 
     def __init__(self, backend):
         self.backend = backend
+        self.logger = self.backend.logger
 
     @property
     def cfg(self):
         return self.backend.cfg
-
-    @property
-    def logger(self):
-        return self.backend.logger
 
     def encode(self, message, serializer=None):
         """Encode a message"""

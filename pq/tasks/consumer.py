@@ -9,6 +9,7 @@ from .scheduler import SchedulerMixin
 from . import states
 from .task import Task, TaskNotAvailable
 from .models import RegistryMixin
+from .rpc import TasksRpc
 from ..utils.time import get_time
 from ..pubsub import backoff, RECONNECT_LAG
 from ..consumer import ConsumerAPI
@@ -51,6 +52,9 @@ class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
             'processed': self._processed,
             'queues': self.queues()
         }
+
+    def rpc(self):
+        return TasksRpc()
 
     # API
     def queue(self, jobname, callback=True, **kwargs):

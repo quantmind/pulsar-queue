@@ -59,12 +59,18 @@ class Producer:
     def is_consumer(self):
         return False
 
-    async def start(self, worker=None):
+    async def start(self, worker=None, consume=False):
         await self.pubsub.start()
         return self
 
     def tick(self):
         pass
+
+    def info(self):
+        for consumer in self.consumers:
+            info = consumer.info()
+            if info:
+                yield consumer.name, info
 
     def lock(self, name, **kwargs):
         """aquire a distributed global lock for ``name``

@@ -28,7 +28,7 @@ class TaskApp(Application):
 
     async def monitor_start(self, monitor, exc=None):
         if not exc:
-            self._backend = await self._start(monitor)
+            self._backend = await self._start(monitor, False)
 
     def monitor_task(self, monitor):
         if monitor.is_running():
@@ -39,7 +39,7 @@ class TaskApp(Application):
             return self._backend.close()
 
     async def worker_start(self, worker, exc=None):
-        if not exc and not worker.is_monitor():
+        if not exc:
             self._backend = await self._start(worker)
 
     def worker_stopping(self, worker, exc=None):
@@ -52,26 +52,24 @@ class TaskApp(Application):
         cfg.set('schedule_periodic', False)
 
     def worker_info(self, worker, info=None):
-        info['queue'] = self._backend.info()
+        info.update(self._backend.info())
 
-    def _start(self, actor):
+    def _start(self, actor, consume=True):
         return self.backend_factory(
             self.cfg,
             logger=self.logger
-        ).start(actor)
+        ).start(actor, consume)
 
 
 class PulsarQueue(MultiApp):
-    '''Build a multi-app consisting on a taskqueue and a JSON-RPC server.
-
-    This class shows how to use the :class:`.MultiApp` utility for
-    starting several :ref:`pulsar applications <apps-framework>` at once.
-    '''
+    """Build a multi-app consisting on a taskqueue and a JSON-RPC server.
+    """
     cfg = Config('Pulsar Queue')
 
     def build(self):
-        yield self.new_app(TaskApp,
+        app = self.new_app(TaskApp,
                            callable=self.cfg.params.get('queue_callable'))
+        yield app
 
         wsgi = self.cfg.params.get('wsgi')
         if wsgi:
@@ -79,17 +77,24 @@ class PulsarQueue(MultiApp):
                 wsgi = Rpc
             yield self.new_app(WSGIServer,
                                prefix='rpc',
-                               callable=wsgi(self.name))
+                               callable=wsgi(app))
 
 
 class Rpc(LazyWsgi):
     '''Default WSGI callable for the wsgi part of the application
     '''
-    def __init__(self, tqname):
-        self.tqname = tqname
+    def __init__(self, tq):
+        self.tq = tq
 
     def setup(self, environ):
         # only post allowed by the JSON RPC handler
-        request = [Router('/', post=TaskQueueRpc(self.tqname))]
+        api = self.tq.api()
+        handler = TaskQueueRpc(self.tq.name)
+        for consumer in api.consumers:
+            rpc = consumer.rpc()
+            if rpc:
+                handler.putSubHandler(consumer.name, rpc)
+
+        request = [Router('/', post=handler)]
         response = [GZipMiddleware(200)]
         return WsgiHandler(middleware=request, response_middleware=response)

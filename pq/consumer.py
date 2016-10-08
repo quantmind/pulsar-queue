@@ -1,10 +1,16 @@
+from logging import getLogger
+
 from pulsar import create_future
 
 from .mq import BaseComponent
 
 
 class ConsumerAPI(BaseComponent):
-    _closing_waiter = None
+
+    def __init__(self, backend):
+        super().__init__(backend)
+        self.logger = getLogger('pulsar.%s' % self.name)
+        self._closing_waiter = None
 
     def __str__(self):
         return self.name
@@ -29,14 +35,17 @@ class ConsumerAPI(BaseComponent):
     def pubsub(self):
         return self.backend.pubsub
 
-    def start(self, worker):
+    def start(self, worker, consume):
         pass
 
-    def start_scheduler(self, worker):
+    def tick(self):
         pass
 
     def info(self):
-        return {}
+        pass
+
+    def rpc(self):
+        pass
 
     def closing(self):
         return self._closing_waiter is not None
@@ -48,6 +57,7 @@ class ConsumerAPI(BaseComponent):
             self._closing_waiter = create_future(self._loop)
             if msg:
                 self.logger.warning(msg)
+            self.tick()
         return self._closing_waiter
 
     def do_close(self):

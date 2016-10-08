@@ -40,9 +40,6 @@ blocking IO tasks and long running CPU bound tasks.
 * Build on top of pulsar_ and asyncio_
 
 
-.. contents:: **CONTENTS**
-
-
 TL;DR
 ========
 
@@ -54,6 +51,10 @@ Clone the repository::
 Move to the ``tests/example`` directory and run the server::
 
     python manage.py
+
+    
+
+.. contents:: **CONTENTS**
 
 
 Four steps tutorial

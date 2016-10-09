@@ -8,7 +8,7 @@ from pulsar.apps.greenio import GreenPool
 from .utils.serializers import serializers
 
 
-class TaskFuture(Future):
+class MessageFuture(Future):
 
     def __init__(self, task_id, backend, *, loop=None):
         super().__init__(loop=loop)
@@ -127,25 +127,25 @@ class MQ(Component, ABC):
     def callbacks(self):
         return self.pubsub.callbacks
 
-    def queue(self, task, callback=True):
+    def queue(self, message, callback=True):
         '''Queue the ``task``.
 
         If callback is True (default) returns a Future
         called back once the task is done, otherwise return a future
         called back once the task is queued
         '''
-        future_done = TaskFuture(task.id, self.backend, loop=self._loop)
-        if task.queue:
-            self.callbacks[task.id] = future_done
+        future_done = MessageFuture(message.id, self.backend, loop=self._loop)
+        if message.queue:
+            self.callbacks[message.id] = future_done
         else:   # the task is not queued instead it is executed immediately
-            coro = self.backend._execute_task(task)
+            coro = self.backend.execute(message)
             return chain_future(coro, next=future_done)
-        coro = self._queue_task(task, future_done)
+        coro = self._queue_message(message, future_done)
         if callback:
             ensure_future(coro, loop=self._loop)
             return future_done
         else:
-            future = TaskFuture(task.id, self.backend, loop=self._loop)
+            future = MessageFuture(message.id, self.backend, loop=self._loop)
             return chain_future(coro, next=future)
 
     @abstractmethod
@@ -189,15 +189,15 @@ class MQ(Component, ABC):
         pass
 
     # INTERNALS
-    async def _queue_task(self, task, future):
+    async def _queue_message(self, message, future):
         '''Asynchronously queue a task
         '''
-        await self.pubsub.publish('queued', task)
+        await self.pubsub.publish('queued', message)
         try:
-            await self.queue_message(task.queue, self.encode(task))
+            await self.queue_message(message.queue, self.encode(message))
         except ConnectionRefusedError:
             self.logger.critical('Could not queue task - connection error')
         else:
-            self.logger.debug('%s in "%s"', task.lazy_info(), task.queue)
-        task.done_callback = future
-        return task
+            self.logger.debug('%s in "%s"', message.lazy_info(), message.queue)
+        message.done_callback = future
+        return message

@@ -35,7 +35,7 @@ class SchedulerMixin:
             #
             # Task is now due
             if is_due:
-                self.queue_task(entry.name)
+                self.queue(entry.name)
                 entry.next()
 
             if next_time_to_run:

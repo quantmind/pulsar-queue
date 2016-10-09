@@ -60,20 +60,23 @@ async def notoverlap(self, lag=1):
 
 @api.job()
 async def queue_from_task(self):
-    task = await self.queue_task('asynchronous')
+    task = await self.queue('asynchronous')
     return task.tojson()
 
 
 class WorkerInfo(api.Job):
 
     def __call__(self):
-        return self.backend.info()
+        return dict(self.backend.info())
 
 
 class GreenExecutor(api.Job):
 
     def __call__(self):
-        return self.run_in_executor(self.backend.info)
+        return self.run_in_executor(self.info)
+
+    def info(self):
+        return dict(self.backend.info())
 
 
 class CpuBound(api.Job):
@@ -90,7 +93,7 @@ class CpuBound(api.Job):
 
 @api.job()
 def testlocalqueue(self):
-    return self.backend.queues()
+    return self.backend.tasks.queues()
 
 
 class CpuBoundWithAsync(api.Job):

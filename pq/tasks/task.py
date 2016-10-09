@@ -59,6 +59,10 @@ class Task(Message):
         return self.info()
     __str__ = __repr__
 
+    @classmethod
+    def consumer(cls):
+        return 'tasks'
+
     @property
     def full_name(self):
         return 'task.%s' % self.name

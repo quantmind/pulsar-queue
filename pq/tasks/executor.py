@@ -8,10 +8,10 @@ from asyncio.subprocess import Process
 from pulsar.utils.system import json
 
 from .task import TaskError, TaskTimeout
-from . import models
 from . import states
 from ..cpubound import StreamProtocol, PROCESS_FILE
 from ..utils.exc import string_exception
+from ..utils import concurrency
 
 
 consumer_event = 'consumer_status'
@@ -31,8 +31,6 @@ class ExecutorMixin:
     # The TaskProducer can execute a task inline, while the consumer executes
     # task from a task queue via the ConsumerMixin
     #
-    _concurrent_tasks = None
-
     async def _execute_task(self, task, worker=None):
         # Function executing a task
         #
@@ -65,11 +63,12 @@ class ExecutorMixin:
                     gap = start_time - time_ended
                     if gap > 0:
                         self._loop.call_later(gap, self._queue_again, task)
-                        if self._concurrent_tasks:
+                        if worker:
                             self._concurrent_tasks.pop(task_id, None)
                         return task
 
-                concurrent = await self.broker.incr(JobClass.name)
+                if worker:
+                    concurrent = await self.broker.incr(JobClass.name)
 
                 job = JobClass(self, task)
 
@@ -87,7 +86,7 @@ class ExecutorMixin:
                 future = self._consume(job, kwargs)
                 #
                 # record future for cancellation
-                if self._concurrent_tasks:
+                if worker:
                     self._concurrent_tasks[task_id].future = future
                 #
                 # This may block until timeout
@@ -119,29 +118,30 @@ class ExecutorMixin:
             logger.info(task.lazy_info())
         #
         task.time_ended = time.time()
-        if self._concurrent_tasks:
+        if worker:
             self._concurrent_tasks.pop(task_id, None)
 
         await self.pubsub.publish('done', task)
 
         if job:
-            await self.broker.decr(job.name)
+            if worker:
+                await self.broker.decr(job.name)
             if self._should_retry(job):
                 await self._requeue_task(job)
 
         return task
 
     def _consume(self, job, kwargs):
-        concurrency = job.get_concurrency()
+        model = job.get_concurrency()
 
-        if concurrency == models.THREAD_IO:
+        if model == concurrency.THREAD_IO:
             return job._loop.run_in_executor(None, lambda: job(**kwargs))
 
-        elif concurrency == models.CPUBOUND:
+        elif model == concurrency.CPUBOUND:
             return self._consume_in_subprocess(job, kwargs)
 
         else:
-            return self.green_pool.submit(job, **kwargs)
+            return self.backend.green_pool.submit(job, **kwargs)
 
     async def _consume_in_subprocess(self, job, kwargs):
         params = dict(self.json_params())
@@ -170,7 +170,7 @@ class ExecutorMixin:
         task = job.task
         meta_params = task.meta.copy()
         meta_params['retry'] = task.retry + 1
-        return job.queue_task(
+        return job.queue(
             job.name,
             callback=False,
             meta_params=meta_params,

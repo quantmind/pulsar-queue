@@ -8,21 +8,8 @@ from pulsar.utils.slugify import slugify
 from pulsar.utils.importer import import_modules
 from pulsar.utils.log import lazyproperty
 from pulsar.utils.string import to_bytes
-from pulsar.utils.structures import inverse_mapping
 
-
-ASYNC_IO = 1        # tasks run in the worker event loop
-GREEN_IO = 2        # tasks run in the worker event loop on a child greenlet
-THREAD_IO = 3       # tasks run in the event loop executor
-CPUBOUND = 4        # tasks run in a subprocess
-
-
-_concurrency = {'asyncio': ASYNC_IO,
-                'greenio': GREEN_IO,
-                'thread': THREAD_IO,
-                'process': CPUBOUND}
-
-_concurrency_name = dict(inverse_mapping(_concurrency))
+from ..utils.concurrency import concurrency_name, ASYNC_IO
 
 
 class ShellError(RuntimeError):
@@ -47,7 +34,7 @@ class RegistryMixin:
             job = registry[name]()
             d = {'doc': job.__doc__,
                  'doc_syntax': job.doc_syntax,
-                 'concurrency': _concurrency_name.get(job.concurrency),
+                 'concurrency': concurrency_name.get(job.concurrency),
                  'type': job.type}
             all.append((name, d))
         return all
@@ -115,11 +102,11 @@ class Job(metaclass=JobMetaClass):
     retry_delay = 0
     max_concurrency = None
     doc_syntax = 'markdown'
-    queue = None
+    default_queue = None
     concurrency = None
 
-    def __init__(self, backend=None, task=None):
-        self.backend = backend
+    def __init__(self, tasks=None, task=None):
+        self.backend = tasks.backend
         self.task = task
         if task:
             self.__dict__.update(task.meta)
@@ -170,19 +157,19 @@ class Job(metaclass=JobMetaClass):
         future = self._loop.run_in_executor(None, callable, *args)
         return self.green_pool.wait(future)
 
-    def queue_task(self, jobname, meta_params=None, **kw):
+    def queue(self, jobname, meta_params=None, **kw):
         '''Queue a new task in the task queue
         '''
         assert self.backend, 'backend not available'
         meta_params = self._meta_params(meta_params)
-        return self.backend.queue_task(jobname, meta_params=meta_params, **kw)
+        return self.backend.tasks.queue(jobname, meta_params=meta_params, **kw)
 
-    def queue_task_local(self, jobname, meta_params=None, **kw):
+    def queue_local(self, jobname, meta_params=None, **kw):
         '''Queue a new task in the local task queue
         '''
         assert self.backend, 'backend not available'
         meta_params = self._meta_params(meta_params)
-        return self.backend.queue_task_local(
+        return self.backend.tasks.queue_local(
             jobname, meta_params=meta_params, **kw)
 
     def _meta_params(self, meta_params=None):
@@ -257,13 +244,6 @@ class PeriodicJob(Job):
         You can override this to decide the interval at runtime.
         """
         return self.run_every.is_due(last_run_at)
-
-
-class EventDriven(Job):
-
-    @property
-    def type(self):
-        return 'event-driven'
 
 
 def anchorDate(hour=0, minute=0, second=0):

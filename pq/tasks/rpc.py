@@ -34,7 +34,7 @@ class TasksRpc(rpc.JSONRPC):
 
         It returns the task :attr:`~Task.id`.
         '''
-        task = await self._queue_task(request, jobname, **kw)
+        task = await self._queue(request, jobname, **kw)
         return task.tojson()
 
     async def rpc_num_tasks(self, request):
@@ -54,7 +54,7 @@ class TasksRpc(rpc.JSONRPC):
 
     ########################################################################
     #    INTERNALS
-    async def _queue_task(self, request, jobname, meta_params=None, **kw):
+    async def _queue(self, request, jobname, meta_params=None, **kw):
         if not jobname:
             raise rpc.InvalidParams('"jobname" is not specified!')
         meta_params = meta_params or {}

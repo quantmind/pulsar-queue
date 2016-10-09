@@ -15,6 +15,9 @@ class ConsumerAPI(BaseComponent):
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return '%s %s' % (self, self.backend)
+
     @property
     def name(self):
         return self.__class__.__name__.lower()
@@ -51,6 +54,9 @@ class ConsumerAPI(BaseComponent):
 
     def rpc(self):
         pass
+
+    def execute(self, message):
+        return message
 
     def closing(self):
         return self._closing_waiter is not None

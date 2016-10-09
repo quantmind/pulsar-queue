@@ -7,10 +7,13 @@ from pulsar.apps.greenio import GreenHttp
 from pulsar.apps.http import HttpClient
 from pulsar.utils.importer import module_attribute
 
-from ..tasks import models
+from ..utils import concurrency
 from ..backends import brokers
 from ..mq import TaskManager
 from ..pubsub import PubSub
+
+
+LOGGER = logging.getLogger('pulsar.queue')
 
 
 class Producer:
@@ -22,7 +25,7 @@ class Producer:
 
     def __init__(self, cfg, *, logger=None, **kw):
         self.cfg = cfg
-        self.logger = logger or logging.getLogger('pulsar.queue')
+        self.logger = logger or LOGGER
         self._closing = False
         loop = cfg.params.pop('loop', None)
         store = create_store(cfg.data_store, loop=loop)
@@ -63,8 +66,17 @@ class Producer:
         await self.pubsub.start()
         return self
 
-    def tick(self):
+    def tick(self, monitor):
         pass
+
+    def worker_tick(self, worker):
+        pass
+
+    def execute(self, message):
+        consumer = message.consumer()
+        if consumer:
+            return getattr(self, consumer).execute(message)
+        return message
 
     def info(self):
         for consumer in self.consumers:
@@ -77,12 +89,12 @@ class Producer:
         """
         return self.pubsub.lock('lock-%s' % name, **kwargs)
 
-    def http_sessions(self, concurrency):
+    def http_sessions(self, model=None):
         """Return an HTTP session handler for a given concurrency model
         """
-        if concurrency == models.THREAD_IO:
+        if model == concurrency.THREAD_IO:
             return HttpClient(loop=new_event_loop())
-        elif concurrency == models.ASYNC_IO:
+        elif model == concurrency.ASYNC_IO:
             return self.http
         else:
             return GreenHttp(self.http)
@@ -104,5 +116,5 @@ class Producer:
         if not self._closing:
             self._closing = True
             for consumer in self.consumers:
-                consumer.close().set_result(True)
+                consumer.close()
             self.manager.close()

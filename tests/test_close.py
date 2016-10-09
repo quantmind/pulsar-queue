@@ -11,7 +11,8 @@ class TestMsgPackQueue(app.TaskQueueBase, unittest.TestCase):
     concurrent_tasks = 20
 
     async def test_max_requests(self):
-        tasks = [self.tq.queue_task('asynchronous', lag=random())
+        api = self.api
+        tasks = [api.tasks.queue('asynchronous', lag=random())
                  for _ in range(18)]
         tasks = await asyncio.gather(*tasks)
         self.assertEqual(len(tasks), 18)
@@ -23,7 +24,7 @@ class TestMsgPackQueue(app.TaskQueueBase, unittest.TestCase):
         self.assertEqual(len(workers), 2)
 
         # FAILURES
-        tasks = [self.tq.queue_task('asynchronous', sleep=1)
+        tasks = [api.tasks.queue('asynchronous', sleep=1)
                  for _ in range(6)]
 
         tasks = await asyncio.gather(*tasks)

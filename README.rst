@@ -52,7 +52,7 @@ Move to the ``tests/example`` directory and run the server::
 
     python manage.py
 
-    
+
 
 .. contents:: **CONTENTS**
 
@@ -72,14 +72,14 @@ A simple python file which runs your application:
 
 .. code:: python
 
-    from pq.api import TaskApp
+    from pq.api import PusarQueue
 
 
     task_paths = ['sampletasks.*', 'pq.jobs']
 
 
     def app():
-        return TaskApp(config=__file__)
+        return PusarQueue(config=__file__)
 
     if __name__ == '__main__':
         app().start()
@@ -122,7 +122,7 @@ It can be a directory containing several submodules.
 
 Run the server with two task consumers (pulsar actors).
 
-**NOTE**: Make sure you have Redis server up and running before you start the queue.
+**NOTE**: Make sure you have Redis server up and running before you start the server.
 
 .. code::
 
@@ -172,9 +172,9 @@ The producer API is obtained from the Task application ``api`` method:
 
 .. code:: python
 
-    from pq.api import TaskApp
+    from pq.api import PusarQueue
 
-    api = TaskApp(...).api()
+    api = PusarQueue(...).api()
 
 
 API methods
@@ -219,7 +219,7 @@ It is possible to obtain a task future resolved when the task has been queued, r
 
 .. code:: python
 
-    task = await tasks.tasks.queue(..., callback=False)
+    task = await tasks.queue(..., callback=False)
     task.status_string  # QUEUED
 
 *tasks*.queue_local(*jobname*, *\*args*, *\*\*kwargs*)
@@ -229,7 +229,7 @@ Queue a job in the local task queue. The local task queue is processed by the sa
 
 .. code:: python
 
-    task = await tasks.tasks.queue(..., queue=tasks.node_name)
+    task = await tasks.queue(..., queue=tasks.node_name)
     task.queue  # tasks.node_name
 
 
@@ -241,7 +241,7 @@ This method is useful for debugging and testing. It is equivalent to execute:
 
 .. code:: python
 
-    task = await tasks.tasks.queue(..., queue=False)
+    task = await tasks.queue(..., queue=False)
     task.queue          # None
     task.status_string  # SUCCESS
 
@@ -300,6 +300,13 @@ it has the following useful attributes and methods:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tasks backend that is processing this Task_ run
+
+*job*.default_queue
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default queue name where tasks for this job are queued. By default it is ``None``
+in which case, if a ``queue`` is not given when queueing a task, the first queue
+from the `queues <#tasks_queues>`_ list taken.
 
 *job*.http
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -468,17 +475,11 @@ An example can be a Job to scrape web pages and create new tasks to process the 
         task = self.queue('process.html', html=html, callback=False)
         return task.id
 
-GREEN_IO
-----------
-
-The green IO mode is associated with tasks that runs on child greenlets.
-This can be useful when using applications which use the greenlet_
-library for implicit asynchronous behaviour.
 
 THREAD_IO
 -------------
 
-THis consurrency mode is best suited for tasks performing
+This concurrency mode is best suited for tasks performing
 *blocking* IO operations.
 A ``THREAD_IO`` job runs its tasks in the event loop executor.
 You can use this model for most blocking operation unless

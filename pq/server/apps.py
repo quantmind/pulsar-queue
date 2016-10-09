@@ -9,7 +9,7 @@ from .consumer import Consumer
 from .. import __version__
 
 
-class TaskApp(Application):
+class QueueApp(Application):
     """A pulsar :class:`.Application` for consuming :class:`.Task`.
 
     This application can also schedule periodic tasks when the
@@ -27,13 +27,12 @@ class TaskApp(Application):
         return Producer(self.cfg, logger=self.logger)
 
     async def monitor_start(self, monitor, exc=None):
-        if not exc:
-            consume = self.cfg.workers == 0
-            self._backend = await self._start(monitor, consume)
+        if not exc and self.cfg.workers:
+            self._backend = await self._start(monitor, False)
 
     def monitor_task(self, monitor):
         if monitor.is_running():
-            self._backend.tick()
+            self._backend.tick(monitor)
 
     def monitor_stopping(self, worker, exc=None):
         if self._backend:
@@ -42,7 +41,7 @@ class TaskApp(Application):
             return backend.close()
 
     async def worker_start(self, worker, exc=None):
-        if not exc and not self._backend:
+        if not exc:
             self._backend = await self._start(worker)
 
     def worker_stopping(self, worker, exc=None):
@@ -69,8 +68,11 @@ class PulsarQueue(MultiApp):
     """
     cfg = Config('Pulsar Queue')
 
+    def api(self):
+        return self.apps()[0].api()
+
     def build(self):
-        app = self.new_app(TaskApp,
+        app = self.new_app(QueueApp,
                            callable=self.cfg.params.get('queue_callable'))
         yield app
 

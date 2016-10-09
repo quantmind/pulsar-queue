@@ -64,7 +64,7 @@ class TaskQueueBase:
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
-        cls.api = await cls.tq_app.api().start()
+        cls.api = await pq.api().start()
         await cls.api.tasks.flush_queues(*cls.queues())
 
     @classmethod
@@ -104,7 +104,7 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(self.api.cfg.default_task_queue, '%s1' % self.name())
 
     def test_job_list(self):
-        jobs = self.tq.job_list()
+        jobs = self.api.tasks.job_list()
         self.assertTrue(jobs)
         self.assertTrue(isinstance(jobs, list))
         d = dict(jobs)
@@ -112,7 +112,8 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(pycode['type'], 'regular')
 
     async def test_simple_task(self):
-        task = await self.tq.queue_task('addition', a=40, b=50)
+        tasks = self.api.tasks
+        task = await tasks.queue('addition', a=40, b=50)
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, 90)
@@ -120,20 +121,23 @@ class TaskQueueApp(TaskQueueBase):
         self.assertTrue(task.done())
 
     async def test_simple_revoked(self):
-        task = await self.tq.queue_task('addition', a=40, b=50, expiry=0)
+        tasks = self.api.tasks
+        task = await tasks.queue('addition', a=40, b=50, expiry=0)
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'REVOKED')
         self.assertFalse(task.result)
 
     async def test_info(self):
-        task = await self.tq.queue_task('workerinfo')
+        tasks = self.api.tasks
+        task = await tasks.queue('workerinfo')
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertIsInstance(task.result, dict)
-        self.assertEqual(len(task.result['queues']), 3)
+        self.assertEqual(len(task.result['tasks']['queues']), 3)
 
     async def test_async_job(self):
-        result = self.tq.queue_task('asynchronous', lag=2)
+        tasks = self.api.tasks
+        result = await tasks.queue('asynchronous', lag=2)
         self.assertIsInstance(result, asyncio.Future)
         task = await result
         self.assertIsInstance(task, api.Task)
@@ -141,15 +145,17 @@ class TaskQueueApp(TaskQueueBase):
         self.assertTrue(task.result >= 2)
 
     async def test_failure(self):
-        task = await self.tq.queue_task('testperiodicerror', msg='testing')
+        tasks = self.api.tasks
+        task = await tasks.queue('testperiodicerror', msg='testing')
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'FAILURE')
         self.assertEqual(task.result, 'testing')
         self.assertTrue(task.stacktrace)
 
     async def test_execute_addition(self):
-        future = self.tq.execute_task('addition', a=3, b=-4)
-        self.assertIsInstance(future, api.TaskFuture)
+        tasks = self.api.tasks
+        future = await tasks.queue('addition', a=3, b=-4)
+        self.assertIsInstance(future, api.MessageFuture)
         self.assertTrue(future.task_id)
         task = await future
         self.assertIsInstance(task, api.Task)
@@ -159,21 +165,24 @@ class TaskQueueApp(TaskQueueBase):
         self.assertFalse(task.queue)
 
     async def test_green_executor(self):
-        task = await self.tq.queue_task('greenexecutor')
+        tasks = self.api.tasks
+        task = await tasks.queue('greenexecutor')
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertIsInstance(task.result, dict)
-        self.assertEqual(len(task.result['queues']), 3)
+        self.assertEqual(len(task.result['tasks']['queues']), 3)
 
     async def test_local_queue(self):
-        task = await self.tq.queue_task_local('testlocalqueue')
+        tasks = self.api.tasks
+        task = await tasks.queue_local('testlocalqueue')
         self.assertIsInstance(task, api.Task)
         self.assertIsInstance(task.result, list)
         self.assertEqual(len(task.result), 3)
-        self.assertEqual(task.result[0], self.tq.node_name)
+        self.assertEqual(task.result[0], self.api.node_name)
 
     async def test_no_callback(self):
-        task = await self.tq.queue_task('asynchronous', callback=False)
+        tasks = self.api.tasks
+        task = await tasks.queue('asynchronous', callback=False)
         self.assertTrue(task.id)
         self.assertEqual(task.status_string, 'QUEUED')
         self.assertTrue('ID=%s' % task.id in repr(task.done_callback))
@@ -181,25 +190,29 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(task.status_string, 'SUCCESS')
 
     async def test_cpubound_task(self):
-        task = await self.tq.queue_task('cpubound')
+        tasks = self.api.tasks
+        task = await tasks.queue('cpubound')
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, ['OK', 2])
 
     async def __test_error_cpubound_task(self):
-        task = await self.tq.queue_task('cpubound', error=True)
+        tasks = self.api.tasks
+        task = await tasks.queue('cpubound', error=True)
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'FAILURE')
         self.assertTrue(task.stacktrace)
 
     async def test_is_in_greenlet(self):
-        task = await self.tq.queue_task('cpuboundwithasync')
+        tasks = self.api.tasks
+        task = await tasks.queue('cpuboundwithasync')
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, True)
 
     async def test_supports_asyncio(self):
-        task = await self.tq.queue_task('cpuboundwithasync', asyncio=True)
+        tasks = self.api.tasks
+        task = await tasks.queue('cpuboundwithasync', asyncio=True)
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, False)
@@ -208,28 +221,31 @@ class TaskQueueApp(TaskQueueBase):
         # If this test fails, it is because the test runner will timeout on
         # this future, this is because the pipe fills up and blocks the
         # cpu bound task
-        await self.tq.queue_task('cpuboundbiglog')
+        tasks = self.api.tasks
+        await tasks.queue('cpuboundbiglog')
 
     async def test_execute_python_code(self):
-        task = await self.tq.execute_task('execute.python',
-                                          code='print("Hello World!")')
+        tasks = self.api.tasks
+        task = await tasks.execute('execute.python',
+                                   code='print("Hello World!")')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, 'Hello World!\n')
 
     async def test_execute_python_script(self):
         script = os.path.join(PATH, 'example', 'executable.py')
-        task = await self.tq.execute_task('execute.python.script',
-                                          script=script)
+        tasks = self.api.tasks
+        task = await tasks.execute('execute.python.script', script=script)
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, sys.executable)
 
     async def test_queue_size(self):
         code = "import time;time.sleep(1)"
+        tasks = self.api.tasks
         task = await asyncio.gather(
-            self.tq.queue_task('execute.python', code=code, callback=False),
-            self.tq.queue_task('execute.python', code=code, callback=False),
-            self.tq.queue_task('execute.python', code=code, callback=False),
-            self.tq.queue_task('execute.python', code=code, callback=False)
+            tasks.queue('execute.python', code=code, callback=False),
+            tasks.queue('execute.python', code=code, callback=False),
+            tasks.queue('execute.python', code=code, callback=False),
+            tasks.queue('execute.python', code=code, callback=False)
         )
         self.assertEqual(task[0].status_string, 'QUEUED')
         size = await self.tq.broker.size(task[0].queue)
@@ -245,30 +261,34 @@ class TaskQueueApp(TaskQueueBase):
 
     async def test_lock(self):
         # make sure the lock is release (in case of errors)
-        tasks = await asyncio.gather(
-            self.tq.queue_task('notoverlap'),
-            self.tq.queue_task('notoverlap'),
-            self.tq.queue_task('notoverlap')
+        tasks = self.api.tasks
+        results = await asyncio.gather(
+            tasks.queue('notoverlap'),
+            tasks.queue('notoverlap'),
+            tasks.queue('notoverlap')
         )
-        tasks = sorted(tasks, key=lambda task: task.result['start'])
-        self.assertTrue(tasks[0].result['end'] < tasks[1].result['start'])
-        self.assertTrue(tasks[1].result['end'] < tasks[2].result['start'])
+        results = sorted(results, key=lambda task: task.result['start'])
+        self.assertTrue(results[0].result['end'] < results[1].result['start'])
+        self.assertTrue(results[1].result['end'] < results[2].result['start'])
 
     async def test_queue_from_task(self):
-        task = await self.tq.queue_task('queue.from.task')
+        tasks = self.api.tasks
+        task = await tasks.queue('queue.from.task')
         self.assertEqual(task.status_string, 'SUCCESS')
         other_task = task.result
         self.assertEqual(other_task['from_task'], task.id)
 
     async def test_scrape(self):
-        task = await self.tq.queue_task('scrape', url='https://www.bbc.co.uk/')
+        tasks = self.api.tasks
+        task = await tasks.queue('scrape', url='https://www.bbc.co.uk/')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertTrue(task.result)
 
     async def test_delay(self):
-        task = await self.tq.queue_task('scrape',
-                                        delay=5,
-                                        url='https://www.bbc.co.uk/')
+        tasks = self.api.tasks
+        task = await tasks.queue('scrape',
+                                 delay=5,
+                                 url='https://www.bbc.co.uk/')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.delay, 5)
         self.assertTrue(task.time_started - task.time_queued > 5)
@@ -276,7 +296,8 @@ class TaskQueueApp(TaskQueueBase):
 
     async def test_thread_io(self):
         output = os.path.join(PATH, 'test.txt')
-        task = await self.tq.queue_task(
+        tasks = self.api.tasks
+        task = await tasks.queue(
             'extract.docx',
             input=os.path.join(PATH, 'example', 'test.docx'),
             output=output
@@ -288,7 +309,8 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(task.result['text'], 306)
 
     async def test_bad_task(self):
-        task = await self.tq.queue_task('asynchronous', sleep=2)
+        tasks = self.api.tasks
+        task = await tasks.queue('asynchronous', sleep=2)
         self.assertEqual(task.status_string, 'FAILURE')
 
     async def test_retry(self):
@@ -309,22 +331,22 @@ class TaskQueueApp(TaskQueueBase):
                             self.task_id = task.id
 
         check_retry = CheckRetry()
-        self.tq.on_events(check_retry)
+        self.api.on_events(check_retry)
         try:
-            task = await self.tq.queue_task('addition', a=1, b='foo',
-                                            delay=1,
-                                            callback=False,
-                                            meta_params=meta)
+            task = await self.api.tasks.queue('addition', a=1, b='foo',
+                                              delay=1,
+                                              callback=False,
+                                              meta_params=meta)
             self.assertEqual(task.status_string, 'QUEUED')
             check_retry.task_id = task.id
             task = await done
             self.assertEqual(check_retry.count, 3)
             self.assertEqual(task.status_string, 'FAILURE')
         finally:
-            self.tq.remove_event_callback(check_retry)
+            self.api.remove_event_callback(check_retry)
 
     async def test_max_concurrency(self):
-        tasks = [self.tq.queue_task('maxconcurrency', lag=2)
+        tasks = [self.api.tasks.queue('maxconcurrency', lag=2)
                  for _ in range(5)]
         tasks = await asyncio.gather(*tasks)
         self.assertEqual(len(tasks), 5)
@@ -337,30 +359,11 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(revoked, 2)
         self.assertEqual(success, 3)
 
-    def _test_sync(self):
-        loop = asyncio.new_event_loop()
-        tasks = api.TaskApp(loop=loop, **self.params()).api()
-        self.assertEqual(tasks._loop, loop)
-        task = tasks.queue_task('scrape', url='https://github.com')
-        self.assertIsInstance(task, asyncio.Future)
-        self.assertTrue(task.task_id)
-        task = task.wait()
-        self.assertEqual(task.status_string, 'SUCCESS')
-        self.assertFalse(tasks._loop.is_running())
-        #
-        task = tasks.queue_task('scrape', url='https://github.com',
-                                callback=False)
-        task = task.wait()
-        self.assertEqual(task.status_string, 'QUEUED')
-        self.assertTrue(task.done_callback)
-        task = task.done_callback.wait()
-        self.assertEqual(task.status_string, 'SUCCESS')
-
     # RPC
     async def test_rpc_job_list(self):
-        data = await self.proxy.job_list()
+        data = await self.proxy.tasks.job_list()
         self.assertIsInstance(data, list)
 
     async def test_rpc_queue_task(self):
-        task = await self.proxy.queue_task('cpubound')
+        task = await self.proxy.tasks.queue('cpubound')
         self.assertEqual(task['status'], 1)

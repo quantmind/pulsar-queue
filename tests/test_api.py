@@ -13,7 +13,7 @@ class TestTasks(unittest.TestCase):
 
     def app(self, task_paths=None, **kwargs):
         task_paths = task_paths or ['tests.example.sampletasks.*']
-        app = api.TaskApp(task_paths=task_paths, **kwargs)
+        app = api.QueueApp(task_paths=task_paths, **kwargs)
         app.backend.tasks.queue = mock.MagicMock()
         return app
 
@@ -40,7 +40,7 @@ class TestTasks(unittest.TestCase):
         self.assertEqual(format_time(None), '?')
 
     def test_close(self):
-        t = api.TaskApp().api()
+        t = api.QueueApp().api()
         self.assertEqual(t.closing(), False)
         t.close()
         self.assertEqual(t.closing(), True)
@@ -55,10 +55,10 @@ class TestTasks(unittest.TestCase):
         )
 
     def test_task_not_available(self):
-        t = api.TaskApp().api()
+        t = api.QueueApp().api()
         self.assertRaises(api.TaskNotAvailable,
                           t.tasks.queue, 'jsdbcjsdhbc')
 
     def test_queues(self):
-        t = api.TaskApp().api()
+        t = api.QueueApp().api()
         self.assertTrue(t.tasks.queues())

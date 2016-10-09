@@ -15,9 +15,6 @@ from ..pubsub import backoff, RECONNECT_LAG
 from ..consumer import ConsumerAPI
 
 
-consumer_event = 'consumer_status'
-
-
 class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
 
     def __init__(self, backend):
@@ -80,9 +77,12 @@ class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
     def execute(self, jobname, **kwargs):
         '''Execute a task immediately
         '''
-        kwargs['queue'] = False
-        kwargs['callback'] = True
-        return self.queue(jobname, **kwargs)
+        if isinstance(jobname, Task):
+            return self._execute_task(jobname)
+        else:
+            kwargs['queue'] = False
+            kwargs['callback'] = True
+            return self.queue(jobname, **kwargs)
 
     def flush_queues(self, *queues):
         return self.broker.flush_queues(*queues)
@@ -145,21 +145,13 @@ class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
                         self._processed += 1
                         self._concurrent_tasks[task.id] = TaskExecutor(task)
                         ensure_future(self._execute_task(task, worker))
-                    await self._broadcast(worker)
             else:
                 self.logger.debug('%s concurrent tasks. Cannot poll.',
                                   self.max_concurrent_tasks)
                 self._next_time = 1
                 next_time = self._next_time
-                await self._broadcast(worker)
 
         self._poll_tasks(worker, next_time)
-
-    def _broadcast(self, worker):
-        info = self.info()
-        info['worker'] = worker.aid
-        info['time'] = time.time()
-        return self.pubsub.publish(consumer_event, info)
 
     def _create_task(self, jobname, meta_params=None, expiry=None, queue=True,
                      delay=None, **kwargs):
@@ -194,7 +186,7 @@ class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
             meta_params = meta_params or {}
             if queue is not False:
                 if queue is True:
-                    queue = job.queue or self.cfg.default_task_queue
+                    queue = job.default_queue or self.cfg.default_task_queue
             else:
                 queue = None
             return Task(task_id,

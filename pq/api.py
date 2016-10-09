@@ -1,21 +1,25 @@
 from .utils.serializers import Message
-from .mq import TaskFuture, MQ, TaskManager
+from .utils.concurrency import ASYNC_IO, THREAD_IO, CPUBOUND
+from .mq import MessageFuture, MQ, TaskManager
 from .consumer import ConsumerAPI
-from .server.apps import TaskApp, PulsarQueue
+
+from .server.apps import QueueApp, PulsarQueue
 from .server.config import DEFAULT_TASK_BACKEND
 
 from .tasks.consumer import Tasks
 from .tasks.task import TaskError, TaskNotAvailable, TaskTimeout, Task
 from .tasks.states import StatusType, status_string
-from .tasks.models import (job, Job, PeriodicJob, EventDriven, anchorDate,
-                           ASYNC_IO, GREEN_IO, THREAD_IO, CPUBOUND)
+from .tasks.models import job, Job, PeriodicJob, anchorDate
 
 
 __all__ = ['Message',
-           'TaskApp',
+           'QueueApp',
            'ConsumerAPI',
            'PulsarQueue',
            'TaskManager',
+           #
+           'MessageFuture',
+           'MQ',
            #
            'Tasks',
            'TaskError',
@@ -24,16 +28,12 @@ __all__ = ['Message',
            'Task',
            'StatusType',
            'status_string',
-           'TaskFuture',
-           #
-           'MQ',
            'job',
            'Job',
            'PeriodicJob',
-           'EventDriven',
            'anchorDate',
+           #
            'ASYNC_IO',
-           'GREEN_IO',
            'THREAD_IO',
            'CPUBOUND',
            'DEFAULT_TASK_BACKEND']

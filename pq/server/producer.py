@@ -9,7 +9,7 @@ from pulsar.utils.importer import module_attribute
 
 from ..utils import concurrency
 from ..backends import brokers
-from ..mq import TaskManager
+from ..mq import Manager
 from ..pubsub import PubSub
 
 
@@ -33,7 +33,7 @@ class Producer:
             broker = store
         else:
             broker = create_store(cfg.message_broker, loop=loop)
-        self.manager = (self.cfg.callable or TaskManager)(self)
+        self.manager = (self.cfg.callable or Manager)(self)
         self.pubsub = PubSub(self, store)
         self.broker = brokers.get(broker.name)(self, broker)
         self.http = self.manager.http()
@@ -62,7 +62,7 @@ class Producer:
     def is_consumer(self):
         return False
 
-    async def start(self, worker=None, consume=False):
+    async def start(self):
         await self.pubsub.start()
         return self
 
@@ -71,12 +71,6 @@ class Producer:
 
     def worker_tick(self, worker):
         pass
-
-    def execute(self, message):
-        consumer = message.consumer()
-        if consumer:
-            return getattr(self, consumer).execute(message)
-        return message
 
     def info(self):
         for consumer in self.consumers:
@@ -104,6 +98,15 @@ class Producer:
 
     def remove_event_callback(self, callback):
         return self.pubsub.remove_event_callback(callback)
+
+    def queue(self, message, callback=True):
+        return self.broker.queue(message, callback=callback)
+
+    def execute(self, message):
+        consumer = message.consumer()
+        if consumer:
+            return getattr(self, consumer).execute(message)
+        return message
 
     def closing(self):
         return self._closing

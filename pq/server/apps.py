@@ -2,7 +2,7 @@ from pulsar import Application, MultiApp, Config
 from pulsar.apps.wsgi import (WSGIServer, Router, LazyWsgi,
                               WsgiHandler, GZipMiddleware)
 
-from .config import DEFAULT_TASK_BACKEND
+from .config import DEFAULT_MQ_BACKEND
 from .rpc import TaskQueueRpc
 from .producer import Producer
 from .consumer import Consumer
@@ -19,7 +19,7 @@ class QueueApp(Application):
     name = 'tasks'
     cfg = Config(apps=('tasks',),
                  version=__version__,
-                 data_store=DEFAULT_TASK_BACKEND,
+                 data_store=DEFAULT_MQ_BACKEND,
                  timeout=600)
     _backend = None
 

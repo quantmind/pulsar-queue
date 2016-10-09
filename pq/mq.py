@@ -58,7 +58,7 @@ class BaseComponent:
         return name
 
 
-class TaskManager(BaseComponent):
+class Manager(BaseComponent):
 
     @property
     def _loop(self):
@@ -71,7 +71,7 @@ class TaskManager(BaseComponent):
         return HttpClient(loop=self._loop)
 
     def queues(self):
-        """List of queue names for Task consumers
+        """List of queue names for Message consumers
         """
         queues = [self.backend.node_name]
         queues.extend(self.cfg.task_queues)
@@ -131,8 +131,8 @@ class MQ(Component, ABC):
         '''Queue the ``task``.
 
         If callback is True (default) returns a Future
-        called back once the task is done, otherwise return a future
-        called back once the task is queued
+        called back once the message is delivered,
+        otherwise return a future called back once the messaged is queued
         '''
         future_done = MessageFuture(message.id, self.backend, loop=self._loop)
         if message.queue:
@@ -140,6 +140,7 @@ class MQ(Component, ABC):
         else:   # the task is not queued instead it is executed immediately
             coro = self.backend.execute(message)
             return chain_future(coro, next=future_done)
+        # queue the message
         coro = self._queue_message(message, future_done)
         if callback:
             ensure_future(coro, loop=self._loop)

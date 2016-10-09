@@ -180,6 +180,18 @@ The producer API is obtained from the Task application ``api`` method:
 API methods
 ---------------
 
+*api*.start()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Start listening to events. This method return a coroutine which resolve in the api:
+
+.. code:: python
+
+    api = await api.start()
+
+The start method is used when the api is used by application to queue messages/tasks
+and listen for events published by distributed consumers.
+
 *api*.on_events(*callback*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -198,6 +210,39 @@ If the event is a task event (see events_) the message is a Task_ object.
 
 Remove a previously added event callback. This method is safe.
 
+*api*.queue(*message*, *callback=True*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Queue a message in the message queue. THis method is a shortcut for:
+
+.. code:: python
+
+    api.broker.queue(message, callback)
+
+This method returns a ``MessageFuture``, a subclass of asyncio Future_ which
+resolve in a ``message`` object.
+If callback is True (default) the Future is resolved once the message
+is delivered (out of the queue), otherwise is is resolved once the message
+is queued (entered the queue).
+
+*api*.execute(*message*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Execute a message without queueing. This is only supported by messages with
+a message consumer which execute them (the ``tasks`` consumer for example).
+If *message* is a Task_, this method is equivalent to:
+
+.. code:: python
+
+    api.tasks.execute(task)
+
+This method returns a ``MessageFuture``, a subclass of asyncio Future_ which
+resolve in a ``message`` object.
+
+*api*.consumers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+List of consumers registered with the api.
 
 Tasks API
 -----------------
@@ -522,14 +567,14 @@ Extend
 =================
 
 It is possible to enhance the task queue application by passing
-a custom ``TaskManager`` during initialisation.
+a custom ``Manager`` during initialisation.
 For example:
 
 .. code:: python
 
     from pq import api
 
-    class TaskManager(api.TaskManager):
+    class Manager(api.Manager):
 
         async def store_message(self, message):
             """This method is called when a message/task is queued,
@@ -548,10 +593,10 @@ For example:
             return queues
 
 
-    tq = TaskApp(TaskManager, ...)
+    tq = PulsarQueue(Manager, ...)
 
 
-The ``TaskManager`` class is initialised when the backend handler is initialised
+The ``Manager`` class is initialised when the backend handler is initialised
 (on each consumer and in the scheduler).
 
 Changelog
@@ -578,6 +623,7 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _greenlet: https://greenlet.readthedocs.io/en/latest/
 .. _msgpack: https://pypi.python.org/pypi/msgpack-python
 .. _`asyncio subprocess`: https://docs.python.org/3/library/asyncio-subprocess.html
+.. _Future: https://docs.python.org/3/library/asyncio-task.html#future
 .. _Jobs: #the-job-class
 .. _Task: #the-task
 .. _Events: #events

@@ -100,12 +100,14 @@ async def main(syspath, params, stask):
         params.update({'python_path': False,
                        'parse_console': False})
         producer = await QueueApp(**params).api().start()
-        logger = producer.logger
         task = producer.pubsub.decode(stask, 'json')
-        JobClass = producer.tasks.registry.get(task.name)
+        #
+        tasks = producer.tasks
+        logger = tasks.logger
+        JobClass = tasks.registry.get(task.name)
         if not JobClass:
             raise RuntimeError('%s not in registry' % task.name)
-        job = JobClass(producer, task)
+        job = JobClass(tasks, task)
         result = await job.green_pool.submit(job, **task.kwargs)
         sys.stdout.write({'cpubound_result': result})
     except Exception:

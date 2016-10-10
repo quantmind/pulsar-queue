@@ -47,7 +47,7 @@ meta = dict(
     install_requires=requirements('requirements.txt')[0],
     # tests_require=config.requirements('requirements-dev.txt')[0],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',

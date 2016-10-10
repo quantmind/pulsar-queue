@@ -26,6 +26,9 @@ class Consumer(Producer):
         try:
             info = dict(self.info())
             info['worker'] = worker.aid
+            info['node'] = self.node_name
+            info['pubsub'] = self.pubsub.store.dns
+            info['message-broker'] = self.broker.store.dns
             info['time'] = time.time()
             if self.cfg.debug:
                 self.logger.debug('publishing worker %s info', worker)

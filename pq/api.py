@@ -1,35 +1,41 @@
 from .utils.serializers import Message
-from .server.apps import TaskApp, PulsarQueue
-from .server.config import DEFAULT_TASK_BACKEND
-from .mq import TaskFuture, MQ, TaskManager
-from .server import TaskScheduler, TaskConsumer
+from .utils.concurrency import ASYNC_IO, THREAD_IO, CPUBOUND
+from .mq import MessageFuture, MQ, Manager
+from .consumer import ConsumerAPI
+
+from .server.apps import QueueApp, PulsarQueue
+from .server.config import DEFAULT_MQ_BACKEND
+
+from .tasks.consumer import Tasks
 from .tasks.task import TaskError, TaskNotAvailable, TaskTimeout, Task
 from .tasks.states import StatusType, status_string
-from .tasks.models import (job, Job, PeriodicJob, EventDriven, anchorDate,
-                           ASYNC_IO, GREEN_IO, THREAD_IO, CPUBOUND)
+from .tasks.models import job, Job, PeriodicJob, anchorDate
 
 
-__all__ = ['Message',
-           'TaskApp',
-           'PulsarQueue',
-           'TaskManager',
-           'TaskError',
-           'TaskNotAvailable',
-           'TaskTimeout',
-           'Task',
-           'StatusType',
-           'status_string',
-           'TaskFuture',
-           'TaskScheduler',
-           'TaskConsumer',
-           'MQ',
-           'job',
-           'Job',
-           'PeriodicJob',
-           'EventDriven',
-           'anchorDate',
-           'ASYNC_IO',
-           'GREEN_IO',
-           'THREAD_IO',
-           'CPUBOUND',
-           'DEFAULT_TASK_BACKEND']
+__all__ = [
+    'QueueApp',
+    'PulsarQueue',
+    #
+    'Message',
+    'MessageFuture',
+    'ConsumerAPI',
+    'Manager',
+    'MQ',
+    #
+    'Tasks',
+    'TaskError',
+    'TaskNotAvailable',
+    'TaskTimeout',
+    'Task',
+    'StatusType',
+    'status_string',
+    'job',
+    'Job',
+    'PeriodicJob',
+    'anchorDate',
+    #
+    'ASYNC_IO',
+    'THREAD_IO',
+    'CPUBOUND',
+    'DEFAULT_MQ_BACKEND'
+]

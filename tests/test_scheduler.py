@@ -11,31 +11,34 @@ class TestScheduler(TaskQueueBase, unittest.TestCase):
     schedule_periodic = True
 
     def test_scheduler(self):
-        scheduler = self.tq_app.scheduler()
-        self.assertTrue(str(scheduler).startswith('task scheduler <'))
+        scheduler = self.tq_app.backend
         self.assertEqual(scheduler.cfg.default_task_queue, '%s1' % self.name())
-        self.assertTrue(scheduler.next_run)
+        self.assertTrue(scheduler.tasks.next_run)
 
     def test_next_scheduled(self):
-        scheduler = self.tq_app.scheduler()
-        entry, t = scheduler.next_scheduled()
+        scheduler = self.tq_app.backend
+        entry, t = scheduler.tasks.next_scheduled()
         self.assertEqual(entry, 'testperiodic')
 
     def test_next_scheduled_entries(self):
-        scheduler = self.tq_app.scheduler()
-        entry, t = scheduler.next_scheduled(['anchoredeveryhour'])
+        scheduler = self.tq_app.backend
+        entry, t = scheduler.tasks.next_scheduled(['anchoredeveryhour'])
         self.assertEqual(entry, 'anchoredeveryhour')
         self.assertTrue(t > 0)
 
-    async def test_test_periodic(self):
+    async def test_periodic(self):
+        scheduler = self.tq_app.backend
         future = asyncio.Future()
-        self.cbk = self.tq.pubsub.on_events(
-            partial(self._test_periodic, future))
-        result = await future
-        self.assertTrue(result < time.time())
+        cbk = scheduler.on_events(partial(self._test_periodic, future))
+        try:
+            result = await future
+            self.assertTrue(result < time.time())
+        finally:
+            cbs = scheduler.remove_event_callback(cbk)
+            self.assertEqual(len(cbs), 0)
 
     async def test_rpc_next_scheduled_tasks(self):
-        next = await self.proxy.next_scheduled_tasks()
+        next = await self.proxy.tasks.next_scheduled_tasks()
         self.assertTrue(isinstance(next, list))
         self.assertEqual(len(next), 2)
         self.assertEqual(next[0], 'testperiodic')
@@ -47,8 +50,6 @@ class TestScheduler(TaskQueueBase, unittest.TestCase):
             self.assertEqual(task.name, 'testperiodic')
             if event != 'task_done':
                 return
-            cbs = self.tq.pubsub.remove_event_callback(self.cbk)
-            self.assertEqual(len(cbs), 0)
         except Exception as exc:
             future.set_exception(exc)
         else:

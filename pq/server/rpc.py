@@ -1,5 +1,4 @@
 import pulsar
-from pulsar import get_application
 from pulsar.apps import rpc
 
 
@@ -14,77 +13,16 @@ class TaskQueueRpc(rpc.JSONRPC):
         application which exposes the remote procedure calls.
 
     '''
-    _task_api_ = None
-
-    def __init__(self, taskqueue, **kwargs):
-        if not isinstance(taskqueue, str):
-            taskqueue = taskqueue.name
-        self.taskqueue = taskqueue
+    def __init__(self, api, **kwargs):
+        self._api_ = (api,)
         super().__init__(**kwargs)
 
-    ########################################################################
-    #    REMOTES
-    async def rpc_job_list(self, request, jobnames=None):
-        '''Return the list of Jobs registered with task queue with meta
-        information.
-
-        If a list of ``jobnames`` is given, it returns only jobs
-        included in the list.
-        '''
-        task_backend = await self._task_backend()
-        return task_backend.job_list(jobnames=jobnames)
-
-    def rpc_next_scheduled_tasks(self, request, jobnames=None):
-        return self._rq(request, next_scheduled, jobnames=jobnames)
-
-    async def rpc_queue_task(self, request, jobname=None, **kw):
-        '''Queue a new ``jobname`` in the task queue.
-
-        The task can be of any type as long as it is registered in the
-        task queue registry. To check the available tasks call the
-        :meth:`rpc_job_list` function.
-
-        It returns the task :attr:`~Task.id`.
-        '''
-        task = await self._queue_task(request, jobname, **kw)
-        return task.tojson()
-
-    async def rpc_num_tasks(self, request):
-        '''Return the approximate number of tasks in the task queue.'''
-        task_backend = await self._task_backend()
-        return task_backend.num_tasks()
-
-    def task_request_parameters(self, request):
-        '''**Internal function** which returns a dictionary of parameters
-        to be passed to the :class:`.Task` class constructor.
-
-        This function can be overridden to add information about
-        the type of request, who made the request and so forth.
-        It must return a dictionary.
-        By default it returns an empty dictionary.'''
-        return {}
-
-    ########################################################################
-    #    INTERNALS
-    async def _task_backend(self):
-        if not self._task_api_:
-            app = await get_application(self.taskqueue)
-            self._task_api_ = await app.api().start()
-        return self._task_api_
-
-    async def _queue_task(self, request, jobname, meta_params=None, **kw):
-        if not jobname:
-            raise rpc.InvalidParams('"jobname" is not specified!')
-        meta_params = meta_params or {}
-        meta_params.update(self.task_request_parameters(request))
-        task_backend = await self._task_backend()
-        result = await task_backend.queue_task(
-            jobname, meta_params=meta_params, **kw)
+    async def rq(self, request, func, *args, **kw):
+        api = await self.api()
+        result = await pulsar.send(api.cfg.name, 'run', func, *args, **kw)
         return result
 
-    def _rq(self, request, func, *args, **kw):
-        return pulsar.send(self.taskqueue, 'run', func, *args, **kw)
-
-
-def next_scheduled(actor, jobnames=None):
-    return actor.app.next_scheduled(jobnames=jobnames)
+    async def api(self):
+        if isinstance(self._api_, tuple):
+            self._api_ = await self._api_[0].start()
+        return self._api_

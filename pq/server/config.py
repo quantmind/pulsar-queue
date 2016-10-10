@@ -3,13 +3,25 @@ import pulsar
 from ..utils.serializers import serializers
 
 
-DEFAULT_TASK_BACKEND = 'redis://127.0.0.1:6379/7'
+DEFAULT_MQ_BACKEND = 'redis://127.0.0.1:6379/7'
 
 
 class TaskSetting(pulsar.Setting):
     virtual = True
     app = 'tasks'
     section = "Task Consumer"
+
+
+class ConsumersPaths(TaskSetting):
+    name = "consumers"
+    validator = pulsar.validate_list
+    default = ['pq.api:Tasks']
+    desc = """\
+        List of python dotted paths where Consumer are implemented.
+
+        This parameter can only be specified during initialization or in a
+        :ref:`config file <setting-config>`.
+        """
 
 
 class MessageBroker(TaskSetting):

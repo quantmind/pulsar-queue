@@ -94,18 +94,20 @@ async def main(syspath, params, stask):
     logger = LOGGER
     try:
         sys.path[:] = json.loads(syspath)
-        from pq.api import TaskApp
+        from pq.api import QueueApp
 
         params = json.loads(params)
         params.update({'python_path': False,
                        'parse_console': False})
-        producer = await TaskApp(**params).api().start()
-        logger = producer.logger
+        producer = await QueueApp(**params).api().start()
         task = producer.pubsub.decode(stask, 'json')
-        JobClass = producer.registry.get(task.name)
+        #
+        tasks = producer.tasks
+        logger = tasks.logger
+        JobClass = tasks.registry.get(task.name)
         if not JobClass:
             raise RuntimeError('%s not in registry' % task.name)
-        job = JobClass(producer, task)
+        job = JobClass(tasks, task)
         result = await job.green_pool.submit(job, **task.kwargs)
         sys.stdout.write({'cpubound_result': result})
     except Exception:

@@ -13,8 +13,8 @@ class TestTasks(unittest.TestCase):
 
     def app(self, task_paths=None, **kwargs):
         task_paths = task_paths or ['tests.example.sampletasks.*']
-        app = api.TaskApp(task_paths=task_paths, **kwargs)
-        app.backend.queue_task = mock.MagicMock()
+        app = api.QueueApp(task_paths=task_paths, **kwargs)
+        app.backend.tasks.queue = mock.MagicMock()
         return app
 
     def test_decorator(self):
@@ -40,13 +40,14 @@ class TestTasks(unittest.TestCase):
         self.assertEqual(format_time(None), '?')
 
     def test_close(self):
-        t = api.TaskApp().api()
+        t = api.QueueApp().api()
         self.assertEqual(t.closing(), False)
         t.close()
         self.assertEqual(t.closing(), True)
+        self.assertEqual(t.tasks.closing(), True)
         warn = mock.MagicMock()
-        t.logger.warning = warn
-        self.assertFalse(t.queue_task('foo'))
+        t.tasks.logger.warning = warn
+        self.assertFalse(t.tasks.queue('foo'))
         self.assertEqual(warn.call_count, 1)
         self.assertEqual(
             warn.call_args[0][0],
@@ -54,10 +55,10 @@ class TestTasks(unittest.TestCase):
         )
 
     def test_task_not_available(self):
-        t = api.TaskApp().api()
+        t = api.QueueApp().api()
         self.assertRaises(api.TaskNotAvailable,
-                          t.queue_task, 'jsdbcjsdhbc')
+                          t.tasks.queue, 'jsdbcjsdhbc')
 
-    def test_no_queues(self):
-        t = api.TaskApp().api()
-        self.assertEqual(t.queues(), ())
+    def test_queues(self):
+        t = api.QueueApp().api()
+        self.assertTrue(t.tasks.queues())

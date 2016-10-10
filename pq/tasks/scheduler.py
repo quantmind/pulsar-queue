@@ -15,11 +15,9 @@ class SchedulerMixin:
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
+        o._polling_tasks = False
         o.next_run = time.time()
         return o
-
-    def __repr__(self):
-        return 'task scheduler <%s>' % self.broker
 
     @lazyproperty
     def entries(self):
@@ -27,15 +25,21 @@ class SchedulerMixin:
 
     def tick(self, now=None):
         # Run a tick, that is one iteration of the scheduler.
-        if self._closing or not self.cfg.schedule_periodic:
+        if self.closing():
+            if not self._polling_tasks:
+                self.do_close()
             return
+
+        if not self.cfg.schedule_periodic or self.next_run > time.time():
+            return
+
         remaining_times = []
         for entry in self.entries.values():
             is_due, next_time_to_run = entry.is_due(now=now)
             #
             # Task is now due
             if is_due:
-                self.queue_task(entry.name)
+                self.queue(entry.name)
                 entry.next()
 
             if next_time_to_run:

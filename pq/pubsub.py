@@ -1,5 +1,5 @@
-from ..utils.serializers import Message
-from ..mq import Component
+from .utils.serializers import Message
+from .mq import Component
 
 
 RECONNECT_LAG = 2

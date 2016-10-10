@@ -41,6 +41,10 @@ class Message(metaclass=MessageMetaClass):
     def type(self):
         return self.__class__.__name__.lower()
 
+    @classmethod
+    def consumer(cls):
+        pass
+
     def tojson(self):
         '''A serializable dictionary
         '''

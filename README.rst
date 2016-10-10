@@ -40,6 +40,20 @@ blocking IO tasks and long running CPU bound tasks.
 * Build on top of pulsar_ and asyncio_
 
 
+TL;DR
+========
+
+Clone the repository::
+
+    git clone git@github.com:quantmind/pulsar-queue.git
+
+
+Move to the ``tests/example`` directory and run the server::
+
+    python manage.py
+
+
+
 .. contents:: **CONTENTS**
 
 
@@ -58,14 +72,14 @@ A simple python file which runs your application:
 
 .. code:: python
 
-    from pq.api import TaskApp
+    from pq.api import PusarQueue
 
 
     task_paths = ['sampletasks.*', 'pq.jobs']
 
 
     def app():
-        return TaskApp(config=__file__)
+        return PusarQueue(config=__file__)
 
     if __name__ == '__main__':
         app().start()
@@ -108,7 +122,7 @@ It can be a directory containing several submodules.
 
 Run the server with two task consumers (pulsar actors).
 
-**NOTE**: Make sure you have Redis server up and running before you start the queue.
+**NOTE**: Make sure you have Redis server up and running before you start the server.
 
 .. code::
 
@@ -123,7 +137,7 @@ Launch a python shell and play with the api
 
     >>> from manage import app
     >>> api = app().api()
-    >>> task = api.queue_task('addition', a=4, b=6)
+    >>> task = api.tasks.queue('addition', a=4, b=6)
     >>> task
     <TaskFuture pending ID=i26ad5c14c5bb422e87b0f7ccbce5ba06>
     >>> task = task.wait()
@@ -137,7 +151,7 @@ You can also queue tasks with a ``delay``
 
 .. code:: python
 
-    >>> task = api.queue_task('addition', a=4, b=6, callback=False, delay=2).wait()
+    >>> task = api.tasks.queue('addition', a=4, b=6, callback=False, delay=2).wait()
     >>> task.status_string
     'QUEUED'
     >>> task.time_queued    # timestamp
@@ -154,73 +168,29 @@ for the task future in a coroutine.
 API
 =============
 
-Tasks Producer
------------------
-
-The tasks producer API is obtained from the Task application ``api`` method:
+The producer API is obtained from the Task application ``api`` method:
 
 .. code:: python
 
-    from pq.api import TaskApp
+    from pq.api import PusarQueue
 
-    api = TaskApp(...).api()
+    api = PusarQueue(...).api()
 
 
-*api*.queue_task(*jobname*, *\*args*, *\*\*kwargs*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+API methods
+---------------
 
-Queue a task and return a **TaskFuture** which is resolved once the task has finished.
-It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
+*api*.start()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: python
-
-    task = await tasks.queue_task(..., callback=False)
-    task.status_string  # QUEUED
-
-*api*.queue_task_local(*jobname*, *\*args*, *\*\*kwargs*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
+Start listening to events. This method return a coroutine which resolve in the api:
 
 .. code:: python
 
-    task = await tasks.queue_task(..., queue=tasks.node_name)
-    task.queue  # tasks.node_name
+    api = await api.start()
 
-
-*api*.execute_task(*jobname*, *\*args*, *\*\*kwargs*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Execute a task immediately, it does not put the task in the task queue.
-This method is useful for debugging and testing. It is equivalent to execute:
-
-.. code:: python
-
-    task = await tasks.queue_task(..., queue=False)
-    task.queue          # None
-    task.status_string  # SUCCESS
-
-
-*api*.queues()
-~~~~~~~~~~~~~~~~~~~~
-
-Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
-
-*api*.job_list(*jobname=None*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
-
-.. code:: python
-
-    jobs = dict(tasks.job_lits())
-    jobs['execute.python']
-    # {
-    #   'type': 'regular',
-    #   'concurrency': 'asyncio',
-    #   'doc_syntax': 'markdown',
-    #   'doc': 'Execute arbitrary python code on a subprocess ... '
-    # }
+The start method is used when the api is used by application to queue messages/tasks
+and listen for events published by distributed consumers.
 
 *api*.on_events(*callback*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -239,6 +209,108 @@ If the event is a task event (see events_) the message is a Task_ object.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Remove a previously added event callback. This method is safe.
+
+*api*.queue(*message*, *callback=True*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Queue a message in the message queue, equivalent to:
+
+.. code:: python
+
+    api.broker.queue(message, callback)
+
+This method returns a ``MessageFuture``, a subclass of asyncio Future_ which
+resolve in a ``message`` object.
+If ``callback`` is True (default) the Future is resolved once the message
+is delivered (out of the queue), otherwise is is resolved once the message
+is queued (entered the queue).
+
+*api*.execute(*message*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Execute a message without queueing. This is only supported by messages with
+a message consumer which execute them (the ``tasks`` consumer for example).
+If *message* is a Task_, this method is equivalent to:
+
+.. code:: python
+
+    api.tasks.execute(task)
+
+This method returns a ``MessageFuture``, a subclass of asyncio Future_ which
+resolve in a ``message`` object.
+
+*api*.consumers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+List of consumers registered with the api.
+
+Tasks API
+-----------------
+
+The tasks producer is obtained vua the ``tasks`` property from the producer API instance
+
+.. code:: python
+
+    tasks = api.tasks
+
+The following methods are available for the tasks producer:
+
+
+*tasks*.queue(*jobname*, *\*args*, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Queue a task and return a **TaskFuture** which is resolved once the task has finished.
+It is possible to obtain a task future resolved when the task has been queued, rather than finished, by passing the **callback=False** parameter:
+
+.. code:: python
+
+    task = await tasks.queue(..., callback=False)
+    task.status_string  # QUEUED
+
+*tasks*.queue_local(*jobname*, *\*args*, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
+
+.. code:: python
+
+    task = await tasks.queue(..., queue=tasks.node_name)
+    task.queue  # tasks.node_name
+
+
+*tasks*.execute(*jobname*, *\*args*, *\*\*kwargs*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Execute a task immediately, it does not put the task in the task queue.
+This method is useful for debugging and testing. It is equivalent to execute:
+
+.. code:: python
+
+    task = await tasks.queue(..., queue=False)
+    task.queue          # None
+    task.status_string  # SUCCESS
+
+
+*tasks*.queues()
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Return the list of queue names the backend is subscribed. This list is not empty when the backend is a task consumer.
+
+*tasks*.job_list(*jobname=None*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Returns a list of ``job_name``, ``job_description`` tuples. The ``job_name`` is a string which must be used as the **jobname** parameter when executing or queing tasks. The ``job_description`` is a dictionary containing metadata and documentation for the job. Example:
+
+.. code:: python
+
+    jobs = dict(tasks.job_lits())
+    jobs['execute.python']
+    # {
+    #   'type': 'regular',
+    #   'concurrency': 'asyncio',
+    #   'doc_syntax': 'markdown',
+    #   'doc': 'Execute arbitrary python code on a subprocess ... '
+    # }
 
 
 The Job class
@@ -273,6 +345,13 @@ it has the following useful attributes and methods:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tasks backend that is processing this Task_ run
+
+*job*.default_queue
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default queue name where tasks for this job are queued. By default it is ``None``
+in which case, if a ``queue`` is not given when queueing a task, the first queue
+from the `queues <#tasks_queues>`_ list taken.
 
 *job*.http
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -309,7 +388,7 @@ The name of this job. Used to queue tasks
 
 The Task_ instance associated with this task run
 
-*job*.queue_task(*jobname*, *\*args*, *\*\*kwargs)
+*job*.queue(*jobname*, *\*args*, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a new job form a task run. It is equivalent to:
@@ -317,7 +396,7 @@ Queue a new job form a task run. It is equivalent to:
 .. code:: python
 
     meta_params = {'from_task': self.task.id}
-    self.backend.queue_task(..., meta_params=meta_params)
+    self.backend.tasks.queue(..., meta_params=meta_params)
 
 
 *job*.shell(*command*, *\*\*kwargs*)
@@ -438,20 +517,14 @@ An example can be a Job to scrape web pages and create new tasks to process the 
         assert url, "url is required"
         request = await self.http.get(url)
         html = request.text()
-        task = self.queue_task('process.html', html=html, callback=False)
+        task = self.queue('process.html', html=html, callback=False)
         return task.id
 
-GREEN_IO
-----------
-
-The green IO mode is associated with tasks that runs on child greenlets.
-This can be useful when using applications which use the greenlet_
-library for implicit asynchronous behaviour.
 
 THREAD_IO
 -------------
 
-THis consurrency mode is best suited for tasks performing
+This concurrency mode is best suited for tasks performing
 *blocking* IO operations.
 A ``THREAD_IO`` job runs its tasks in the event loop executor.
 You can use this model for most blocking operation unless
@@ -494,14 +567,14 @@ Extend
 =================
 
 It is possible to enhance the task queue application by passing
-a custom ``TaskManager`` during initialisation.
+a custom ``Manager`` during initialisation.
 For example:
 
 .. code:: python
 
     from pq import api
 
-    class TaskManager(api.TaskManager):
+    class Manager(api.Manager):
 
         async def store_message(self, message):
             """This method is called when a message/task is queued,
@@ -520,10 +593,10 @@ For example:
             return queues
 
 
-    tq = TaskApp(TaskManager, ...)
+    tq = PulsarQueue(Manager, ...)
 
 
-The ``TaskManager`` class is initialised when the backend handler is initialised
+The ``Manager`` class is initialised when the backend handler is initialised
 (on each consumer and in the scheduler).
 
 Changelog
@@ -550,6 +623,7 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _greenlet: https://greenlet.readthedocs.io/en/latest/
 .. _msgpack: https://pypi.python.org/pypi/msgpack-python
 .. _`asyncio subprocess`: https://docs.python.org/3/library/asyncio-subprocess.html
+.. _Future: https://docs.python.org/3/library/asyncio-task.html#future
 .. _Jobs: #the-job-class
 .. _Task: #the-task
 .. _Events: #events

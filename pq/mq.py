@@ -128,7 +128,7 @@ class MQ(Component, ABC):
         return self.pubsub.callbacks
 
     def queue(self, message, callback=True):
-        '''Queue the ``task``.
+        '''Queue the ``message``.
 
         If callback is True (default) returns a Future
         called back once the message is delivered,

@@ -4,7 +4,7 @@ sudo: false
 
 python:
   - 3.5.2
-  - 3.6-dev
+  # - nightly
 
 services:
   - redis-server

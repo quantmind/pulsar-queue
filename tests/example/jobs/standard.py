@@ -32,6 +32,11 @@ class Addition(api.Job):
         return a + b
 
 
+@api.job()
+def subtraction(self, a=0, b=0):
+        return a - b
+
+
 class Asynchronous(api.Job):
 
     async def __call__(self, lag=1):

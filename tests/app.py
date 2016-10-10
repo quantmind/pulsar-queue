@@ -322,7 +322,7 @@ class TaskQueueApp(TaskQueueBase):
             task_id = None
 
             def __call__(self, event, task):
-                if event == 'task_done' and task.name == 'addition':
+                if event == 'task_done' and task.name == 'subtraction':
                     if task.meta.get('from_task') == self.task_id:
                         self.count += 1
                         if task.retry == 3:
@@ -333,7 +333,7 @@ class TaskQueueApp(TaskQueueBase):
         check_retry = CheckRetry()
         self.api.on_events(check_retry)
         try:
-            task = await self.api.tasks.queue('addition', a=1, b='foo',
+            task = await self.api.tasks.queue('subtraction', a=1, b='foo',
                                               delay=1,
                                               callback=False,
                                               meta_params=meta)

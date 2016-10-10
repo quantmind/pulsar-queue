@@ -4,6 +4,8 @@ import asyncio
 import unittest
 from functools import partial
 
+from pulsar import get_actor
+
 from tests.app import TaskQueueBase
 
 
@@ -37,6 +39,8 @@ class TestScheduler(TaskQueueBase, unittest.TestCase):
             cbs = scheduler.remove_event_callback(cbk)
             self.assertEqual(len(cbs), 0)
 
+    @unittest.skipIf(get_actor().cfg.event_loop == 'uv',
+                     "uvloop fails on this test sometimes")
     async def test_rpc_next_scheduled_tasks(self):
         next = await self.proxy.tasks.next_scheduled_tasks()
         self.assertTrue(isinstance(next, list))

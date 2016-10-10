@@ -47,6 +47,8 @@ class QueueApp(Application):
     async def worker_start(self, worker, exc=None):
         if not exc:
             self._backend = await self._start(worker)
+            if not worker.is_monitor():
+                self._backend.bind_event('close', _close)
 
     def worker_stopping(self, worker, exc=None):
         if self._backend:
@@ -112,3 +114,7 @@ class Rpc(LazyWsgi):
         request = [Router('/', post=handler)]
         response = [GZipMiddleware(200)]
         return WsgiHandler(middleware=request, response_middleware=response)
+
+
+def _close(backend, **kw):
+    backend._loop.call_soon(backend._loop.stop)

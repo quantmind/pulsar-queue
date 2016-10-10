@@ -1,7 +1,8 @@
 import logging
 import platform
+import asyncio
 
-from pulsar import new_event_loop
+from pulsar import new_event_loop, ensure_future, EventHandler
 from pulsar.apps.data import create_store
 from pulsar.apps.greenio import GreenHttp
 from pulsar.apps.http import HttpClient
@@ -16,19 +17,21 @@ from ..pubsub import PubSub
 LOGGER = logging.getLogger('pulsar.queue')
 
 
-class Producer:
+class Producer(EventHandler):
     """Produce tasks by queuing them
 
     Abstract base class for both task schedulers and task consumers
     """
     app = None
+    ONE_TIME_EVENTS = ('close',)
 
     def __init__(self, cfg, *, logger=None, **kw):
-        self.cfg = cfg
-        self.logger = logger or LOGGER
-        self._closing = False
         loop = cfg.params.pop('loop', None)
         store = create_store(cfg.data_store, loop=loop)
+        super().__init__(loop=store._loop)
+        self.cfg = cfg
+        self._logger = logger or LOGGER
+        self._closing_waiter = None
         if not cfg.message_broker:
             broker = store
         else:
@@ -49,10 +52,6 @@ class Producer:
 
     def __repr__(self):
         return 'producer <%s>' % self.broker
-
-    @property
-    def _loop(self):
-        return self.broker._loop
 
     @property
     def node_name(self):
@@ -109,15 +108,31 @@ class Producer:
         return message
 
     def closing(self):
-        return self._closing
+        return self._closing_waiter is not None
 
-    def close(self):
+    def close(self, msg=None):
         '''Close this :class:`.TaskBackend`.
 
         Invoked by the :class:`.Actor` when stopping.
         '''
-        if not self._closing:
-            self._closing = True
+        if not self._closing_waiter:
+            if msg:
+                self.logger.warning(msg)
+            closing = []
             for consumer in self.consumers:
-                consumer.close()
-            self.manager.close()
+                result = consumer.close()
+                if not result.done():
+                    closing.append(result)
+
+            self._closing_waiter = ensure_future(
+                _close(self, closing, self._loop),
+                loop=self._loop
+            )
+        return self._closing_waiter
+
+
+async def _close(self, closing, loop):
+    if closing:
+        await asyncio.gather(*closing, loop=loop)
+    self.manager.close()
+    self.fire_event('close')

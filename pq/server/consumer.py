@@ -41,13 +41,5 @@ class Consumer(Producer):
             await self.worker_tick(worker)
         return self
 
-    async def close(self, msg=None):
-        if not self.closing():
-            closing = []
-            for consumer in self.consumers:
-                closing.append(consumer.close())
-            await asyncio.gather(*closing)
-            self.manager.close()
-
     def __tick(self, worker):
         asyncio.ensure_future(self.worker_tick(worker), loop=worker._loop)

@@ -44,36 +44,3 @@ def get_git_changeset(filename=None):
     except ValueError:
         return None
     return timestamp.strftime('%Y%m%d%H%M%S')
-
-
-FORMAT = '%n'.join(['%H', '%aN', '%ae', '%cN', '%ce', '%s'])
-
-
-def gitrepo(root=None):
-    if not root:
-        cwd = root = os.getcwd()
-    else:
-        cwd = os.getcwd()
-        if cwd != root:
-            os.chdir(root)
-    gitlog = sh('git --no-pager log -1 --pretty="format:%s"' % FORMAT,
-                cwd=root).split('\n', 5)
-    branch = sh('git rev-parse --abbrev-ref HEAD', cwd=root).strip()
-    remotes = [x.split() for x in
-               filter(lambda x: x.endswith('(fetch)'),
-                      sh('git remote -v', cwd=root).strip().splitlines())]
-    if cwd != root:
-        os.chdir(cwd)
-    return {
-        "head": {
-            "id": gitlog[0],
-            "author_name": gitlog[1],
-            "author_email": gitlog[2],
-            "committer_name": gitlog[3],
-            "committer_email": gitlog[4],
-            "message": gitlog[5].strip(),
-        },
-        "branch": branch,
-        "remotes": [{'name': remote[0], 'url': remote[1]}
-                    for remote in remotes]
-    }

@@ -35,8 +35,10 @@ class TestConnectionDrop(unittest.TestCase):
             await send('arbiter', 'kill_actor', self.app.name)
 
     async def test_fail_get_message(self):
-        original, warning, critical = self._patch(
+        original, _, _ = self._patch(
             self.backend.broker, 'get_message')
+        critical = Tester()
+        self.backend.tasks.logger.critical = critical
         args, kw = await critical.end
         self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.broker)

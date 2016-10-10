@@ -114,7 +114,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
             if self.num_concurrent_tasks < self.max_concurrent_tasks:
                 max_tasks = self.cfg.max_requests
                 if max_tasks and self._processed >= max_tasks:
-                    self.close(
+                    self.backend.close(
                         'Processed %s tasks. Stop polling tasks.'
                         % self._processed
                     )

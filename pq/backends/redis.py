@@ -8,7 +8,7 @@ class MQ(mq.MQ):
         super().__init__(backend, store)
         self._client = store.client()
 
-    async def get_task(self, *queues):
+    async def get_message(self, *queues):
         '''Asynchronously retrieve a :class:`Task` from queues
 
         :return: a :class:`.Task` or ``None``.
@@ -18,8 +18,8 @@ class MQ(mq.MQ):
         args.append(self.cfg.task_pool_timeout)
         qt = await self._client.execute('brpop', *args)
         if qt:
-            _, stask = qt
-            return self.decode(stask)
+            _, message = qt
+            return self.decode(message)
 
     async def flush_queues(self, *queues):
         '''Clear a list of task queues

@@ -57,9 +57,9 @@ class TaskQueueBase:
             rpc_keep_alive=cls.rpc_timeout
         )
         pq = api.PulsarQueue(**params)
-        cfgs = await pq.start()
-        cls.tq_app = cfgs[0].app()
-        cls.rpc = cfgs[1].app()
+        await pq.start()
+        cls.tq_app = pq.apps()[0]
+        cls.rpc = pq.apps()[1]
         # make sure the time out is high enough (bigger than test-timeout)
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
@@ -137,7 +137,7 @@ class TaskQueueApp(TaskQueueBase):
 
     async def test_async_job(self):
         tasks = self.api.tasks
-        result = await tasks.queue('asynchronous', lag=2)
+        result = tasks.queue('asynchronous', lag=2)
         self.assertIsInstance(result, asyncio.Future)
         task = await result
         self.assertIsInstance(task, api.Task)
@@ -154,7 +154,7 @@ class TaskQueueApp(TaskQueueBase):
 
     async def test_execute_addition(self):
         tasks = self.api.tasks
-        future = await tasks.queue('addition', a=3, b=-4)
+        future = tasks.execute('addition', a=3, b=-4)
         self.assertIsInstance(future, api.MessageFuture)
         self.assertTrue(future.task_id)
         task = await future
@@ -248,7 +248,7 @@ class TaskQueueApp(TaskQueueBase):
             tasks.queue('execute.python', code=code, callback=False)
         )
         self.assertEqual(task[0].status_string, 'QUEUED')
-        size = await self.tq.broker.size(task[0].queue)
+        size = await self.api.broker.size(task[0].queue)
         task = await asyncio.gather(
             task[0].done_callback,
             task[1].done_callback,

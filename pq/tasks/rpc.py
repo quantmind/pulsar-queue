@@ -59,10 +59,11 @@ class TasksRpc(rpc.JSONRPC):
             raise rpc.InvalidParams('"jobname" is not specified!')
         meta_params = meta_params or {}
         meta_params.update(self.task_request_parameters(request))
-        api = await self.api()
+        api = await self.parent.api()
         result = await api.tasks.queue(jobname, meta_params=meta_params, **kw)
         return result
 
 
 def next_scheduled(actor, jobnames=None):
-    return actor.app.next_scheduled(jobnames=jobnames)
+    backend = actor.app.backend
+    return backend.tasks.next_scheduled(jobnames=jobnames)

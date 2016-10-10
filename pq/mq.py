@@ -158,7 +158,7 @@ class MQ(Component, ABC):
         pass
 
     @abstractmethod
-    async def get_task(self, *queues):  # pragma    nocover
+    async def get_message(self, *queues):  # pragma    nocover
         '''Asynchronously retrieve a :class:`.Task` from queues
 
         :return: a :class:`.Task` or ``None``.

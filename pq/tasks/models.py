@@ -106,7 +106,7 @@ class Job(metaclass=JobMetaClass):
     concurrency = None
 
     def __init__(self, tasks=None, task=None):
-        self.backend = tasks.backend
+        self.backend = tasks.backend if tasks else None
         self.task = task
         if task:
             self.__dict__.update(task.meta)

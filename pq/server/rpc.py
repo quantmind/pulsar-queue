@@ -1,5 +1,4 @@
 import pulsar
-from pulsar import get_application
 from pulsar.apps import rpc
 
 
@@ -14,19 +13,16 @@ class TaskQueueRpc(rpc.JSONRPC):
         application which exposes the remote procedure calls.
 
     '''
-    _task_api_ = None
-
-    def __init__(self, taskqueue, **kwargs):
-        if not isinstance(taskqueue, str):
-            taskqueue = taskqueue.name
-        self.taskqueue = taskqueue
+    def __init__(self, api, **kwargs):
+        self._api_ = (api,)
         super().__init__(**kwargs)
 
-    def rq(self, request, func, *args, **kw):
-        return pulsar.send(self.taskqueue, 'run', func, *args, **kw)
+    async def rq(self, request, func, *args, **kw):
+        api = await self.api()
+        result = await pulsar.send(api.cfg.name, 'run', func, *args, **kw)
+        return result
 
     async def api(self):
-        if not self._task_api_:
-            app = await get_application(self.taskqueue)
-            self._task_api_ = await app.api().start()
-        return self._task_api_
+        if isinstance(self._api_, tuple):
+            self._api_ = await self._api_[0].start()
+        return self._api_

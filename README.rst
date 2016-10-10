@@ -213,7 +213,7 @@ Remove a previously added event callback. This method is safe.
 *api*.queue(*message*, *callback=True*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Queue a message in the message queue. THis method is a shortcut for:
+Queue a message in the message queue, equivalent to:
 
 .. code:: python
 
@@ -221,7 +221,7 @@ Queue a message in the message queue. THis method is a shortcut for:
 
 This method returns a ``MessageFuture``, a subclass of asyncio Future_ which
 resolve in a ``message`` object.
-If callback is True (default) the Future is resolved once the message
+If ``callback`` is True (default) the Future is resolved once the message
 is delivered (out of the queue), otherwise is is resolved once the message
 is queued (entered the queue).
 

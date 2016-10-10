@@ -94,7 +94,7 @@ class Producer:
             return GreenHttp(self.http)
 
     def on_events(self, callback):
-        self.pubsub.on_events(callback)
+        return self.pubsub.on_events(callback)
 
     def remove_event_callback(self, callback):
         return self.pubsub.remove_event_callback(callback)

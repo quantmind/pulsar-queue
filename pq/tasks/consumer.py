@@ -15,7 +15,7 @@ from ..pubsub import backoff, RECONNECT_LAG
 from ..consumer import ConsumerAPI
 
 
-class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
+class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
 
     def __init__(self, backend):
         super().__init__(backend)
@@ -24,6 +24,7 @@ class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
         self._concurrent_tasks = {}
 
     def start(self, worker):
+        self._polling_tasks = True
         self._poll_tasks(worker)
         self.logger.warning('%s started polling tasks', self)
 
@@ -120,7 +121,7 @@ class Tasks(ConsumerAPI, RegistryMixin, ExecutorMixin, SchedulerMixin):
 
                 if not self.closing():
                     try:
-                        task = await self.broker.get_task(*self.queues())
+                        task = await self.broker.get_message(*self.queues())
                     except ConnectionRefusedError:
                         if self.broker.connection_error:
                             self._next_time = backoff(self._next_time)

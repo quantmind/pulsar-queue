@@ -26,6 +26,10 @@ class QueueApp(Application):
     def api(self):
         return Producer(self.cfg, logger=self.logger)
 
+    @property
+    def backend(self):
+        return self._backend
+
     async def monitor_start(self, monitor, exc=None):
         if not exc and self.cfg.workers:
             self._backend = await self._start(monitor, False)
@@ -53,9 +57,6 @@ class QueueApp(Application):
         cfg = params['cfg']
         cfg.set('schedule_periodic', False)
 
-    def worker_info(self, worker, info=None):
-        info.update(self._backend.info())
-
     def _start(self, actor, consume=True):
         return self.backend_factory(
             self.cfg,
@@ -68,33 +69,41 @@ class PulsarQueue(MultiApp):
     """
     cfg = Config('Pulsar Queue')
 
+    def __init__(self, callable=None, **params):
+        super().__init__(**params)
+        self.manager = callable
+
     def api(self):
         return self.apps()[0].api()
 
     def build(self):
-        app = self.new_app(QueueApp,
-                           callable=self.cfg.params.get('queue_callable'))
-        yield app
-
+        yield self.new_app(QueueApp, callable=self.manager)
         wsgi = self.cfg.params.get('wsgi')
         if wsgi:
             if wsgi is True:
                 wsgi = Rpc
-            yield self.new_app(WSGIServer,
+            yield self.new_app(RpcServer,
                                prefix='rpc',
-                               callable=wsgi(app))
+                               callable=self)
+
+
+class RpcServer(WSGIServer):
+
+    def __init__(self, callable=None, **params):
+        callable = Rpc(callable.apps()[0].cfg)
+        super().__init__(callable=callable, **params)
 
 
 class Rpc(LazyWsgi):
     '''Default WSGI callable for the wsgi part of the application
     '''
-    def __init__(self, tq):
-        self.tq = tq
+    def __init__(self, cfg):
+        self.cfg = cfg
 
     def setup(self, environ):
         # only post allowed by the JSON RPC handler
-        api = self.tq.api()
-        handler = TaskQueueRpc(self.tq.name)
+        api = Producer(self.cfg)
+        handler = TaskQueueRpc(api)
         for consumer in api.consumers:
             rpc = consumer.rpc()
             if rpc:

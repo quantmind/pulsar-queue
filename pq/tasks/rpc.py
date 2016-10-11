@@ -37,11 +37,6 @@ class TasksRpc(rpc.JSONRPC):
         task = await self._queue(request, jobname, **kw)
         return task.tojson()
 
-    async def rpc_num_tasks(self, request):
-        '''Return the approximate number of tasks in the task queue.'''
-        api = await self.parent.api()
-        return api.tasks.num_tasks()
-
     def task_request_parameters(self, request):
         '''**Internal function** which returns a dictionary of parameters
         to be passed to the :class:`.Task` class constructor.

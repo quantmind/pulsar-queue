@@ -51,6 +51,7 @@ class TaskQueueBase:
             wsgi=True,
             schedule_periodic=cls.schedule_periodic,
             rpc_bind='127.0.0.1:0',
+            rpc_workers=0,
             concurrent_tasks=cls.concurrent_tasks,
             max_requests=cls.max_requests,
             message_serializer=cls.message_serializer,
@@ -64,7 +65,7 @@ class TaskQueueBase:
         cls.proxy = rpc.JsonProxy('http://%s:%s' % cls.rpc.cfg.addresses[0],
                                   timeout=cls.rpc_timeout)
         # Now flush the task queue
-        cls.api = await pq.api().start()
+        cls.api = cls.tq_app.backend
         await cls.api.tasks.flush_queues(*cls.queues())
 
     @classmethod
@@ -99,8 +100,8 @@ class TaskQueueApp(TaskQueueBase):
         self.assertTrue(regular)
         self.assertTrue(periodic)
 
-    def test_producer(self):
-        self.assertTrue(str(self.api).startswith('producer <'))
+    def test_consumer(self):
+        self.assertTrue(str(self.api).startswith('consumer <'))
         self.assertEqual(self.api.cfg.default_task_queue, '%s1' % self.name())
 
     def test_job_list(self):

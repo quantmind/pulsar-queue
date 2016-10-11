@@ -1,4 +1,3 @@
-import logging
 import platform
 import asyncio
 
@@ -14,9 +13,6 @@ from ..mq import Manager
 from ..pubsub import PubSub
 
 
-LOGGER = logging.getLogger('pulsar.queue')
-
-
 class Producer(EventHandler):
     """Produce tasks by queuing them
 
@@ -30,7 +26,7 @@ class Producer(EventHandler):
         store = create_store(cfg.data_store, loop=loop)
         super().__init__(loop=store._loop)
         self.cfg = cfg
-        self._logger = logger or LOGGER
+        self._logger = logger
         self._closing_waiter = None
         if not cfg.message_broker:
             broker = store
@@ -66,9 +62,6 @@ class Producer(EventHandler):
         return self
 
     def tick(self, monitor):
-        pass
-
-    def worker_tick(self, worker):
         pass
 
     def info(self):

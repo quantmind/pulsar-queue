@@ -13,7 +13,10 @@ from ..utils.concurrency import concurrency_name, ASYNC_IO
 
 
 class ShellError(RuntimeError):
-    pass
+
+    @property
+    def returncode(self):
+        return self.args[1] if len(self.args) > 1 else 1
 
 
 class RegistryMixin:

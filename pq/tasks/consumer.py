@@ -10,7 +10,6 @@ from . import states
 from .task import Task, TaskNotAvailable
 from .models import RegistryMixin
 from .rpc import TasksRpc
-from ..utils.time import get_time
 from ..pubsub import backoff, RECONNECT_LAG
 from ..consumer import ConsumerAPI
 

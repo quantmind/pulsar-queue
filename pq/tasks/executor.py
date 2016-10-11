@@ -98,7 +98,7 @@ class ExecutorMixin:
         except (CancelledError, TimeoutError, TaskTimeout):
             task.result = None
             task.status = states.REVOKED
-            logger.info(task.lazy_info())
+            logger.error(task.lazy_info())
         except RemoteStackTrace:
             task.status = states.FAILURE
             logger.error(task.lazy_info())

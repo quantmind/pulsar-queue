@@ -1,7 +1,6 @@
 import time
 import asyncio
 import threading
-from datetime import timedelta
 
 import greenlet
 
@@ -15,7 +14,7 @@ class TestError(Exception):
 class RunPyCode(api.Job):
     '''execute python code in *code*. There must be a *task_function*
 function defined which accept key-valued parameters only.'''
-    timeout = timedelta(seconds=60)
+    timeout = 60
 
     def __call__(self, code=None, **kwargs):
         code_local = compile(code, '<string>', 'exec')
@@ -26,7 +25,7 @@ function defined which accept key-valued parameters only.'''
 
 
 class Addition(api.Job):
-    timeout = timedelta(seconds=60)
+    timeout = 60
 
     def __call__(self, a=0, b=0):
         return a + b

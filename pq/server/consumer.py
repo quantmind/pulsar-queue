@@ -1,5 +1,6 @@
 import time
 import asyncio
+from multiprocessing import cpu_count
 
 from .producer import Producer
 
@@ -28,6 +29,7 @@ class Consumer(Producer):
             info['worker'] = worker.aid
             info['node'] = self.node_name
             info['pubsub'] = self.pubsub.store.dns
+            info['cores'] = cpu_count()
             info['message-broker'] = self.broker.store.dns
             info['time'] = time.time()
             if self.cfg.debug:

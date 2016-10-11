@@ -613,6 +613,7 @@ The ``Manager`` class is initialised when the backend handler is initialised
 Changelog
 ==============
 
+* `Versions 0.5 <https://github.com/quantmind/pulsar-queue/blob/master/docs/history/0.5.md>`_
 * `Versions 0.4 <https://github.com/quantmind/pulsar-queue/blob/master/docs/history/0.4.md>`_
 * `Versions 0.3 <https://github.com/quantmind/pulsar-queue/blob/master/docs/history/0.3.md>`_
 * `Versions 0.2 <https://github.com/quantmind/pulsar-queue/blob/master/docs/history/0.2.md>`_

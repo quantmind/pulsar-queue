@@ -121,13 +121,6 @@ class TaskQueueApp(TaskQueueBase):
         self.assertTrue(str(task).startswith('task.addition<'))
         self.assertTrue(task.done())
 
-    async def test_simple_revoked(self):
-        tasks = self.api.tasks
-        task = await tasks.queue('addition', a=40, b=50, expiry=0)
-        self.assertIsInstance(task, api.Task)
-        self.assertEqual(task.status_string, 'REVOKED')
-        self.assertFalse(task.result)
-
     async def test_info(self):
         tasks = self.api.tasks
         task = await tasks.queue('workerinfo')
@@ -361,7 +354,7 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(success, 3)
 
     async def test_task_timeout(self):
-        future = self.api.tasks.queue('asynchronous', lag=10, timeout=5)
+        future = self.api.tasks.queue('asynchronous', lag=10, timeout=3)
         task = await future
         self.assertEqual(task.status_string, 'REVOKED')
         self.assertGreaterEqual(task.time_ended-task.time_queued,

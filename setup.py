@@ -43,7 +43,7 @@ meta = dict(
     packages=find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
     zip_safe=False,
-    setup_requires=['pulsar'],
+    setup_requires=['pulsar', 'wheel'],
     install_requires=requirements('requirements.txt')[0],
     # tests_require=config.requirements('requirements-dev.txt')[0],
     classifiers=[

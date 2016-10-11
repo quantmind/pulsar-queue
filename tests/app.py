@@ -360,6 +360,14 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(revoked, 2)
         self.assertEqual(success, 3)
 
+    async def test_task_timeout(self):
+        future = self.api.tasks.queue('asynchronous', lag=10, timeout=5)
+        task = await future
+        self.assertEqual(task.status_string, 'REVOKED')
+        self.assertGreaterEqual(task.time_ended-task.time_queued,
+                                task.timeout)
+        self.assertTrue(task.expiry)
+
     # RPC
     async def test_rpc_job_list(self):
         data = await self.proxy.tasks.job_list()

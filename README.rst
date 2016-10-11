@@ -256,7 +256,7 @@ The tasks producer is obtained vua the ``tasks`` property from the producer API 
 The following methods are available for the tasks producer:
 
 
-*tasks*.queue(*jobname*, *\*args*, *\*\*kwargs*)
+*tasks*.queue(*jobname*, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a task and return a **TaskFuture** which is resolved once the task has finished.
@@ -267,7 +267,18 @@ It is possible to obtain a task future resolved when the task has been queued, r
     task = await tasks.queue(..., callback=False)
     task.status_string  # QUEUED
 
-*tasks*.queue_local(*jobname*, *\*args*, *\*\*kwargs*)
+The ``kwargs`` parameters are used as input parameters for the Job_ callable with the exception of:
+
+* ``callback``: discussed above
+* ``delay``: delay execution by a given number of seconds
+* ``queue``: overrides the Job_ [default_queue](#job-default-queue)
+* [timeout](#job-timeout)
+* ``meta_params``: dictionary of parameters used by the Job_ callable to override default values of:
+  * [max_retries](#job-max-retries)
+  * [retry_delay](#job-retry-delay)
+  * [max_concurrency](#job-max-concurrency)
+
+*tasks*.queue_local(*jobname*, *\*\*kwargs*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Queue a job in the local task queue. The local task queue is processed by the same server instance. It is equivalent to execute:
@@ -624,6 +635,7 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _msgpack: https://pypi.python.org/pypi/msgpack-python
 .. _`asyncio subprocess`: https://docs.python.org/3/library/asyncio-subprocess.html
 .. _Future: https://docs.python.org/3/library/asyncio-task.html#future
+.. _Job: #the-job-class
 .. _Jobs: #the-job-class
 .. _Task: #the-task
 .. _Events: #events

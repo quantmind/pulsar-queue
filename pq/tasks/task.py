@@ -33,7 +33,7 @@ class Task(Message):
     def __init__(self, id=None, name=None, time_queued=None,
                  time_started=None, time_ended=None,
                  result=None, exception=None, stacktrace=None, worker=None,
-                 expiry=None, status=None, kwargs=None, queue=None,
+                 timeout=None, status=None, kwargs=None, queue=None,
                  retry=None, delay=None, meta=None, run_info=None, **kw):
         self.__dict__.update(kw)
         self.id = id
@@ -46,7 +46,7 @@ class Task(Message):
         self.exception = exception
         self.stacktrace = stacktrace
         self.worker = worker
-        self.expiry = expiry
+        self.timeout = timeout
         self.status = status
         self.retry = retry or 1
         self.delay = delay
@@ -72,6 +72,11 @@ class Task(Message):
         '''A string representation of :attr:`status` code
         '''
         return states.status_string(self.status)
+
+    @property
+    def expiry(self):
+        if self.timeout:
+            return self.time_queued + (self.delay or 0) + self.timeout
 
     def done(self):
         '''Return ``True`` if the :class:`Task` has finshed.

@@ -50,22 +50,23 @@ class ExecutorMixin:
                 raise RuntimeError('%s not in registry' % task.name)
 
             if task.status > states.STARTED:
-                expiry = task.expiry
-                timeout = None
+                queued = task.time_queued
+                timeout = task.timeout
+                delay = task.delay or 0
+                start = queued + delay
 
-                if expiry:  # Handle expiry
-                    timeout = expiry - time_ended
-                    if timeout <= 0:
-                        raise TaskTimeout
-
-                if task.delay:  # Task with delay
-                    start_time = task.time_queued + task.delay
-                    gap = start_time - time_ended
+                if delay:  # Task with delay
+                    gap = start - time_ended
                     if gap > 0:
                         self._loop.call_later(gap, self._queue_again, task)
                         if worker:
                             self._concurrent_tasks.pop(task_id, None)
                         return task
+
+                if timeout:  # Handle timeout
+                    timeout = timeout + start - time_ended
+                    if timeout <= 0:
+                        raise TaskTimeout
 
                 if worker:
                     concurrent = await self.broker.incr(JobClass.name)

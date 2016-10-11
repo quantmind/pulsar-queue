@@ -154,7 +154,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
 
         self._poll_tasks(worker, next_time)
 
-    def _create_task(self, jobname, meta_params=None, expiry=None, queue=True,
+    def _create_task(self, jobname, meta_params=None, timeout=None, queue=True,
                      delay=None, **kwargs):
         '''Try to queue a new :ref:`Task`.
 
@@ -166,8 +166,8 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
             registered with the :class:`.TaskQueue` application.
         :param meta_params: Additional parameters to be passed to the
             :class:`Task` constructor (not its callable function).
-        :param expiry: optional expiry timestamp to override the default
-            expiry of a task.
+        :param timeout: optional expiry timestamp to override the default
+            timeout of a task.
         :param kwargs: optional dictionary used for the key-valued arguments
             in the task callable.
         :return: a :class:`.Future` resulting in a task once finished or
@@ -180,10 +180,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
             job = self.registry[jobname]
             task_id = self.gen_unique_id()
             queued = time.time()
-            if expiry is not None:
-                expiry = get_time(expiry, queued)
-            elif job.timeout:
-                expiry = get_time(job.timeout, queued)
+            timeout = timeout or job.timeout
             meta_params = meta_params or {}
             if queue is not False:
                 if queue is True:
@@ -194,7 +191,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
                         name=job.name,
                         queue=queue,
                         time_queued=queued,
-                        expiry=expiry,
+                        timeout=timeout,
                         kwargs=kwargs,
                         status=states.QUEUED,
                         delay=delay,

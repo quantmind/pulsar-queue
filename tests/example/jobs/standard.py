@@ -41,7 +41,11 @@ class Asynchronous(api.Job):
 
     async def __call__(self, lag=1):
         start = time.time()
-        await asyncio.sleep(lag)
+        try:
+            await asyncio.sleep(lag)
+        except asyncio.CancelledError:
+            self.task.run_info['cancelled'] = time.time() - start
+            raise
         return time.time() - start
 
 

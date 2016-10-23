@@ -50,7 +50,7 @@ class TestConnectionDrop(unittest.TestCase):
 
     async def test_fail_publish(self):
         original, warning, critical = self._patch(
-            self.backend.pubsub._pubsub, 'publish')
+            self.backend.pubsub.pubsub, 'publish')
         task = self.backend.tasks.queue('addition', a=1, b=2)
         args, kw = await critical.end
         self.assertEqual(len(args), 3)
@@ -60,7 +60,7 @@ class TestConnectionDrop(unittest.TestCase):
     async def test_fail_subscribe(self):
         await self.backend.pubsub.close()
         original, warning, critical = self._patch(
-            self.backend.pubsub._pubsub, 'psubscribe')
+            self.backend.pubsub.pubsub, 'psubscribe')
         await self.backend.pubsub.start()
         args, kw = await critical.end
         self.assertEqual(len(args), 4)
@@ -71,7 +71,7 @@ class TestConnectionDrop(unittest.TestCase):
         self.assertEqual(len(args), 4)
         self.assertEqual(args[1], self.backend.pubsub)
         self.assertEqual(args[3], 2.25)
-        self.backend.pubsub._pubsub.psubscribe = original
+        self.backend.pubsub.pubsub.psubscribe = original
         args, kw = await warning.end
         self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.pubsub)

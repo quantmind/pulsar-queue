@@ -4,6 +4,7 @@ from asyncio import Future, ensure_future
 from pulsar import chain_future
 from pulsar.apps.http import HttpClient
 from pulsar.apps.greenio import GreenPool
+from pulsar.apps.data.channels import Connector
 
 from .utils.serializers import serializers
 
@@ -86,12 +87,11 @@ class Manager(BaseComponent):
         pass
 
 
-class Component(BaseComponent):
+class Component(BaseComponent, Connector):
     component_type = None
 
     def __init__(self, backend, store):
         super().__init__(backend)
-        self.connection_error = False
         self.store = store
 
     def __repr__(self):
@@ -102,16 +102,6 @@ class Component(BaseComponent):
     @property
     def _loop(self):
         return self.store._loop
-
-    def connection_ok(self):
-        if self.connection_error:
-            self.logger.warning(
-                'connection with %s established - all good',
-                self
-            )
-            self.connection_error = False
-        else:
-            return True
 
 
 class MQ(Component, ABC):

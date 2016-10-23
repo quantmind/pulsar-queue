@@ -29,13 +29,13 @@ class TestScheduler(app.TaskQueueBase, unittest.TestCase):
     async def test_periodic(self):
         scheduler = self.tq_app.backend
         future = asyncio.Future()
-        cbk = scheduler.on_events(partial(self._test_periodic, future))
+        cbk = partial(self._test_periodic, future)
+        await scheduler.on_events('task', '*', cbk)
         try:
             result = await future
             self.assertTrue(result < time.time())
         finally:
-            cbs = scheduler.remove_event_callback(cbk)
-            self.assertEqual(len(cbs), 0)
+            await scheduler.remove_event_callback('task', '*', cbk)
 
     async def test_rpc_next_scheduled_tasks(self):
         next = await self.proxy.tasks.next_scheduled_tasks()
@@ -43,12 +43,10 @@ class TestScheduler(app.TaskQueueBase, unittest.TestCase):
         self.assertEqual(len(next), 2)
         self.assertEqual(next[0], 'testperiodic')
 
-    def _test_periodic(self, future, event, task):
-        if not event.startswith('task_'):
-            return
+    def _test_periodic(self, future, channel, event, task):
         try:
             self.assertEqual(task.name, 'testperiodic')
-            if event != 'task_done':
+            if event != 'done':
                 return
         except Exception as exc:
             future.set_exception(exc)

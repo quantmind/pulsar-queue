@@ -192,21 +192,22 @@ Start listening to events. This method return a coroutine which resolve in the a
 The start method is used when the api is used by application to queue messages/tasks
 and listen for events published by distributed consumers.
 
-*api*.on_events(*callback*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*api*.messages.register(*message_type*, *event_re*, *callback*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Add a callback invoked every time a new event occurs. The *callback* has the following signature:
+Add a callback invoked every time an event matching the regular expression ``event_re``
+occurs on the ``message_type`` channel. The *callback* has the following signature:
 
 .. code:: python
 
-    def event_callback(event, message):
-        # event is string
-        # message is either a task object of a message dictionary
+    def event_callback(channel, event, message):
+        # event is string, the evnt matched
+        # message is of type message_type
 
 If the event is a task event (see events_) the message is a Task_ object.
 
-*api*.remove_event_callback(*callback*)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*api*.messages.unregister(*message_type*, *event_re*, *callback*)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Remove a previously added event callback. This method is safe.
 

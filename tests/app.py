@@ -315,8 +315,8 @@ class TaskQueueApp(TaskQueueBase):
             count = 1
             task_id = None
 
-            def __call__(self, event, task):
-                if event == 'task_done' and task.name == 'subtraction':
+            def __call__(self, _, event, task):
+                if task.name == 'subtraction':
                     if task.meta.get('from_task') == self.task_id:
                         self.count += 1
                         if task.retry == 3:
@@ -325,7 +325,7 @@ class TaskQueueApp(TaskQueueBase):
                             self.task_id = task.id
 
         check_retry = CheckRetry()
-        self.api.on_events(check_retry)
+        await self.api.on_events('task', 'done', check_retry)
         try:
             task = await self.api.tasks.queue('subtraction', a=1, b='foo',
                                               delay=1,
@@ -337,7 +337,7 @@ class TaskQueueApp(TaskQueueBase):
             self.assertEqual(check_retry.count, 3)
             self.assertEqual(task.status_string, 'FAILURE')
         finally:
-            self.api.remove_event_callback(check_retry)
+            await self.api.remove_event_callback('task', 'done', check_retry)
 
     async def test_max_concurrency(self):
         tasks = [self.api.tasks.queue('maxconcurrency', lag=2)

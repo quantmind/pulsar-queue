@@ -140,13 +140,13 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
                         task = None
                         if worker.is_running():
                             self.logger.critical(
-                                '%s cannot pool tasks - '
+                                '%s cannot pool messages - '
                                 'connection error - try again in %s seconds',
                                 self.broker,
                                 next_time
                             )
                     except CANCELLED_ERRORS:
-                        self.logger.debug('stopped polling tasks')
+                        self.logger.debug('stopped polling messages')
                         raise
                     else:
                         self.broker.connection_ok()
@@ -155,7 +155,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
                         self._concurrent_tasks[task.id] = TaskExecutor(task)
                         ensure_future(self._execute_task(task, worker))
             else:
-                self.logger.debug('%s concurrent tasks. Cannot poll.',
+                self.logger.debug('%s concurrent messages. Cannot poll.',
                                   self.max_concurrent_tasks)
                 self._next_time = 1
                 next_time = self._next_time

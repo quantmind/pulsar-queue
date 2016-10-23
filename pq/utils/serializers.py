@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from pulsar import ProtocolError
 from pulsar.utils.system import json
 
 try:
@@ -18,12 +19,31 @@ def serializer(cls):
     return cls
 
 
-def as_message(message):
+def load_message(message):
     if isinstance(message, dict):
-        MsgType = message_types.get(message.get('type'))
+        MsgType = message_types.get(message.pop('type', None))
         if MsgType:
-            message.pop('type')
-            message = MsgType(**message)
+            return MsgType(**message)
+
+
+def as_message(message):
+    msg = load_message(message.get('data'))
+    if msg:
+        message['data'] = msg
+    else:
+        message = load_message(message)
+        if not message:
+            raise ProtocolError
+    return message
+
+
+def tojson(message):
+    if isinstance(message, dict):
+        msg = message.get('data')
+        if isinstance(msg, Message):
+            message['data'] = msg.tojson()
+    elif isinstance(message, Message):
+        message = message.tojson()
     return message
 
 
@@ -52,15 +72,8 @@ class Message(metaclass=MessageMetaClass):
 
 class MessageDict(Message):
 
-    def __init__(self, data):
-        self.data = data
-
-    def tojson(self):
-        '''A serializable dictionary
-        '''
-        data = self.data.copy()
-        data['type'] = self.type
-        return data
+    def __init__(self, *args, **kwargs):
+        self.__dict__.update(*args, **kwargs)
 
 
 @serializer
@@ -74,9 +87,7 @@ class Json:
 
     @classmethod
     def encode(cls, message):
-        if isinstance(message, Message):
-            message = message.tojson()
-        return json.dumps(message)
+        return json.dumps(tojson(message))
 
 
 if msgpack:
@@ -90,6 +101,4 @@ if msgpack:
 
         @classmethod
         def encode(cls, message):
-            if isinstance(message, Message):
-                message = message.tojson()
-            return msgpack.packb(message)
+            return msgpack.packb(tojson(message))

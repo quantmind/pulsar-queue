@@ -54,6 +54,10 @@ class Producer(EventHandler):
         return platform.node().lower()
 
     @property
+    def messages(self):
+        return self.pubsub.messages
+
+    @property
     def is_consumer(self):
         return False
 
@@ -89,11 +93,11 @@ class Producer(EventHandler):
         else:
             return GreenHttp(self.http)
 
-    def on_events(self, callback):
-        return self.pubsub.on_events(callback)
+    def on_events(self, channel, event, callback):
+        return self.pubsub.on_events(channel, event, callback)
 
-    def remove_event_callback(self, callback):
-        return self.pubsub.remove_event_callback(callback)
+    def remove_event_callback(self, channel, event, callback):
+        return self.pubsub.remove_event_callback(channel, event, callback)
 
     def queue(self, message, callback=True):
         return self.broker.queue(message, callback=callback)

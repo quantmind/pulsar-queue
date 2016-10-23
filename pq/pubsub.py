@@ -37,6 +37,16 @@ class PubSub(Component):
     def pubsub(self):
         return self.channels.pubsub
 
+    def on_events(self, channel, event, callback):
+        return self._loop.create_task(
+            self.channels.register(channel, event, callback)
+        )
+
+    def remove_event_callback(self, channel, event, callback):
+        return self._loop.create_task(
+            self.channels.unregister(channel, event, callback)
+        )
+
     async def start(self):
         """Subscribe to all channels
 

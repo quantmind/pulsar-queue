@@ -42,15 +42,13 @@ class BaseComponent:
     def cfg(self):
         return self.backend.cfg
 
-    def encode(self, message, serializer=None):
+    def encode(self, message):
         """Encode a message"""
-        serializer = serializer or self.cfg.message_serializer
-        return serializers[serializer].encode(message)
+        return serializers[self.cfg.message_serializer].encode(message)
 
-    def decode(self, data, serializer=None):
+    def decode(self, data):
         """Decode a message"""
-        serializer = serializer or self.cfg.message_serializer
-        return serializers[serializer].decode(data)
+        return serializers[self.cfg.message_serializer].decode(data)
 
     def prefixed(self, name=''):
         prefix = '%s_' % self.cfg.name

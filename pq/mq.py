@@ -119,13 +119,13 @@ class MQ(Component, ABC):
     """
     component_type = 'message-broker'
 
+    def __init__(self, backend, store):
+        super().__init__(backend, store)
+        self.queued_messages = {}
+
     @property
     def pubsub(self):
         return self.backend.pubsub
-
-    @property
-    def callbacks(self):
-        return self.pubsub.callbacks
 
     def queue(self, message, callback=True):
         '''Queue the ``message``.
@@ -136,7 +136,7 @@ class MQ(Component, ABC):
         '''
         future_done = MessageFuture(message.id, self.backend, loop=self._loop)
         if message.queue:
-            self.callbacks[message.id] = future_done
+            self.queued_messages[message.id] = future_done
         else:   # the task is not queued instead it is executed immediately
             coro = self.backend.execute(message)
             return chain_future(coro, next=future_done)

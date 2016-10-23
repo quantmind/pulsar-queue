@@ -15,7 +15,8 @@ from ..consumer import ConsumerAPI
 
 
 class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
-
+    """A Consumer for processing tasks
+    """
     def __init__(self, backend):
         super().__init__(backend)
         self._processed = 0
@@ -26,6 +27,9 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
         self._polling_tasks = True
         self._poll_tasks(worker)
         self.logger.warning('%s started polling tasks', self)
+
+    async def register(self):
+        await self.channels.register(Task.type, 'done', self._task_done)
 
     def queues(self):
         '''List of task queues consumed by this task consumer
@@ -93,6 +97,11 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
     # #######################################################################
     # #    PRIVATE METHODS
     # #######################################################################
+    def _task_done(self, channel, event, task):
+        done = self.backend.broker.queued_messages.pop(task.id, None)
+        if done:
+            done.set_result(task)
+
     def _poll_tasks(self, worker, next_time=None):
         if self.closing() and not self._concurrent_tasks:
             self.do_close()

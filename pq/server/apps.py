@@ -19,8 +19,7 @@ class QueueApp(Application):
     name = 'tasks'
     cfg = Config(apps=('tasks',),
                  version=__version__,
-                 data_store=DEFAULT_MQ_BACKEND,
-                 timeout=600)
+                 data_store=DEFAULT_MQ_BACKEND)
     _backend = None
 
     def api(self):

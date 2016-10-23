@@ -3,10 +3,9 @@ import asyncio
 from multiprocessing import cpu_count
 
 from .producer import Producer
-
+from ..pubsub import ConsumerMessage
 
 HEARTBEAT = 2
-CONSUMER_EVENT = 'consumer_status'
 
 
 class Consumer(Producer):
@@ -34,7 +33,7 @@ class Consumer(Producer):
             info['time'] = time.time()
             if self.cfg.debug:
                 self.logger.debug('publishing worker %s info', worker)
-            await self.pubsub.publish(CONSUMER_EVENT, info)
+            await self.pubsub.publish('status', ConsumerMessage(info))
         finally:
             worker._loop.call_later(HEARTBEAT, self.__tick, worker)
 

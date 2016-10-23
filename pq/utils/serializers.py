@@ -30,16 +30,13 @@ def as_message(message):
 class MessageMetaClass(type):
 
     def __new__(cls, name, bases, attrs):
+        attrs['type'] = (attrs.get('type') or name).lower()
         c = super(MessageMetaClass, cls).__new__(cls, name, bases, attrs)
-        message_types[c.__name__.lower()] = c
+        message_types[c.type] = c
         return c
 
 
 class Message(metaclass=MessageMetaClass):
-
-    @property
-    def type(self):
-        return self.__class__.__name__.lower()
 
     @classmethod
     def consumer(cls):
@@ -49,6 +46,19 @@ class Message(metaclass=MessageMetaClass):
         '''A serializable dictionary
         '''
         data = self.__dict__.copy()
+        data['type'] = self.type
+        return data
+
+
+class MessageDict(Message):
+
+    def __init__(self, data):
+        self.data = data
+
+    def tojson(self):
+        '''A serializable dictionary
+        '''
+        data = self.data.copy()
         data['type'] = self.type
         return data
 

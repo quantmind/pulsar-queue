@@ -66,9 +66,13 @@ class Producer(EventHandler):
 
     def info(self):
         for consumer in self.consumers:
-            info = consumer.info()
-            if info:
-                yield consumer.name, info
+            try:
+                info = consumer.info()
+            except Exception:
+                self.logger.exception('Unhandled information exception')
+            else:
+                if info:
+                    yield consumer.name, info
 
     def lock(self, name, **kwargs):
         """aquire a distributed global lock for ``name``

@@ -38,11 +38,19 @@ class ConsumerAPI(BaseComponent):
     def pubsub(self):
         return self.backend.pubsub
 
-    def start(self, worker, consume):
-        pass
+    @property
+    def channels(self):
+        return self.backend.pubsub.channels
+
+    def start(self, worker):
+        """Start this consumer"""
+
+    def register(self):
+        """Register this consumer with channels"""
 
     def tick(self):
-        """Called periodically by the actor.
+        """Called periodically by the monitor and before closing
+        by all workers.
 
         By default it checks for closing signal and it available do the close
         """

@@ -2,8 +2,8 @@ import time
 import asyncio
 from multiprocessing import cpu_count
 
-from .producer import Producer
-from ..pubsub import ConsumerMessage
+from .producer import Producer, ConsumerMessage
+
 
 HEARTBEAT = 2
 
@@ -27,18 +27,18 @@ class Consumer(Producer):
             info = dict(self.info())
             info['worker'] = worker.aid
             info['node'] = self.node_name
-            info['pubsub'] = self.pubsub.store.dns
+            info['pubsub'] = self.channels.dns
             info['cores'] = cpu_count()
             info['message-broker'] = self.broker.store.dns
             info['time'] = time.time()
             if self.cfg.debug:
                 self.logger.debug('publishing worker %s info', worker)
-            await self.pubsub.publish('status', ConsumerMessage(info))
+            await self.publish('status', ConsumerMessage(info))
         finally:
             worker._loop.call_later(HEARTBEAT, self.__tick, worker)
 
     async def start(self, worker, consume=True):
-        await self.pubsub.start()
+        await super().start()
         if consume:
             for consumer in self.consumers:
                 consumer.start(worker)

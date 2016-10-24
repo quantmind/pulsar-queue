@@ -1,16 +1,21 @@
 import platform
 import asyncio
 
-from pulsar import new_event_loop, ensure_future, EventHandler
+from pulsar import new_event_loop, ensure_future, EventHandler, as_coroutine
 from pulsar.apps.data import create_store
 from pulsar.apps.greenio import GreenHttp
 from pulsar.apps.http import HttpClient
 from pulsar.utils.importer import module_attribute
+from pulsar.apps.data.channels import Channels
 
+from ..utils.serializers import MessageDict
 from ..utils import concurrency
 from ..backends import brokers
 from ..mq import Manager
-from ..pubsub import PubSub
+
+
+class ConsumerMessage(MessageDict):
+    type = 'consumer'
 
 
 class Producer(EventHandler):
@@ -33,8 +38,12 @@ class Producer(EventHandler):
         else:
             broker = create_store(cfg.message_broker, loop=loop)
         self.manager = (self.cfg.callable or Manager)(self)
-        self.pubsub = PubSub(self, store)
         self.broker = brokers.get(broker.name)(self, broker)
+        self.messages = Channels(
+            store.pubsub(protocol=self.broker),
+            status_channel=ConsumerMessage.type,
+            logger=self.logger
+        )
         self.http = self.manager.http()
         self.green_pool = self.manager.green_pool()
         self.consumers = []
@@ -54,16 +63,20 @@ class Producer(EventHandler):
         return platform.node().lower()
 
     @property
-    def messages(self):
-        return self.pubsub.messages
-
-    @property
     def is_consumer(self):
         return False
 
     async def start(self):
-        await self.pubsub.start()
+        for consumer in self.consumers:
+            await as_coroutine(consumer.register())
+        await self.channels.connect()
         return self
+
+    async def publish(self, event, message):
+        """Publish an event to the message channel
+        """
+        await self.manager.store_message(message)
+        await self.messages.publish(message.type, event, message)
 
     def tick(self, monitor):
         pass
@@ -81,7 +94,7 @@ class Producer(EventHandler):
     def lock(self, name, **kwargs):
         """aquire a distributed global lock for ``name``
         """
-        return self.pubsub.lock('lock-%s' % name, **kwargs)
+        return self.messages.lock('lock-%s' % name, **kwargs)
 
     def http_sessions(self, model=None):
         """Return an HTTP session handler for a given concurrency model
@@ -94,10 +107,14 @@ class Producer(EventHandler):
             return GreenHttp(self.http)
 
     def on_events(self, channel, event, callback):
-        return self.pubsub.on_events(channel, event, callback)
+        return self._loop.create_task(
+            self.messages.register(channel, event, callback)
+        )
 
     def remove_event_callback(self, channel, event, callback):
-        return self.pubsub.remove_event_callback(channel, event, callback)
+        return self._loop.create_task(
+            self.messages.unregister(channel, event, callback)
+        )
 
     def queue(self, message, callback=True):
         return self.broker.queue(message, callback=callback)
@@ -135,5 +152,6 @@ class Producer(EventHandler):
 async def _close(self, closing, loop):
     if closing:
         await asyncio.gather(*closing, loop=loop)
+    await self.channels.close()
     self.manager.close()
     self.fire_event('close')

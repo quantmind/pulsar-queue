@@ -3,6 +3,7 @@ from uuid import uuid4
 from multiprocessing import cpu_count
 
 from pulsar import ensure_future, CANCELLED_ERRORS
+from pulsar.apps.data.channels import backoff, RECONNECT_LAG
 
 from .executor import ExecutorMixin
 from .scheduler import SchedulerMixin
@@ -10,7 +11,6 @@ from . import states
 from .task import Task, TaskNotAvailable
 from .models import RegistryMixin
 from .rpc import TasksRpc
-from ..pubsub import backoff, RECONNECT_LAG
 from ..consumer import ConsumerAPI
 
 

@@ -50,31 +50,31 @@ class TestConnectionDrop(unittest.TestCase):
 
     async def test_fail_publish(self):
         original, warning, critical = self._patch(
-            self.backend.pubsub.pubsub, 'publish')
+            self.backend.channels.pubsub, 'publish')
         task = self.backend.tasks.queue('addition', a=1, b=2)
         args, kw = await critical.end
         self.assertEqual(len(args), 3)
-        self.assertEqual(args[1], self.backend.pubsub)
+        self.assertEqual(args[1], self.backend.channels)
         task.cancel()
 
     async def test_fail_subscribe(self):
-        await self.backend.pubsub.close()
+        await self.backend.channels.close()
         original, warning, critical = self._patch(
-            self.backend.pubsub.pubsub, 'psubscribe')
-        await self.backend.pubsub.start()
+            self.backend.channels.pubsub, 'psubscribe')
+        await self.backend.channels.start()
         args, kw = await critical.end
         self.assertEqual(len(args), 4)
-        self.assertEqual(args[1], self.backend.pubsub)
+        self.assertEqual(args[1], self.backend.channels)
         self.assertEqual(args[3], 2)
         critical.end = Future()
         args, kw = await critical.end
         self.assertEqual(len(args), 4)
-        self.assertEqual(args[1], self.backend.pubsub)
+        self.assertEqual(args[1], self.backend.channels)
         self.assertEqual(args[3], 2.25)
-        self.backend.pubsub.pubsub.psubscribe = original
+        self.backend.channels.pubsub.psubscribe = original
         args, kw = await warning.end
         self.assertEqual(len(args), 3)
-        self.assertEqual(args[1], self.backend.pubsub)
+        self.assertEqual(args[1], self.backend.channels)
         self.assertEqual(args[2], '%s_*' % self.app.name)
 
     def _log_error(self, coro, *args, **kwargs):

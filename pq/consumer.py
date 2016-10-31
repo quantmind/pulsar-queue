@@ -35,12 +35,8 @@ class ConsumerAPI(BaseComponent):
         return self.backend.broker
 
     @property
-    def pubsub(self):
-        return self.backend.pubsub
-
-    @property
     def channels(self):
-        return self.backend.pubsub.channels
+        return self.backend.channels
 
     def start(self, worker):
         """Start this consumer"""

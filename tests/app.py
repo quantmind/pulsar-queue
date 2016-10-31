@@ -150,7 +150,7 @@ class TaskQueueApp(TaskQueueBase):
         tasks = self.api.tasks
         future = tasks.execute('addition', a=3, b=-4)
         self.assertIsInstance(future, api.MessageFuture)
-        self.assertTrue(future.task_id)
+        self.assertTrue(future.message_id)
         task = await future
         self.assertIsInstance(task, api.Task)
         self.assertEqual(task.status_string, 'SUCCESS')
@@ -313,16 +313,16 @@ class TaskQueueApp(TaskQueueBase):
 
         class CheckRetry:
             count = 1
-            task_id = None
+            message_id = None
 
             def __call__(self, _, event, task):
                 if task.name == 'subtraction':
-                    if task.meta.get('from_task') == self.task_id:
+                    if task.meta.get('from_task') == self.message_id:
                         self.count += 1
                         if task.retry == 3:
                             done.set_result(task)
                         else:
-                            self.task_id = task.id
+                            self.message_id = task.id
 
         check_retry = CheckRetry()
         await self.api.on_events('task', 'done', check_retry)
@@ -332,7 +332,7 @@ class TaskQueueApp(TaskQueueBase):
                                               callback=False,
                                               meta_params=meta)
             self.assertEqual(task.status_string, 'QUEUED')
-            check_retry.task_id = task.id
+            check_retry.message_id = task.id
             task = await done
             self.assertEqual(check_retry.count, 3)
             self.assertEqual(task.status_string, 'FAILURE')

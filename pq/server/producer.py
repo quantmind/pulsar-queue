@@ -39,7 +39,7 @@ class Producer(EventHandler):
             broker = create_store(cfg.message_broker, loop=loop)
         self.manager = (self.cfg.callable or Manager)(self)
         self.broker = brokers.get(broker.name)(self, broker)
-        self.messages = Channels(
+        self.channels = Channels(
             store.pubsub(protocol=self.broker),
             status_channel=ConsumerMessage.type,
             logger=self.logger
@@ -76,7 +76,7 @@ class Producer(EventHandler):
         """Publish an event to the message channel
         """
         await self.manager.store_message(message)
-        await self.messages.publish(message.type, event, message)
+        await self.channels.publish(message.type, event, message)
 
     def tick(self, monitor):
         pass
@@ -94,7 +94,7 @@ class Producer(EventHandler):
     def lock(self, name, **kwargs):
         """aquire a distributed global lock for ``name``
         """
-        return self.messages.lock('lock-%s' % name, **kwargs)
+        return self.channels.lock('lock-%s' % name, **kwargs)
 
     def http_sessions(self, model=None):
         """Return an HTTP session handler for a given concurrency model
@@ -108,12 +108,12 @@ class Producer(EventHandler):
 
     def on_events(self, channel, event, callback):
         return self._loop.create_task(
-            self.messages.register(channel, event, callback)
+            self.channels.register(channel, event, callback)
         )
 
     def remove_event_callback(self, channel, event, callback):
         return self._loop.create_task(
-            self.messages.unregister(channel, event, callback)
+            self.channels.unregister(channel, event, callback)
         )
 
     def queue(self, message, callback=True):

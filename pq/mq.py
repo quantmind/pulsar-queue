@@ -11,9 +11,9 @@ from .utils.serializers import serializers
 
 class MessageFuture(Future):
 
-    def __init__(self, task_id, backend, *, loop=None):
+    def __init__(self, message_id, backend, *, loop=None):
         super().__init__(loop=loop)
-        self.task_id = task_id
+        self.message_id = message_id
         self.backend = backend
 
     def wait(self):     # pragma    nocover
@@ -22,12 +22,12 @@ class MessageFuture(Future):
 
     def _repr_info(self):
         info = super()._repr_info()
-        info.append('ID=%s' % self.task_id)
+        info.append('ID=%s' % self.message_id)
         return info
 
 
 async def _wait(task_future):
-    await task_future.backend.pubsub.start()
+    await task_future.backend.channels.connect()
     result = await task_future
     return result
 
@@ -111,10 +111,6 @@ class MQ(Component, ABC):
         super().__init__(backend, store)
         self.queued_messages = {}
 
-    @property
-    def pubsub(self):
-        return self.backend.pubsub
-
     def queue(self, message, callback=True):
         '''Queue the ``message``.
 
@@ -181,7 +177,7 @@ class MQ(Component, ABC):
     async def _queue_message(self, message, future):
         '''Asynchronously queue a task
         '''
-        await self.pubsub.publish('queued', message)
+        await self.backend.publish('queued', message)
         try:
             await self.queue_message(message.queue, self.encode(message))
         except ConnectionRefusedError:

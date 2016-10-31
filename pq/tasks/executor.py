@@ -83,7 +83,7 @@ class ExecutorMixin:
                 if worker:
                     task.worker = worker.aid
                 logger.info(task.lazy_info())
-                await self.pubsub.publish('started', task)
+                await self.backend.publish('started', task)
                 future = self._consume(job, kwargs)
                 #
                 # record future for cancellation
@@ -122,7 +122,7 @@ class ExecutorMixin:
         if worker:
             self._concurrent_tasks.pop(task_id, None)
 
-        await self.pubsub.publish('done', task)
+        await self.backend.publish('done', task)
 
         if job:
             if worker:

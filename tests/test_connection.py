@@ -58,24 +58,23 @@ class TestConnectionDrop(unittest.TestCase):
         task.cancel()
 
     async def test_fail_subscribe(self):
-        await self.backend.channels.close()
         original, warning, critical = self._patch(
-            self.backend.channels.pubsub, 'psubscribe')
-        await self.backend.channels.connect()
+            self.backend.channels.pubsub, 'subscribe')
+        await self.backend.on_events('tasks', 'started', lambda *args: args)
         args, kw = await critical.end
-        self.assertEqual(len(args), 4)
+        self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.channels)
-        self.assertEqual(args[3], 2)
+        self.assertEqual(args[2], 2)
         critical.end = Future()
         args, kw = await critical.end
-        self.assertEqual(len(args), 4)
+        self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.channels)
-        self.assertEqual(args[3], 2.25)
-        self.backend.channels.pubsub.psubscribe = original
+        self.assertEqual(args[2], 2.25)
+        self.backend.channels.pubsub.subscribe = original
         args, kw = await warning.end
         self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.channels)
-        self.assertEqual(args[2], '%s_*' % self.app.name)
+        self.assertEqual(args[2], 'consumer')
 
     def _log_error(self, coro, *args, **kwargs):
         coro.switch((args, kwargs))

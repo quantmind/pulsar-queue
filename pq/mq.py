@@ -42,26 +42,22 @@ class BaseComponent:
     def cfg(self):
         return self.backend.cfg
 
-    def encode(self, message):
-        """Encode a message"""
-        return serializers[self.cfg.message_serializer].encode(message)
-
-    def decode(self, data):
-        """Decode a message"""
-        return serializers[self.cfg.message_serializer].decode(data)
-
-    def prefixed(self, name=''):
-        prefix = '%s_' % self.cfg.name
-        if not name.startswith(prefix):
-            name = '%s%s' % (prefix, name)
-        return name
-
-
-class Manager(BaseComponent):
-
     @property
     def _loop(self):
         return self.backend._loop
+
+    def encode(self, message, serializer=None):
+        """Encode a message"""
+        serializer = serializer or self.cfg.message_serializer
+        return serializers[serializer].encode(message)
+
+    def decode(self, data, serializer=None):
+        """Decode a message"""
+        serializer = serializer or self.cfg.message_serializer
+        return serializers[serializer].decode(data)
+
+
+class Manager(BaseComponent):
 
     def green_pool(self):
         return GreenPool(loop=self._loop)
@@ -85,31 +81,17 @@ class Manager(BaseComponent):
         pass
 
 
-class Component(BaseComponent, Connector):
-    component_type = None
-
-    def __init__(self, backend, store):
-        super().__init__(backend)
-        self.store = store
-
-    def __repr__(self):
-        return '%s - %s' % (self.component_type, self.store.dns)
-
-    __str__ = __repr__
-
-    @property
-    def _loop(self):
-        return self.store._loop
-
-
-class MQ(Component, ABC):
+class MQ(BaseComponent, Connector, ABC):
     """Interface class for a distributed message queue
     """
-    component_type = 'message-broker'
-
-    def __init__(self, backend, store):
-        super().__init__(backend, store)
+    def __init__(self, backend, store, namespace=None):
+        super().__init__(backend)
+        Connector.__init__(self, store, namespace=namespace)
+        self.store = store
         self.queued_messages = {}
+
+    def __repr__(self):
+        return 'message-broker - %s' % self.dns
 
     def queue(self, message, callback=True):
         '''Queue the ``message``.

@@ -192,7 +192,7 @@ Start listening to events. This method return a coroutine which resolve in the a
 The start method is used when the api is used by application to queue messages/tasks
 and listen for events published by distributed consumers.
 
-*api*.messages.register(*message_type*, *event_re*, *callback*)
+*api*.on_events(*message_type*, *event_re*, *callback*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Add a callback invoked every time an event matching the regular expression ``event_re``
@@ -201,12 +201,20 @@ occurs on the ``message_type`` channel. The *callback* has the following signatu
 .. code:: python
 
     def event_callback(channel, event, message):
-        # event is string, the evnt matched
+        # event is string, the event matched
         # message is of type message_type
 
 If the event is a task event (see events_) the message is a Task_ object.
 
-*api*.messages.unregister(*message_type*, *event_re*, *callback*)
+This method is useful when creating applications which needs to respond to the
+queue server events in real time::
+
+    api.on_events('task', 'queued', callback)
+    api.on_events('task', 'started', callback)
+    api.on_events('task', 'done', callback)
+
+
+*api*.remove_event_callback(*message_type*, *event_re*, *callback*)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Remove a previously added event callback. This method is safe.
@@ -221,7 +229,7 @@ Queue a message in the message queue, equivalent to:
     api.broker.queue(message, callback)
 
 This method returns a ``MessageFuture``, a subclass of asyncio Future_ which
-resolve in a ``message`` object.
+resolves in a ``message`` object.
 If ``callback`` is True (default) the Future is resolved once the message
 is delivered (out of the queue), otherwise is is resolved once the message
 is queued (entered the queue).

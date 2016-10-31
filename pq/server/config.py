@@ -3,7 +3,7 @@ import pulsar
 from ..utils.serializers import serializers
 
 
-DEFAULT_MQ_BACKEND = 'redis://127.0.0.1:6379/7'
+DEFAULT_MQ_BACKEND = 'redis://127.0.0.1:6379/7?namespace=pq'
 
 
 class TaskSetting(pulsar.Setting):

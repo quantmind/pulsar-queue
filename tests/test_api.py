@@ -62,3 +62,8 @@ class TestTasks(unittest.TestCase):
     def test_queues(self):
         t = api.QueueApp().api()
         self.assertTrue(t.tasks.queues())
+
+    def test_namespace(self):
+        t = api.QueueApp(config='tests.config').api()
+        self.assertEqual(t.broker.namespace, 'pqtests_')
+        self.assertEqual(t.broker.prefixed('foo'), 'pqtests_foo')

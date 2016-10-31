@@ -14,7 +14,7 @@ class MQ(mq.MQ):
         :return: a :class:`.Task` or ``None``.
         '''
         assert queues
-        args = list(queues)
+        args = [self.prefixed(q) for q in queues]
         args.append(self.cfg.task_pool_timeout)
         qt = await self._client.execute('brpop', *args)
         if qt:
@@ -26,18 +26,18 @@ class MQ(mq.MQ):
         '''
         pipe = self._client.pipeline()
         for queue in queues:
-            pipe.execute('del', queue)
+            pipe.execute('del', self.prefixed(queue))
         await pipe.commit()
 
     async def queue_message(self, queue, message):
         '''Asynchronously queue a task
         '''
-        await self._client.lpush(queue, message)
+        await self._client.lpush(self.prefixed(queue), message)
 
     async def size(self, *queues):
         pipe = self._client.pipeline()
         for queue in queues:
-            pipe.execute('llen', queue)
+            pipe.execute('llen', self.prefixed(queue))
         sizes = await pipe.commit()
         return sizes
 

@@ -1,11 +1,11 @@
 import sys
 import time
 import traceback
+import json
+
 from asyncio import wait_for
 from asyncio import CancelledError, TimeoutError
 from asyncio.subprocess import Process
-
-from pulsar.utils.system import json
 
 from .task import TaskError, TaskTimeout
 from . import states
@@ -154,7 +154,8 @@ class ExecutorMixin:
             PROCESS_FILE,
             json.dumps(sys.path),
             json.dumps(params),
-            json.dumps(job.task.tojson()))
+            json.dumps(job.task.tojson())
+        )
         process = Process(transport, protocol, loop)
         await process.communicate()
         if job.task.stacktrace:

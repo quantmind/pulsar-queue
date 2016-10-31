@@ -204,7 +204,7 @@ class TaskQueueApp(TaskQueueBase):
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertEqual(task.result, True)
 
-    async def test_supports_asyncio(self):
+    async def test_cpu_supports_asyncio(self):
         tasks = self.api.tasks
         task = await tasks.queue('cpuboundwithasync', asyncio=True)
         self.assertIsInstance(task, api.Task)

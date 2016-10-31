@@ -100,7 +100,7 @@ async def main(syspath, params, stask):
         params.update({'python_path': False,
                        'parse_console': False})
         producer = await QueueApp(**params).api().start()
-        task = producer.pubsub.decode(stask, 'json')
+        task = producer.broker.decode(stask, 'json')
         #
         tasks = producer.tasks
         logger = tasks.logger

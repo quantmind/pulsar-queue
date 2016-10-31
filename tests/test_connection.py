@@ -61,7 +61,7 @@ class TestConnectionDrop(unittest.TestCase):
         await self.backend.channels.close()
         original, warning, critical = self._patch(
             self.backend.channels.pubsub, 'psubscribe')
-        await self.backend.channels.start()
+        await self.backend.channels.connect()
         args, kw = await critical.end
         self.assertEqual(len(args), 4)
         self.assertEqual(args[1], self.backend.channels)

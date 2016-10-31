@@ -29,7 +29,7 @@ class Consumer(Producer):
             info['node'] = self.node_name
             info['pubsub'] = self.channels.dns
             info['cores'] = cpu_count()
-            info['message-broker'] = self.broker.store.dns
+            info['message-broker'] = self.broker.dns
             info['time'] = time.time()
             if self.cfg.debug:
                 self.logger.debug('publishing worker %s info', worker)

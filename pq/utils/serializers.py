@@ -1,7 +1,5 @@
+import json
 from collections import OrderedDict
-
-from pulsar import ProtocolError
-from pulsar.utils.system import json
 
 try:
     import msgpack
@@ -17,34 +15,6 @@ def serializer(cls):
     name = cls.__name__.lower()
     serializers[name] = cls
     return cls
-
-
-def load_message(message):
-    if isinstance(message, dict):
-        MsgType = message_types.get(message.pop('type', None))
-        if MsgType:
-            return MsgType(**message)
-
-
-def as_message(message):
-    msg = load_message(message.get('data'))
-    if msg:
-        message['data'] = msg
-    else:
-        message = load_message(message)
-        if not message:
-            raise ProtocolError
-    return message
-
-
-def tojson(message):
-    if isinstance(message, dict):
-        msg = message.get('data')
-        if isinstance(msg, Message):
-            message['data'] = msg.tojson()
-    elif isinstance(message, Message):
-        message = message.tojson()
-    return message
 
 
 class MessageMetaClass(type):
@@ -86,11 +56,11 @@ class Json:
     def decode(cls, data):
         if isinstance(data, bytes):
             data = data.decode('utf-8')
-        return as_message(json.loads(data))
+        return json.loads(data, object_hook=object_hook)
 
     @classmethod
     def encode(cls, message):
-        return json.dumps(tojson(message))
+        return json.dumps(message, cls=JSONEncoder)
 
 
 if msgpack:
@@ -100,8 +70,30 @@ if msgpack:
 
         @classmethod
         def decode(cls, data):
-            return as_message(msgpack.unpackb(data, encoding='utf-8'))
+            return msgpack.unpackb(data, object_hook=object_hook,
+                                   encoding='utf-8')
 
         @classmethod
         def encode(cls, message):
-            return msgpack.packb(tojson(message))
+            return msgpack.packb(message, default=as_message)
+
+
+def object_hook(d):
+    type = d.get('type')
+    MsgType = message_types.get(type)
+    if MsgType:
+        d.pop('type')
+        return MsgType(**d)
+    return d
+
+
+class JSONEncoder(json.JSONEncoder):
+
+    def default(self, o):
+        if isinstance(o, Message):
+            return o.tojson()
+        return super().default(o)
+
+
+def as_message(o):
+    return o.tojson() if isinstance(o, Message) else o

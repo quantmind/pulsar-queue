@@ -270,7 +270,7 @@ class TaskQueueApp(TaskQueueBase):
         task = await tasks.queue('queue.from.task')
         self.assertEqual(task.status_string, 'SUCCESS')
         other_task = task.result
-        self.assertEqual(other_task['from_task'], task.id)
+        self.assertEqual(other_task.from_task, task.id)
 
     async def test_scrape(self):
         tasks = self.api.tasks

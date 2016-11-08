@@ -76,15 +76,10 @@ class Producer(EventHandler):
     async def publish(self, event, message):
         """Publish an event to the message channel
         """
-        coro = [
-            self.manager.store_message(message),
-            self.channels.publish(message.type, event, message)
-        ]
+        await self.manager.store_message(message),
+        await self.channels.publish(message.type, event, message)
         if message.id:
-            coro.append(
-                self.channels.publish(message.type, message.id, message)
-            )
-        await gather(*coro)
+            await self.channels.publish(message.type, message.id, message)
 
     def tick(self, monitor):
         pass

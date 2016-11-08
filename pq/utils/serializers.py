@@ -27,6 +27,8 @@ class MessageMetaClass(type):
 
 
 class Message(metaclass=MessageMetaClass):
+    id = None
+    """Message ID - all messages should have one"""
 
     @classmethod
     def consumer(cls):

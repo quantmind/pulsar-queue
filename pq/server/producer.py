@@ -1,5 +1,6 @@
 import platform
-import asyncio
+
+from asyncio import gather
 
 from pulsar import new_event_loop, ensure_future, EventHandler, as_coroutine
 from pulsar.apps.data import create_store
@@ -75,8 +76,15 @@ class Producer(EventHandler):
     async def publish(self, event, message):
         """Publish an event to the message channel
         """
-        await self.manager.store_message(message)
-        await self.channels.publish(message.type, event, message)
+        coro = [
+            self.manager.store_message(message),
+            self.channels.publish(message.type, event, message)
+        ]
+        if message.id:
+            coro.append(
+                self.channels.publish(message.type, message.id, message)
+            )
+        await gather(*coro)
 
     def tick(self, monitor):
         pass
@@ -151,7 +159,7 @@ class Producer(EventHandler):
 
 async def _close(self, closing, loop):
     if closing:
-        await asyncio.gather(*closing, loop=loop)
+        await gather(*closing, loop=loop)
     await self.channels.close()
     self.manager.close()
     self.fire_event('close')

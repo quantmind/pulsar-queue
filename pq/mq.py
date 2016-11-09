@@ -77,6 +77,11 @@ class Manager(BaseComponent):
         """
         pass
 
+    def start(self):
+        """Optional start method, called by the backend when it starts
+        """
+        pass
+
     def close(self):
         pass
 

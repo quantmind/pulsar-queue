@@ -67,9 +67,12 @@ class Producer(EventHandler):
         return False
 
     async def start(self):
+        # Register consumers
         for consumer in self.consumers:
             await as_coroutine(consumer.register())
+        # connect channels
         await self.channels.connect()
+        self.manager.start()
         return self
 
     async def publish(self, event, message):

@@ -181,7 +181,8 @@ def register_broker(name, factory=None):
         factory = brokers.get(name)
         if not factory:
             raise ImproperlyConfigured('No such message broker: %s' % name)
-    brokers[name] = factory
+    else:
+        brokers[name] = factory
     return factory
 
 

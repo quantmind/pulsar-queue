@@ -9,8 +9,8 @@ from pulsar.utils.importer import module_attribute
 
 from ..utils.serializers import MessageDict
 from ..utils import concurrency
-from ..backends import register_broker
-from ..mq import Manager
+from ..mq import Manager, register_broker
+from ..backends import redis
 
 
 class ConsumerMessage(MessageDict):
@@ -26,6 +26,7 @@ class Producer(EventHandler):
     ONE_TIME_EVENTS = ('close',)
 
     def __init__(self, cfg, *, logger=None, **kw):
+        register_broker('redis', redis.MQ)
         loop = cfg.params.pop('loop', None)
         # create the store for channels
         store = create_store(cfg.data_store, loop=loop)

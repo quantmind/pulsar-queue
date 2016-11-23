@@ -2,6 +2,7 @@ from .utils.serializers import Message, MessageDict
 from .utils.concurrency import ASYNC_IO, THREAD_IO, CPUBOUND
 from .mq import MessageFuture, MQ, Manager, register_broker
 from .consumer import ConsumerAPI
+from .backends import redis
 
 from .server.apps import QueueApp, PulsarQueue
 from .server.config import DEFAULT_MQ_BACKEND
@@ -41,3 +42,6 @@ __all__ = [
     'CPUBOUND',
     'DEFAULT_MQ_BACKEND'
 ]
+
+
+register_broker('redis', redis.MQ)

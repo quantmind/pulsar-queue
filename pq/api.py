@@ -1,6 +1,6 @@
 from .utils.serializers import Message, MessageDict
 from .utils.concurrency import ASYNC_IO, THREAD_IO, CPUBOUND
-from .mq import MessageFuture, MQ, Manager
+from .mq import MessageFuture, MQ, Manager, register_broker
 from .consumer import ConsumerAPI
 
 from .server.apps import QueueApp, PulsarQueue
@@ -22,6 +22,7 @@ __all__ = [
     'ConsumerAPI',
     'Manager',
     'MQ',
+    'register_broker',
     #
     'Tasks',
     'TaskError',

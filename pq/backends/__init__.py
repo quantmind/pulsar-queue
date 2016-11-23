@@ -1,3 +1,4 @@
 from . import redis
+from ..api import register_broker
 
-brokers = {'redis': redis.MQ}
+register_broker('redis', redis.MQ)

@@ -6,11 +6,10 @@ from pulsar.apps.data import create_store
 from pulsar.apps.greenio import GreenHttp
 from pulsar.apps.http import HttpClient
 from pulsar.utils.importer import module_attribute
-from pulsar.apps.data.channels import Channels
 
 from ..utils.serializers import MessageDict
 from ..utils import concurrency
-from ..backends import brokers
+from ..backends import register_broker
 from ..mq import Manager
 
 
@@ -28,6 +27,7 @@ class Producer(EventHandler):
 
     def __init__(self, cfg, *, logger=None, **kw):
         loop = cfg.params.pop('loop', None)
+        # create the store for channels
         store = create_store(cfg.data_store, loop=loop)
         super().__init__(loop=store._loop)
         self.cfg = cfg
@@ -38,9 +38,9 @@ class Producer(EventHandler):
         else:
             broker = create_store(cfg.message_broker, loop=loop)
         self.manager = (self.cfg.callable or Manager)(self)
-        self.broker = brokers.get(broker.name)(self, broker)
-        self.channels = Channels(
-            store.pubsub(protocol=self.broker),
+        self.broker = register_broker(broker.name)(self, broker)
+        self.channels = store.channels(
+            protocol=self.broker,
             status_channel=ConsumerMessage.type,
             logger=self.logger
         )

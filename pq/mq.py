@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from asyncio import Future, ensure_future
+from collections import OrderedDict
 
-from pulsar import chain_future
+from pulsar import chain_future, ImproperlyConfigured
 from pulsar.apps.http import HttpClient
 from pulsar.apps.greenio import GreenPool
 from pulsar.apps.data.channels import Connector
@@ -173,3 +174,15 @@ class MQ(BaseComponent, Connector, ABC):
             self.logger.debug('%s in "%s"', message.lazy_info(), message.queue)
         message.done_callback = future
         return message
+
+
+def register_broker(name, factory=None):
+    if factory is None:
+        factory = brokers.get(name)
+        if not factory:
+            raise ImproperlyConfigured('No such message broker: %s' % name)
+    brokers[name] = factory
+    return factory
+
+
+brokers = OrderedDict()

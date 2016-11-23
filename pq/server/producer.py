@@ -13,6 +13,9 @@ from ..mq import Manager, register_broker
 from ..backends import redis
 
 
+register_broker('redis', redis.MQ)
+
+
 class ConsumerMessage(MessageDict):
     type = 'consumer'
 
@@ -26,7 +29,6 @@ class Producer(EventHandler):
     ONE_TIME_EVENTS = ('close',)
 
     def __init__(self, cfg, *, logger=None, **kw):
-        register_broker('redis', redis.MQ)
         loop = cfg.params.pop('loop', None)
         # create the store for channels
         store = create_store(cfg.data_store, loop=loop)

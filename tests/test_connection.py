@@ -74,7 +74,7 @@ class TestConnectionDrop(unittest.TestCase):
         args, kw = await warning.end
         self.assertEqual(len(args), 3)
         self.assertEqual(args[1], self.backend.channels)
-        self.assertEqual(args[2], 'consumer')
+        self.assertEqual(args[2].name, 'consumer')
 
     def _log_error(self, coro, *args, **kwargs):
         coro.switch((args, kwargs))

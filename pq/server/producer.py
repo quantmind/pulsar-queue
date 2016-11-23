@@ -10,10 +10,9 @@ from pulsar.utils.importer import module_attribute
 from ..utils.serializers import MessageDict
 from ..utils import concurrency
 from ..mq import Manager, register_broker
-from ..backends import redis
 
 
-register_broker('redis', redis.MQ)
+register_broker('redis', 'pq.backends.redis:MQ')
 
 
 class ConsumerMessage(MessageDict):

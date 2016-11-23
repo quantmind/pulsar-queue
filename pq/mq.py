@@ -6,6 +6,7 @@ from pulsar import chain_future, ImproperlyConfigured
 from pulsar.apps.http import HttpClient
 from pulsar.apps.greenio import GreenPool
 from pulsar.apps.data.channels import Connector
+from pulsar.utils.importer import module_attribute
 
 from .utils.serializers import serializers
 
@@ -178,9 +179,13 @@ class MQ(BaseComponent, Connector, ABC):
 
 def register_broker(name, factory=None):
     if factory is None:
-        factory = brokers.get(name)
-        if not factory:
+        dotted_path = brokers.get(name)
+        if not dotted_path:
             raise ImproperlyConfigured('No such message broker: %s' % name)
+        factory = module_attribute(dotted_path, safe=True)
+        if not factory:
+            raise ImproperlyConfigured(
+                '"%s" store not available' % dotted_path)
     else:
         brokers[name] = factory
     return factory

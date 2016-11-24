@@ -15,7 +15,7 @@ class MQ(mq.MQ):
         '''
         assert queues
         args = [self.prefixed(q) for q in queues]
-        args.append(self.cfg.task_pool_timeout)
+        args.append(max(1, int(self.cfg.task_pool_timeout)))
         qt = await self._client.execute('brpop', *args)
         if qt:
             _, message = qt

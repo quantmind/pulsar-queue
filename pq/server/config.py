@@ -72,7 +72,7 @@ class TaskPoolTimeout(TaskSetting):
     name = "task_pool_timeout"
     flags = ["--task-pool-timeout"]
     default = 1
-    validator = pulsar.validate_pos_int
+    validator = pulsar.validate_pos_float
     type = int
     desc = """\
         Timeout for asynchronously polling tasks from the queues when
@@ -84,7 +84,7 @@ class TaskPoolTimeoutMax(TaskSetting):
     name = "task_pool_timeout_max"
     flags = ["--task-pool-timeout-max"]
     default = 4
-    validator = pulsar.validate_pos_int
+    validator = pulsar.validate_pos_float
     type = int
     desc = """\
         Timeout for asynchronously polling tasks from the queues when

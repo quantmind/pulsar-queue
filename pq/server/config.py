@@ -71,10 +71,24 @@ class TaskQueues(TaskSetting):
 class TaskPoolTimeout(TaskSetting):
     name = "task_pool_timeout"
     flags = ["--task-pool-timeout"]
-    default = 2
+    default = 1
+    validator = pulsar.validate_pos_int
     type = int
     desc = """\
-        Timeout for asynchronously polling tasks from the queues
+        Timeout for asynchronously polling tasks from the queues when
+        no concurrent tasks in consumer
+        """
+
+
+class TaskPoolTimeoutMax(TaskSetting):
+    name = "task_pool_timeout_max"
+    flags = ["--task-pool-timeout-max"]
+    default = 4
+    validator = pulsar.validate_pos_int
+    type = int
+    desc = """\
+        Timeout for asynchronously polling tasks from the queues when
+        concurrent tasks are at max_concurrency level
         """
 
 

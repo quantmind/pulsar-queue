@@ -70,6 +70,8 @@ class TestTasks(unittest.TestCase):
         self.assertEqual(t.broker.prefixed('foo'), 'pqtests_foo')
 
     def test_poll_time(self):
-        self.assertEqual(poll_time(0), 1)
-        self.assertEqual(poll_time(1), 4)
-        self.assertLess(poll_time(0.5), 2.5)
+        self.assertEqual(poll_time(1, 4, 0), 1)
+        self.assertEqual(poll_time(1, 4, 1), 4)
+        self.assertLess(poll_time(1, 4, 0.5), 2.5)
+        self.assertEqual(poll_time(1, 4, 0, lag=2), 0.1)
+        self.assertEqual(poll_time(1, 4, 1, lag=2), 2)

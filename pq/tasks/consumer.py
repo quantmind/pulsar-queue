@@ -15,13 +15,14 @@ from .rpc import TasksRpc
 from ..consumer import ConsumerAPI
 
 
-MIN_POOL_GAP = 1
-MAX_POOL_GAP = 4
-FACTOR = (MAX_POOL_GAP-MIN_POOL_GAP)/(exp(1)-2)
+MIN_POLL_TIME = 0.1
+FACTOR = exp(1) - 2
 
 
-def poll_time(x):
-    return MIN_POOL_GAP + FACTOR * (exp(x) - x - 1)
+def poll_time(a, b, x, lag=0):
+    a = max(a, MIN_POLL_TIME)   # 0.1 minimum pool gap
+    b = max(a, b)   # b cannot be less than a
+    return max(a + (b-a) * (exp(x) - x - 1)/FACTOR - lag, MIN_POLL_TIME)
 
 
 class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
@@ -105,9 +106,6 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
     def gen_unique_id(self):
         return uuid4().hex
 
-    def pull_lag(self):
-        return poll_time(self.num_concurrent_tasks/self.max_concurrent_tasks)
-
     # #######################################################################
     # #    PRIVATE METHODS
     # #######################################################################
@@ -131,7 +129,9 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
         # It pools a new task if possible, and add it to the queue of
         # tasks consumed by the ``worker`` CPU-bound thread.'''
         next_time = None
+        lag = 0
         if worker.is_running():
+            loop = worker._loop
 
             if self.num_concurrent_tasks < self.max_concurrent_tasks:
                 max_tasks = self.cfg.max_requests
@@ -143,7 +143,9 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
 
                 if not self.closing():
                     try:
+                        t0 = loop.time()
                         task = await self.broker.get_message(*self.queues())
+                        lag = loop.time() - t0
                     except ConnectionError:
                         if self.broker.connection_error:
                             next_time = backoff(self._next_time)
@@ -172,7 +174,12 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
                                   self.max_concurrent_tasks)
 
             if next_time is None:
-                next_time = self.pull_lag()
+                next_time = poll_time(
+                    self.cfg.task_pool_timeout,
+                    self.cfg.task_pool_timeout_max,
+                    self.num_concurrent_tasks/self.max_concurrent_tasks,
+                    lag
+                )
             self._next_time = next_time
 
         self._poll_tasks(worker, next_time)

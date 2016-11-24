@@ -340,7 +340,7 @@ class TaskQueueApp(TaskQueueBase):
             await self.api.remove_event_callback('task', 'done', check_retry)
 
     async def test_max_concurrency(self):
-        tasks = [self.api.tasks.queue('maxconcurrency', lag=2)
+        tasks = [self.api.tasks.queue('maxconcurrency', lag=5)
                  for _ in range(5)]
         tasks = await asyncio.gather(*tasks)
         self.assertEqual(len(tasks), 5)

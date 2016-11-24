@@ -58,7 +58,7 @@ class Json:
     def decode(cls, data):
         if isinstance(data, bytes):
             data = data.decode('utf-8')
-        return json.loads(data, object_hook=object_hook)
+        return json.loads(data, object_hook=queue_message)
 
     @classmethod
     def encode(cls, message):
@@ -72,7 +72,7 @@ if msgpack:
 
         @classmethod
         def decode(cls, data):
-            return msgpack.unpackb(data, object_hook=object_hook,
+            return msgpack.unpackb(data, object_hook=queue_message,
                                    encoding='utf-8')
 
         @classmethod
@@ -80,7 +80,7 @@ if msgpack:
             return msgpack.packb(message, default=as_message)
 
 
-def object_hook(d):
+def queue_message(d):
     type = d.get('type')
     MsgType = message_types.get(type)
     if MsgType:

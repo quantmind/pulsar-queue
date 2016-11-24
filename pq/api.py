@@ -1,4 +1,4 @@
-from .utils.serializers import Message, MessageDict
+from .utils.serializers import Message, MessageDict, queue_message
 from .utils.concurrency import ASYNC_IO, THREAD_IO, CPUBOUND
 from .mq import MessageFuture, MQ, Manager, register_broker
 from .consumer import ConsumerAPI
@@ -17,6 +17,7 @@ __all__ = [
     'PulsarQueue',
     #
     'Message',
+    'queue_message',
     'MessageDict',
     'MessageFuture',
     'ConsumerAPI',

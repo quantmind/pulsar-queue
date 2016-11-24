@@ -5,6 +5,7 @@ from unittest import mock
 
 from pq import api
 from pq.utils.time import format_time
+from pq.tasks.consumer import poll_time
 
 from tests.app import simple_task
 
@@ -67,3 +68,8 @@ class TestTasks(unittest.TestCase):
         t = api.QueueApp(config='tests.config').api()
         self.assertEqual(t.broker.namespace, 'pqtests_')
         self.assertEqual(t.broker.prefixed('foo'), 'pqtests_foo')
+
+    def test_poll_time(self):
+        self.assertEqual(poll_time(0), 1)
+        self.assertEqual(poll_time(1), 4)
+        self.assertLess(poll_time(0.5), 2.5)

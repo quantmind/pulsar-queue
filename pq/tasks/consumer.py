@@ -1,4 +1,5 @@
 import time
+from math import exp
 from uuid import uuid4
 from multiprocessing import cpu_count
 
@@ -12,6 +13,15 @@ from .task import Task, TaskNotAvailable
 from .models import RegistryMixin
 from .rpc import TasksRpc
 from ..consumer import ConsumerAPI
+
+
+MIN_POOL_GAP = 1
+MAX_POOL_GAP = 4
+FACTOR = (MAX_POOL_GAP-MIN_POOL_GAP)/(exp(1)-2)
+
+
+def poll_time(x):
+    return MIN_POOL_GAP + FACTOR * (exp(x) - x - 1)
 
 
 class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
@@ -51,6 +61,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
             'max_concurrent_tasks': self.max_concurrent_tasks,
             'concurrent_tasks': list(self._concurrent_tasks),
             'processed': self._processed,
+            'pulltime': self._next_time,
             'queues': self.queues()
         }
 
@@ -94,6 +105,9 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
     def gen_unique_id(self):
         return uuid4().hex
 
+    def pull_lag(self):
+        return poll_time(self.num_concurrent_tasks/self.max_concurrent_tasks)
+
     # #######################################################################
     # #    PRIVATE METHODS
     # #######################################################################
@@ -130,13 +144,12 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
                 if not self.closing():
                     try:
                         task = await self.broker.get_message(*self.queues())
-                    except ConnectionRefusedError:
+                    except ConnectionError:
                         if self.broker.connection_error:
-                            self._next_time = backoff(self._next_time)
+                            next_time = backoff(self._next_time)
                         else:
-                            self._next_time = RECONNECT_LAG
+                            next_time = RECONNECT_LAG
                             self.broker.connection_error = True
-                        next_time = self._next_time
                         task = None
                         if worker.is_running():
                             self.logger.critical(
@@ -157,8 +170,10 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
             else:
                 self.logger.debug('%s concurrent messages. Cannot poll.',
                                   self.max_concurrent_tasks)
-                self._next_time = 1
-                next_time = self._next_time
+
+            if next_time is None:
+                next_time = self.pull_lag()
+            self._next_time = next_time
 
         self._poll_tasks(worker, next_time)
 

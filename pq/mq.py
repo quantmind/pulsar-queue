@@ -98,7 +98,7 @@ class MQ(BaseComponent, Connector, ABC):
         self.queued_messages = {}
 
     def __repr__(self):
-        return 'message-broker - %s' % self.dns
+        return 'message-broker - %s' % self.store
 
     def queue(self, message, callback=True):
         '''Queue the ``message``.

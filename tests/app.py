@@ -55,7 +55,9 @@ class TaskQueueBase:
             concurrent_tasks=cls.concurrent_tasks,
             max_requests=cls.max_requests,
             message_serializer=cls.message_serializer,
-            rpc_keep_alive=cls.rpc_timeout
+            task_pool_timeout=0.1,
+            task_pool_timeout_max=0.1,
+            rpc_keep_alive=cls.rpc_timeout,
         )
         pq = api.PulsarQueue(**params)
         await pq.start()
@@ -340,7 +342,7 @@ class TaskQueueApp(TaskQueueBase):
             await self.api.remove_event_callback('task', 'done', check_retry)
 
     async def test_max_concurrency(self):
-        tasks = [self.api.tasks.queue('maxconcurrency', lag=5)
+        tasks = [self.api.tasks.queue('maxconcurrency', lag=3)
                  for _ in range(5)]
         tasks = await asyncio.gather(*tasks)
         self.assertEqual(len(tasks), 5)

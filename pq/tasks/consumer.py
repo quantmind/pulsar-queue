@@ -128,6 +128,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
         #
         # It pools a new task if possible, and add it to the queue of
         # tasks consumed by the ``worker`` CPU-bound thread.'''
+        task = None
         next_time = None
         lag = 0
         if worker.is_running():
@@ -152,7 +153,6 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
                         else:
                             next_time = RECONNECT_LAG
                             self.broker.connection_error = True
-                        task = None
                         if worker.is_running():
                             self.logger.critical(
                                 '%s cannot pool messages - '
@@ -163,6 +163,9 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
                     except CANCELLED_ERRORS:
                         self.logger.debug('stopped polling messages')
                         raise
+                    except Exception:
+                        if worker.is_running():
+                            self.logger.exception('server exception')
                     else:
                         self.broker.connection_ok()
                     if task:  # Got a new task

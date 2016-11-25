@@ -7,11 +7,5 @@
             "version": "{{ pq_version }}",
             "release_notes": "docs/history"
         }
-    },
-    "tasks": {
-        "release": {
-            "description": "make a new pulsar-queue release to github",
-            "command": ["python", "github:pq"]
-        }
     }
 }

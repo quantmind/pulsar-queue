@@ -2,9 +2,9 @@
 concurrency = greenlet,multiprocessing
 source = pq
 omit =
-    *pq/__init__.py
-    *pq/cpubound.py
-    *pq/utils/version.py
+    pq/__init__.py
+    pq/cpubound.py
+    pq/utils/version.py
 
 
 [report]

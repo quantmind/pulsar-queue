@@ -30,9 +30,9 @@ class Consumer(Producer):
             info = dict(self.info())
             info['worker'] = worker.aid
             info['node'] = self.node_name
-            info['pubsub'] = self.channels.dns
+            info['pubsub'] = str(self.channels)
             info['cores'] = cpu_count()
-            info['message-broker'] = self.broker.dns
+            info['message-broker'] = str(self.broker.store)
             info['time'] = time.time()
             if self.cfg.debug:
                 self.logger.debug('publishing worker %s info', worker)

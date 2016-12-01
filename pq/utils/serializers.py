@@ -80,11 +80,11 @@ if msgpack:
             return msgpack.packb(message, default=as_message)
 
 
-def queue_message(d):
-    type = d.get('type')
+def queue_message(d, type=None):
+    type = d.get('type', type)
     MsgType = message_types.get(type)
     if MsgType:
-        d.pop('type')
+        d.pop('type', None)
         return MsgType(**d)
     return d
 

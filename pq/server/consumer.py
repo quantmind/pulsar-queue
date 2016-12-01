@@ -47,6 +47,7 @@ class Consumer(Producer):
             worker._loop.call_later(next, self.__tick, worker, next)
 
     async def start(self, worker, consume=True):
+        self.logger.info('Start %s', self)
         await super().start()
         if consume:
             for consumer in self.consumers:

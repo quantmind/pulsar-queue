@@ -11,7 +11,6 @@ class SchedulerMixin:
 
     Implements method for task scheduling
     """
-
     @classmethod
     def __new__(cls, *args, **kwargs):
         o = super().__new__(cls)
@@ -26,7 +25,7 @@ class SchedulerMixin:
     def tick(self, now=None):
         # Run a tick, that is one iteration of the scheduler.
         if self.closing():
-            if not self._polling_tasks:
+            if not self._polling_tasks or not self.num_concurrent_tasks:
                 self.do_close()
             return
 

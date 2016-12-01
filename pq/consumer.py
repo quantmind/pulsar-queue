@@ -50,7 +50,7 @@ class ConsumerAPI(BaseComponent):
 
         By default it checks for closing signal and it available do the close
         """
-        if self._closing_waiter and not self._closing_waiter.done():
+        if self._closing_waiter:
             self.do_close()
 
     def info(self):
@@ -76,6 +76,7 @@ class ConsumerAPI(BaseComponent):
         return self._closing_waiter
 
     def do_close(self, msg=None):
-        if msg:
-            self.logger.warning(msg)
-        self._closing_waiter.set_result(True)
+        if not self._closing_waiter.done():
+            if msg:
+                self.logger.warning(msg)
+            self._closing_waiter.set_result(True)

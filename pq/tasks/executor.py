@@ -68,7 +68,9 @@ class ExecutorMixin:
                     if timeout <= 0:
                         raise TaskTimeout
 
+                task.node = self.backend.node_name
                 if worker:
+                    task.consumer = worker.aid
                     concurrent = await self.broker.incr(JobClass.name)
 
                 job = JobClass(self, task)

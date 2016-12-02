@@ -28,7 +28,7 @@ class Consumer(Producer):
         pnext, next = next, HEARTBEAT
         try:
             info = dict(self.info())
-            info['worker'] = worker.aid
+            info['consumer'] = worker.aid
             info['node'] = self.node_name
             info['pubsub'] = str(self.channels)
             info['cores'] = cpu_count()

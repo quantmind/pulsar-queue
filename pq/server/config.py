@@ -1,4 +1,5 @@
 import pulsar
+from pulsar.utils.importer import module_attribute
 
 from ..utils.serializers import serializers
 
@@ -37,9 +38,8 @@ class MessageBroker(TaskSetting):
 class ConcurrentTasks(TaskSetting):
     name = "concurrent_tasks"
     flags = ["--concurrent-tasks"]
-    validator = pulsar.validate_pos_int
-    type = int
-    default = 5
+    default = 'pq.tasks.concurrency:log'
+    validator = module_attribute
     desc = """\
         The maximum number of concurrent tasks for a worker.
 
@@ -71,7 +71,7 @@ class TaskQueues(TaskSetting):
 class TaskPoolTimeout(TaskSetting):
     name = "task_pool_timeout"
     flags = ["--task-pool-timeout"]
-    default = 1
+    default = 0.1
     validator = pulsar.validate_pos_float
     type = int
     desc = """\
@@ -83,7 +83,7 @@ class TaskPoolTimeout(TaskSetting):
 class TaskPoolTimeoutMax(TaskSetting):
     name = "task_pool_timeout_max"
     flags = ["--task-pool-timeout-max"]
-    default = 4
+    default = 2
     validator = pulsar.validate_pos_float
     type = int
     desc = """\

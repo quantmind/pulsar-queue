@@ -1,7 +1,6 @@
 import time
 from math import exp
 from uuid import uuid4
-from multiprocessing import cpu_count
 
 from pulsar import ensure_future, CANCELLED_ERRORS
 from pulsar.apps.data.channels import backoff, RECONNECT_LAG
@@ -15,14 +14,13 @@ from .rpc import TasksRpc
 from ..consumer import ConsumerAPI
 
 
-MIN_POLL_TIME = 0.1
 FACTOR = exp(1) - 2
 
 
 def poll_time(a, b, x, lag=0):
-    a = max(a, MIN_POLL_TIME)   # 0.1 minimum pool gap
+    a = max(a, 0)   # 0 minimum pool gap
     b = max(a, b)   # b cannot be less than a
-    return max(a + (b-a) * (exp(x) - x - 1)/FACTOR - lag, MIN_POLL_TIME)
+    return max(a + (b-a) * (exp(x) - x - 1)/FACTOR - lag, 0)
 
 
 class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
@@ -49,7 +47,7 @@ class Tasks(RegistryMixin, ExecutorMixin, SchedulerMixin, ConsumerAPI):
 
     @property
     def max_concurrent_tasks(self):
-        return cpu_count() * self.cfg.concurrent_tasks
+        return self.cfg.concurrent_tasks(self.cfg)
 
     @property
     def num_concurrent_tasks(self):

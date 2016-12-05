@@ -29,7 +29,7 @@ class TaskQueueBase:
     # long enough to allow to wait for tasks
     rpc_timeout = 500
     max_requests = 0
-    concurrent_tasks = 5
+    concurrent_tasks = None
     tq_app = None
     rpc = None
     schedule_periodic = False

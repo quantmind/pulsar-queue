@@ -73,5 +73,5 @@ class TestTasks(unittest.TestCase):
         self.assertEqual(poll_time(1, 4, 0), 1)
         self.assertEqual(poll_time(1, 4, 1), 4)
         self.assertLess(poll_time(1, 4, 0.5), 2.5)
-        self.assertEqual(poll_time(1, 4, 0, lag=2), 0.1)
+        self.assertEqual(poll_time(1, 4, 0, lag=2), 0)
         self.assertEqual(poll_time(1, 4, 1, lag=2), 2)

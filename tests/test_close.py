@@ -6,13 +6,9 @@ from random import random
 from tests import app
 
 
-def venti(cfg):
-    return 20
-
-
 class TestMsgPackQueue(app.TaskQueueBase, unittest.TestCase):
     max_requests = 10
-    concurrent_tasks = 'pq.tests.test_close:venti'
+    concurrent_tasks = 20
 
     async def test_max_requests(self):
         api = self.api

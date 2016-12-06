@@ -7,6 +7,24 @@ from ..utils.serializers import serializers
 DEFAULT_MQ_BACKEND = 'redis://127.0.0.1:6379/7?namespace=pq'
 
 
+def constant_or_function(value):
+    try:
+        value = int(value)
+    except ValueError:
+        return module_attribute(value)
+    else:
+        return Constant(value)
+
+
+class Constant:
+
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self, cfg):
+        return self.value
+
+
 class TaskSetting(pulsar.Setting):
     virtual = True
     app = 'tasks'
@@ -38,8 +56,8 @@ class MessageBroker(TaskSetting):
 class ConcurrentTasks(TaskSetting):
     name = "concurrent_tasks"
     flags = ["--concurrent-tasks"]
-    default = 'pq.tasks.concurrency:log'
-    validator = module_attribute
+    default = 'pq.tasks.concurrency:linear'
+    validator = constant_or_function
     desc = """\
         The maximum number of concurrent tasks for a worker.
 

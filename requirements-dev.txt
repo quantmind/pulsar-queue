@@ -1,4 +1,3 @@
 coverage
 flake8
 msgpack-python
-python-docx

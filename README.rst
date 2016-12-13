@@ -1,7 +1,7 @@
 |pulsar-queue|
 
 :Badges: |license|  |pyversions| |status| |pypiversion|
-:Master CI: |master-build| |coverage-master|
+:Master CI: |master-build| |coverage-master| |appveyor|
 :Downloads: http://pypi.python.org/pypi/pulsar-queue
 :Source: https://github.com/quantmind/pulsar-queue
 :Mailing list: `google user group`_
@@ -28,6 +28,8 @@
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
 .. |coverage-dev| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=dev
   :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=dev
+.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/7us462jl0de2w0ly/branch/master?svg=true
+    :target: https://ci.appveyor.com/project/lsbardel/pulsar-queue
 
 
 Asynchronous server for consuming asynchronous IO tasks, green IO tasks,

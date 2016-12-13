@@ -173,7 +173,6 @@ class TaskQueueApp(TaskQueueBase):
         task = await tasks.queue_local('testlocalqueue')
         self.assertIsInstance(task, api.Task)
         self.assertIsInstance(task.result, list)
-        print(task.result)
         self.assertEqual(len(task.result), 3)
         self.assertEqual(task.result[0], self.api.node_name)
 

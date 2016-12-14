@@ -291,18 +291,12 @@ class TaskQueueApp(TaskQueueBase):
         self.assertTrue(task.result)
 
     async def test_thread_io(self):
-        output = os.path.join(PATH, 'test.txt')
+        inp = os.path.join(PATH, 'example', 'randomtext.txt')
         tasks = self.api.tasks
-        task = await tasks.queue(
-            'extract.docx',
-            input=os.path.join(PATH, 'example', 'test.docx'),
-            output=output
-        )
+        task = await tasks.queue('read.text', input=inp)
         self.assertEqual(task.status_string, 'SUCCESS')
-        self.assertTrue(os.path.isfile(output))
-        os.remove(output)
         self.assertNotEqual(task.result['thread'], threading.get_ident())
-        self.assertEqual(task.result['text'], 306)
+        self.assertTrue(task.result['text'])
 
     async def test_bad_task(self):
         tasks = self.api.tasks

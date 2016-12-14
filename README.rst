@@ -652,5 +652,5 @@ file in the top distribution directory for the full license text. Logo designed 
 .. _Task: #the-task
 .. _Events: #events
 .. _events: #events
-.. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner-400-width.png
+.. |pulsar-queue| image:: https://pulsar.fluidily.com/assets/queue/pulsar-queue-banner.svg
    :target: https://github.com/quantmind/pulsar-queue

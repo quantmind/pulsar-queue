@@ -138,7 +138,7 @@ async def scrape(self, url=None):
 
 
 @api.job(concurrency=api.THREAD_IO)
-def extract_docx(self, input=None, output=None):
+def read_text(self, input=None):
     """
     Extract text from a docx document
 
@@ -147,15 +147,12 @@ def extract_docx(self, input=None, output=None):
 
     :return: the length of the text extracted
     """
-    import docx
-    assert input and output, "input and output must be given"
-    document = docx.Document(input)
-    text = '\n\n'.join(_docx_text(document))
-    with open(output, 'w') as fp:
-        fp.write(text)
+    assert input, "input must be given"
+    with open(input, 'r') as fp:
+        text = fp.read()
     return {
         'thread': threading.get_ident(),
-        'text': len(text)
+        'text': text
     }
 
 

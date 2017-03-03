@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from asyncio import Future, ensure_future
 from collections import OrderedDict
 
-from pulsar import chain_future, ImproperlyConfigured
+from pulsar.api import chain_future, ImproperlyConfigured
 from pulsar.apps.http import HttpClient
 from pulsar.apps.greenio import GreenPool
 from pulsar.apps.data.channels import Connector

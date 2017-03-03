@@ -1,7 +1,5 @@
 from logging import getLogger
 
-from pulsar import create_future
-
 from .mq import BaseComponent
 
 
@@ -69,7 +67,7 @@ class ConsumerAPI(BaseComponent):
         """Return a Future which should be called back once the consumer
         is closed"""
         if not self.closing():
-            self._closing_waiter = create_future(self._loop)
+            self._closing_waiter = self._loop.create_future()
             if msg:
                 self.logger.warning(msg)
             self.tick()

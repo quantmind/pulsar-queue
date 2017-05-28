@@ -74,14 +74,14 @@ A simple python file which runs your application:
 
 .. code:: python
 
-    from pq.api import PusarQueue
+    from pq.api import PulsarQueue
 
 
     task_paths = ['sampletasks.*', 'pq.jobs']
 
 
     def app():
-        return PusarQueue(config=__file__)
+        return PulsarQueue(config=__file__)
 
     if __name__ == '__main__':
         app().start()

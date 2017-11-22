@@ -1,4 +1,4 @@
-from pulsar import Application, MultiApp, Config
+from pulsar.api import Application, MultiApp, Config
 from pulsar.apps.wsgi import (WSGIServer, Router, LazyWsgi,
                               WsgiHandler, GZipMiddleware)
 

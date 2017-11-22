@@ -2,7 +2,7 @@
 import unittest
 from asyncio import Future
 
-from pulsar import send
+from pulsar.api import send
 from pulsar.utils.string import random_string
 
 from pq import api

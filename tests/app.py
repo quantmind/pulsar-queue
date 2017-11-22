@@ -4,7 +4,7 @@ import sys
 import asyncio
 import threading
 
-from pulsar import send, create_future
+from pulsar.api import send, create_future
 from pulsar.apps import rpc
 
 from pq import api

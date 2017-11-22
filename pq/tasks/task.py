@@ -1,4 +1,4 @@
-from pulsar import PulsarException
+from pulsar.api import PulsarException
 from pulsar.utils.log import LazyString
 
 from ..utils.serializers import Message

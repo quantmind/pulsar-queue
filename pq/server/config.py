@@ -1,4 +1,7 @@
-import pulsar
+from pulsar.api import Setting
+from pulsar.utils.config import (
+    validate_list, validate_bool, validate_pos_float
+)
 from pulsar.utils.importer import module_attribute
 
 from ..utils.serializers import serializers
@@ -25,7 +28,7 @@ class Constant:
         return self.value
 
 
-class TaskSetting(pulsar.Setting):
+class TaskSetting(Setting):
     virtual = True
     app = 'tasks'
     section = "Task Consumer"
@@ -33,7 +36,7 @@ class TaskSetting(pulsar.Setting):
 
 class ConsumersPaths(TaskSetting):
     name = "consumers"
-    validator = pulsar.validate_list
+    validator = validate_list
     default = ['pq.api:Tasks']
     desc = """\
         List of python dotted paths where Consumer are implemented.
@@ -80,7 +83,7 @@ class DefaultQueue(TaskSetting):
 class TaskQueues(TaskSetting):
     name = 'task_queues'
     default = ['pulsarqueue']
-    validator = pulsar.validate_list
+    validator = validate_list
     desc = """\
         List of queues to consume
         """
@@ -90,7 +93,7 @@ class TaskPoolTimeout(TaskSetting):
     name = "task_pool_timeout"
     flags = ["--task-pool-timeout"]
     default = 0.1
-    validator = pulsar.validate_pos_float
+    validator = validate_pos_float
     type = int
     desc = """\
         Timeout for asynchronously polling tasks from the queues when
@@ -102,7 +105,7 @@ class TaskPoolTimeoutMax(TaskSetting):
     name = "task_pool_timeout_max"
     flags = ["--task-pool-timeout-max"]
     default = 2
-    validator = pulsar.validate_pos_float
+    validator = validate_pos_float
     type = int
     desc = """\
         Timeout for asynchronously polling tasks from the queues when
@@ -112,7 +115,7 @@ class TaskPoolTimeoutMax(TaskSetting):
 
 class TaskPaths(TaskSetting):
     name = "task_paths"
-    validator = pulsar.validate_list
+    validator = validate_list
     default = []
     desc = """\
         List of python dotted paths where tasks are located.
@@ -125,7 +128,7 @@ class TaskPaths(TaskSetting):
 class SchedulePeriodic(TaskSetting):
     name = 'schedule_periodic'
     flags = ["--schedule-periodic"]
-    validator = pulsar.validate_bool
+    validator = validate_bool
     action = "store_true"
     default = False
     desc = '''\

@@ -1,7 +1,7 @@
 import platform
-from asyncio import gather
+from asyncio import gather, new_event_loop
 
-from pulsar import new_event_loop, ensure_future, EventHandler, as_coroutine
+from pulsar.api import ensure_future, EventHandler, as_coroutine
 from pulsar.apps.data import create_store
 from pulsar.apps.greenio import GreenHttp
 from pulsar.apps.http import HttpClient
@@ -28,17 +28,16 @@ class Producer(EventHandler):
     ONE_TIME_EVENTS = ('close',)
 
     def __init__(self, cfg, *, logger=None, **kw):
-        loop = cfg.params.pop('loop', None)
         # create the store for channels
-        store = create_store(cfg.data_store, loop=loop)
-        super().__init__(loop=store._loop)
+        store = create_store(cfg.data_store, loop=cfg.params.pop('loop', None))
         self.cfg = cfg
-        self._logger = logger
+        self._loop = store._loop
+        self.logger = logger
         self._closing_waiter = None
         if not cfg.message_broker:
             broker = store
         else:
-            broker = create_store(cfg.message_broker, loop=loop)
+            broker = create_store(cfg.message_broker, loop=self._loop)
         self.manager = (self.cfg.callable or Manager)(self)
         self.broker = register_broker(broker.name)(self, broker)
         self.channels = store.channels(

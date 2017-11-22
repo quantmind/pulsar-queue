@@ -2,7 +2,7 @@ import time
 from math import exp
 from uuid import uuid4
 
-from pulsar import ensure_future, CANCELLED_ERRORS
+from pulsar.async.access import ensure_future, CANCELLED_ERRORS
 from pulsar.apps.data.channels import backoff, RECONNECT_LAG
 
 from .executor import ExecutorMixin

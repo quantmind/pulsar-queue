@@ -1,4 +1,3 @@
-import sys
 import os
 
 from setuptools import setup, find_packages
@@ -44,8 +43,8 @@ meta = dict(
     include_package_data=True,
     zip_safe=False,
     setup_requires=['pulsar', 'wheel'],
-    install_requires=requirements('requirements.txt')[0],
-    # tests_require=config.requirements('requirements-dev.txt')[0],
+    install_requires=requirements('requirements/hard.txt')[0],
+    tests_require=requirements('requirements/dev.txt')[0],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
@@ -62,9 +61,4 @@ meta = dict(
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1 and sys.argv[1] == 'agile':
-        from agile.app import AgileManager
-        AgileManager(description='Release manager for pulsar-queue',
-                     argv=sys.argv[2:]).start()
-    else:
-        setup(**meta)
+    setup(**meta)

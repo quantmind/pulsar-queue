@@ -17,5 +17,13 @@ script:
 after_script:
   - if [[ $TRAVIS_PYTHON_VERSION == 3.6.3 ]]; then codecov; fi
 
+deploy:
+  - python setup.py pypi --final
+  - python setup.py sdist
+  - twine upload dist/* --username lsbardel --password $PYPI_PASSWORD
+  - ci/tag.sh
+  on:
+    branch: release
+
 notifications:
   email: false

@@ -60,4 +60,9 @@ meta = dict(
 
 
 if __name__ == '__main__':
+    try:
+        from pulsar import cmds
+        meta['cmdclass'] = dict(pypi=cmds.PyPi)
+    except ImportError:
+        pass
     setup(**meta)

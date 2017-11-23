@@ -47,7 +47,7 @@ class QueueApp(Application):
         if not exc:
             self._backend = await self._start(worker)
             if not worker.is_monitor():
-                self._backend.bind_event('close', _close)
+                self._backend.event('close').bind(_close)
 
     def worker_stopping(self, worker, exc=None):
         if self._backend:

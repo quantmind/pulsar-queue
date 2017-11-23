@@ -22,4 +22,5 @@ __pycache__
 build
 _build
 dist
+venv
 release-notes.md

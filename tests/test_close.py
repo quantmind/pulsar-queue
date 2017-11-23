@@ -24,8 +24,7 @@ class TestMsgPackQueue(app.TaskQueueBase, unittest.TestCase):
         self.assertEqual(len(workers), 2)
 
         # FAILURES
-        tasks = [api.tasks.queue('asynchronous', sleep=1)
-                 for _ in range(6)]
+        tasks = [api.tasks.queue('asynchronous', sleep=1) for _ in range(6)]
 
         tasks = await asyncio.gather(*tasks)
         self.assertEqual(len(tasks), 6)

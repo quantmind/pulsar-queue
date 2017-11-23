@@ -1,21 +1,19 @@
 language: python
 
 python:
-  - 3.5.2
-  - 3.6-dev
+  - 3.5.4
+  - 3.6.3
 
 services:
   - redis-server
 
 install:
-  - pip install -r requirements-dev.txt
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.5.2 ]]; then pip install uvloop; fi
+  - pip install -r requirements/dev.txt
+  - pip install git+git://github.com/quantmind/pulsar.git
 
 script:
-  - python setup.py test --coverage -q
-  - flake8
-  - python setup.py test --coveralls
-  # - if [[ $TRAVIS_PYTHON_VERSION == 3.5.2 ]]; then python setup.py test -q --io uv; fi
+  - make test
+  - make coverage
 
 notifications:
   email: false

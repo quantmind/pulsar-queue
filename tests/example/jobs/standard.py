@@ -134,7 +134,7 @@ class CpuBoundBigLog(api.Job):
 async def scrape(self, url=None):
     assert url, "url is required"
     request = await self.http.get(url)
-    return request.text()
+    return request.text
 
 
 @api.job(concurrency=api.THREAD_IO)

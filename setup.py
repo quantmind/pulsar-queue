@@ -44,7 +44,6 @@ meta = dict(
     zip_safe=False,
     setup_requires=['pulsar', 'wheel'],
     install_requires=requirements('requirements/hard.txt')[0],
-    tests_require=requirements('requirements/dev.txt')[0],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',

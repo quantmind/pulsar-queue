@@ -10,7 +10,7 @@ clean:
 
 test:
 	flake8
-	$(PYTHON) -W ignore setup.py test -q --io uv
+	$(PYTHON) -W ignore setup.py test -q
 
 testinstalled:
 	$(PYTHON) -W ignore runtests.py

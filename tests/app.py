@@ -276,7 +276,7 @@ class TaskQueueApp(TaskQueueBase):
 
     async def test_scrape(self):
         tasks = self.api.tasks
-        task = await tasks.queue('scrape', url='https://www.bbc.co.uk/')
+        task = await tasks.queue('scrape', url='https://github.com/')
         self.assertEqual(task.status_string, 'SUCCESS')
         self.assertTrue(task.result)
 

@@ -13,10 +13,10 @@ install:
 
 script:
   - make test
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.6.3 ]]; make coverage
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.6.3 ]]; make coverage; fi
 
 after_script:
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.6.3 ]]; codecov
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.6.3 ]]; codecov; fi
 
 notifications:
   email: false

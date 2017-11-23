@@ -3,5 +3,4 @@ codecov
 flake8
 uvloop
 httptools
-cython
 msgpack-python

@@ -15,5 +15,8 @@ script:
   - make test
   - make coverage
 
+after_script:
+  - codecov
+  
 notifications:
   email: false

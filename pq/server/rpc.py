@@ -1,4 +1,4 @@
-import pulsar
+from pulsar.api import send
 from pulsar.apps import rpc
 
 
@@ -19,7 +19,7 @@ class TaskQueueRpc(rpc.JSONRPC):
 
     async def rq(self, request, func, *args, **kw):
         api = await self.api()
-        result = await pulsar.send(api.cfg.name, 'run', func, *args, **kw)
+        result = await send(api.cfg.name, 'run', func, *args, **kw)
         return result
 
     async def api(self):

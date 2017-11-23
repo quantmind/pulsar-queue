@@ -1,7 +1,7 @@
 |pulsar-queue|
 
 :Badges: |license|  |pyversions| |status| |pypiversion|
-:Master CI: |master-build| |coverage-master| |appveyor|
+:CI: |travis| |coverage| |appveyor|
 :Downloads: http://pypi.python.org/pypi/pulsar-queue
 :Source: https://github.com/quantmind/pulsar-queue
 :Mailing list: `google user group`_
@@ -20,17 +20,12 @@
   :target: https://pypi.python.org/pypi/pulsar-queue
 .. |downloads| image:: https://img.shields.io/pypi/dd/pulsar-queue.svg
   :target: https://pypi.python.org/pypi/pulsar-queue
-.. |master-build| image:: https://img.shields.io/travis/quantmind/pulsar-queue/master.svg
+.. |travis| image:: https://img.shields.io/travis/quantmind/pulsar-queue/master.svg
   :target: https://travis-ci.org/quantmind/pulsar-queue
-.. |dev-build| image:: https://img.shields.io/travis/quantmind/pulsar-queue/dev.svg
-  :target: https://travis-ci.org/quantmind/pulsar-queue?branch=dev
-.. |coverage-master| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=master
-  :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=master
-.. |coverage-dev| image:: https://coveralls.io/repos/github/quantmind/pulsar-queue/badge.svg?branch=dev
-  :target: https://coveralls.io/github/quantmind/pulsar-queue?branch=dev
 .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/7us462jl0de2w0ly/branch/master?svg=true
     :target: https://ci.appveyor.com/project/lsbardel/pulsar-queue
-
+.. |coverage| image:: https://codecov.io/gh/quantmind/pulsar-queue/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/quantmind/pulsar-queue
 
 Asynchronous server for consuming asynchronous IO tasks, green IO tasks,
 blocking IO tasks and long running CPU bound tasks.

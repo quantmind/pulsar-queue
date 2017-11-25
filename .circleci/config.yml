@@ -86,21 +86,6 @@ workflows:
               ignore: release
             tags:
               ignore: /.*/
-      - docs:
-          filters:
-            branches:
-              ignore: release
-            tags:
-              ignore: /.*/
-      - binaries:
-          requires:
-            - main
-            - legacy
-          filters:
-            branches:
-              only: release
-            tags:
-              ignore: /.*/
       - deploy-release:
           filters:
             branches:

@@ -10,7 +10,7 @@ clean:
 
 test:
 	flake8
-	$(PYTHON) -W ignore setup.py test -q
+	$(PYTHON) -W ignore setup.py test -q --sequential
 
 coverage:
 	$(PYTHON) -W ignore setup.py test --coverage -q

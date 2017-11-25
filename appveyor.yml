@@ -1,22 +1,23 @@
 environment:
+  PYPI_PASSWD:
+    secure: w16EmxgfwQdS1FLB/PCWQA==
 
   matrix:
-    # Pre-installed Python versions, which Appveyor may upgrade to
-    # a later point release.
     - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.x"
-      PYTHON_ARCH: "32"
-
     - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x"
-      PYTHON_ARCH: "64"
+    - PYTHON: "C:\\Python36"
+    - PYTHON: "C:\\Python36-x64"
+
+branches:
+  only:
+    - master
+    - release
 
 init:
   - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
 
 install:
   - "%WITH_COMPILER% %PYTHON%/python -V"
-  - "%WITH_COMPILER% %PYTHON%/python -m pip install -r requirements-dev.txt"
   - cmd: nuget install redis-64 -excludeversion
   - cmd: redis-64\tools\redis-server.exe --service-install
   - cmd: redis-64\tools\redis-server.exe --service-start
@@ -24,9 +25,11 @@ install:
 build: off
 
 test_script:
-  - "%WITH_COMPILER% %PYTHON%/python setup.py test -q --io proactor"
+  - "%WITH_COMPILER% %PYTHON%/python setup.py test -q --io proactor --sequential"
+  - "%WITH_COMPILER% %PYTHON%/python setup.py sdist"
 
-notifications:
-  - provider: Email
-    on_build_success: false
-    on_build_failure: false
+after_test:
+  - ps: >-
+      if($env:appveyor_repo_branch -eq 'release') {
+          Invoke-Expression "$env:PYTHON\\python.exe -m twine upload dist/* --username lsbardel --password $env:PYPI_PASSWD"
+      }

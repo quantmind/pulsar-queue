@@ -1,0 +1,109 @@
+version: 2
+jobs:
+    main:
+        working_directory: ~/main
+        docker:
+          - image: python:3.6.3
+          - image: redis
+        steps:
+          - checkout
+          - run:
+              name: install packages
+              command: ci/install.sh
+          - run:
+              name: test
+              command: make test
+    coverage:
+        working_directory: ~/coverage
+        docker:
+          - image: python:3.6.3
+          - image: redis
+        steps:
+          - checkout
+          - run:
+              name: install packages
+              command: ci/install.sh
+          - run:
+              name: run tests for coverage
+              command: make coverage
+          - run:
+              name: upload coverage stats
+              command: codecov
+    legacy:
+        working_directory: ~/legacy
+        docker:
+          - image: python:3.5.4
+          - image: redis
+        steps:
+          - checkout
+          - run:
+              name: install packages
+              command: ci/install.sh
+          - run:
+              name: test
+              command: make test
+    deploy-release:
+        working_directory: ~/deploy
+        docker:
+          - image: python:3.6.3
+        steps:
+          - checkout
+          - run:
+              name: install packages
+              command: ci/install.sh
+          - run:
+              name: check version
+              command: python setup.py pypi --final
+          - run:
+              name: create source distribution
+              command: python setup.py sdist
+          - run:
+              name: release source distribution
+              command: twine upload dist/* --username lsbardel --password $PYPI_PASSWORD
+          - run:
+              name: tag
+              command: ci/tag.sh
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - main:
+          filters:
+            branches:
+              ignore: release
+            tags:
+              ignore: /.*/
+      - coverage:
+          filters:
+            branches:
+              ignore: release
+            tags:
+              ignore: /.*/
+      - legacy:
+          filters:
+            branches:
+              ignore: release
+            tags:
+              ignore: /.*/
+      - docs:
+          filters:
+            branches:
+              ignore: release
+            tags:
+              ignore: /.*/
+      - binaries:
+          requires:
+            - main
+            - legacy
+          filters:
+            branches:
+              only: release
+            tags:
+              ignore: /.*/
+      - deploy-release:
+          filters:
+            branches:
+              only: release
+            tags:
+              ignore: /.*/

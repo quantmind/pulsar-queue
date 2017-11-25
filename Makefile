@@ -1,4 +1,4 @@
-.PHONY: clean test testinstalled coverage wheels macwheels
+.PHONY: clean test coverage
 
 
 PYTHON ?= python
@@ -12,15 +12,5 @@ test:
 	flake8
 	$(PYTHON) -W ignore setup.py test -q
 
-testinstalled:
-	$(PYTHON) -W ignore runtests.py
-
 coverage:
-	export PULSARPY=yes; $(PYTHON) -W ignore setup.py test --coverage -q
-
-wheels:
-	rm -rf wheelhouse
-	$(PYTHON) -m ci.build_wheels --pyversions 3.5 3.6
-
-macwheels:
-	export PYMODULE=pulsar; export WHEEL=macosx; export CI=true; ./ci/build-wheels.sh
+	$(PYTHON) -W ignore setup.py test --coverage -q

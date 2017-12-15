@@ -50,9 +50,9 @@ class CpuTaskInfo:
             p = self.buffer.find('\n')
             if p:
                 length = int(self.buffer[:p])
-                data = self.buffer[p+1:]
+                data = self.buffer[p + 1:]
                 if len(data) >= length + 1:
-                    self.buffer = data[length+1:]
+                    self.buffer = data[length + 1:]
                     self.on_data(json.loads(data[:length]))
                 else:
                     break
